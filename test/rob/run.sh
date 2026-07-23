@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TEST_DIR="$ROOT/test/rob"
 
-verilator --cc --build -j -Wno-fatal --output-split 100 --output-split-cfuncs 100 \
+verilator --cc --build -j 1 -Wno-fatal --output-split 100 --output-split-cfuncs 100 \
   -Wno-DECLFILENAME -Wno-WIDTH -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module rob_test_top \

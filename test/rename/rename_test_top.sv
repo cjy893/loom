@@ -42,6 +42,9 @@ module rename_test_top (
     uop_t [1:0] commit_uops;
     wakeup_t [5:0] wakeups;
     br_update_info_t brupdate;
+    logic [1:0] dec_fire;
+
+    assign dec_fire = in_valid & {2{!(|stalls)}};
 
     always_comb begin
         dec_uops = '0;
@@ -79,7 +82,8 @@ module rename_test_top (
     ) dut (
         .clk,
         .rst_n,
-        .dec_fire(in_valid),
+        .dec_valids(in_valid),
+        .dec_fire,
         .dec_uops,
         .wakeups,
         .brupdate,

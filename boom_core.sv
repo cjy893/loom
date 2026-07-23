@@ -228,6 +228,7 @@ module boom_core #(
                    .WAKEUP_PORTS(NUM_WAKEUPS), .IS_FP(0))
     rename (
         .clk(clk), .rst_n(rst_n),
+        .dec_valids(dec_valids),
         .dec_fire  (dec_fire),
         .dec_uops  (dec_uops),
         .wakeups   (wakeups),

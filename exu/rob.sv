@@ -20,7 +20,7 @@ module rob #(
     input exe_unit_resp_t [NUM_WAKEUP_PORTS-1:0] wb_resps,
 
     input logic [CORE_WIDTH-1:0] lsu_clr_bsy_valid,
-    input logic [ROB_ADDR_SZ-1:0] [CORE_WIDTH-1:0] lsu_clr_bsy_addr,
+    input logic [CORE_WIDTH-1:0] [ROB_ADDR_SZ-1:0] lsu_clr_bsy_addr,
 
     input br_update_info_t brupdate,
 
@@ -65,7 +65,7 @@ module rob #(
         S_ROLLBACK
     } rob_state_t;
 
-    rob_state_t rob_state, next_rob_state;
+    rob_state_t rob_state;
 
     function automatic logic [$clog2(NUM_ROWS)-1:0] get_row( logic [ROB_ADDR_SZ-1:0] idx);
         return idx[ROB_ADDR_SZ-1:$clog2(CORE_WIDTH)];
@@ -277,6 +277,9 @@ module rob #(
                 end
                 S_ROLLBACK: begin
                     rob_state <= S_NORMAL;
+                end
+                default: begin
+                    rob_state <= S_ROLLBACK;
                 end
             endcase
         end

@@ -253,4 +253,17 @@ package loom_types;
         logic [3:0] iq_type;
         logic use_matrix_issue;
     } issue_params_t;
+
+    typedef struct packed {
+        logic valid;
+        logic [XLEN-1:0] pc;
+
+        logic [FTQ_ADDR_SZ-1:0] ftq_idx;
+        logic edge_inst;
+        logic is_16bit;
+        logic [$clog2(ICACHE_BLOCK_BYTES)-1:0] pc_lob;
+        logic [XLEN-1:0] cause;
+        logic [XLEN-1:0] badvaddr;
+        logic [2:0] flush_typ;
+    } commit_exception_signals_t;
 endpackage

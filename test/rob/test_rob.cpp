@@ -13,6 +13,9 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->wb_valid = 0;
     dut->wb_rob_idx_0 = 0;
     dut->wb_rob_idx_1 = 0;
+    dut->lsu_clr_bsy_valid = 0;
+    dut->lsu_clr_bsy_addr_0 = 0;
+    dut->lsu_clr_bsy_addr_1 = 0;
 }
 
 int main(int argc, char** argv) {
@@ -79,6 +82,54 @@ int main(int argc, char** argv) {
     }
     expect_eq("tail wrapped", dut->tail_idx, 2);
     expect_eq("ROB empty after wrap", dut->empty, 1);
+
+    // Clear a younger row first. It must remain blocked by the busy head row,
+    // then become immediately committable after the head row retires.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_0 = 20;
+    dut->enq_ldst_1 = 21;
+    dut->enq_busy_0 = 1;
+    dut->enq_busy_1 = 1;
+    eval_cycle(dut);
+
+    dut->enq_rob_idx_0 = 2;
+    dut->enq_rob_idx_1 = 3;
+    dut->enq_ldst_0 = 22;
+    dut->enq_ldst_1 = 23;
+    eval_cycle(dut);
+    clear_inputs(dut);
+
+    dut->lsu_clr_bsy_valid = 3;
+    dut->lsu_clr_bsy_addr_0 = 2;
+    dut->lsu_clr_bsy_addr_1 = 3;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("cleared younger row remains ordered", dut->commit_valid, 0);
+
+    dut->lsu_clr_bsy_valid = 3;
+    dut->lsu_clr_bsy_addr_0 = 0;
+    dut->lsu_clr_bsy_addr_1 = 1;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("LSU clear releases head row", dut->commit_valid, 3);
+    expect_eq("LSU-cleared head lane0 identity", dut->commit_ldst_0, 20);
+    expect_eq("LSU-cleared head lane1 identity", dut->commit_ldst_1, 21);
+
+    eval_cycle(dut);
+    expect_eq("previously cleared younger row commits", dut->commit_valid, 3);
+    expect_eq("LSU-cleared younger lane0 identity", dut->commit_ldst_0, 22);
+    expect_eq("LSU-cleared younger lane1 identity", dut->commit_ldst_1, 23);
+    eval_cycle(dut);
+    expect_eq("ROB empty after LSU clears", dut->empty, 1);
 
     pass("rob");
     delete dut;
