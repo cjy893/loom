@@ -12,21 +12,24 @@ module dispatch_test_top (
     input  logic       iq_alu_ready,
     input  logic       iq_unq_ready,
 
-    output logic       iq_mem_dis_valid,
-    output logic [5:0] iq_mem_rob_idx,
-    output logic       iq_alu_dis_valid,
-    output logic [5:0] iq_alu_rob_idx,
-    output logic       iq_unq_dis_valid,
-    output logic [5:0] iq_unq_rob_idx,
+    output logic [1:0] iq_mem_dis_valid,
+    output logic [5:0] iq_mem_rob_idx_0,
+    output logic [5:0] iq_mem_rob_idx_1,
+    output logic [1:0] iq_alu_dis_valid,
+    output logic [5:0] iq_alu_rob_idx_0,
+    output logic [5:0] iq_alu_rob_idx_1,
+    output logic [1:0] iq_unq_dis_valid,
+    output logic [5:0] iq_unq_rob_idx_0,
+    output logic [5:0] iq_unq_rob_idx_1,
     output logic       dis_ready,
     output logic [1:0] dis_fire,
     output logic [5:0] dis_uop_rob_idx_0,
     output logic [5:0] dis_uop_rob_idx_1
 );
     uop_t [1:0] rn2_uops;
-    uop_t iq_mem_dis_uop;
-    uop_t iq_alu_dis_uop;
-    uop_t iq_unq_dis_uop;
+    uop_t [1:0] iq_mem_dis_uop;
+    uop_t [1:0] iq_alu_dis_uop;
+    uop_t [1:0] iq_unq_dis_uop;
     uop_t [1:0] dis_uops;
 
     always_comb begin
@@ -54,9 +57,12 @@ module dispatch_test_top (
         .dis_uops
     );
 
-    assign iq_mem_rob_idx = iq_mem_dis_uop.rob_idx;
-    assign iq_alu_rob_idx = iq_alu_dis_uop.rob_idx;
-    assign iq_unq_rob_idx = iq_unq_dis_uop.rob_idx;
+    assign iq_mem_rob_idx_0 = iq_mem_dis_uop[0].rob_idx;
+    assign iq_mem_rob_idx_1 = iq_mem_dis_uop[1].rob_idx;
+    assign iq_alu_rob_idx_0 = iq_alu_dis_uop[0].rob_idx;
+    assign iq_alu_rob_idx_1 = iq_alu_dis_uop[1].rob_idx;
+    assign iq_unq_rob_idx_0 = iq_unq_dis_uop[0].rob_idx;
+    assign iq_unq_rob_idx_1 = iq_unq_dis_uop[1].rob_idx;
     assign dis_uop_rob_idx_0 = dis_uops[0].rob_idx;
     assign dis_uop_rob_idx_1 = dis_uops[1].rob_idx;
 endmodule

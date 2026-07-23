@@ -37,6 +37,7 @@ module decode_test_top (
 
     decode dut (
         .inst,
+        .pc(32'b0),
         .status_prv,
         .uop
     );

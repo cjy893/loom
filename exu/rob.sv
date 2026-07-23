@@ -129,15 +129,19 @@ module rob #(
 
     logic block_commit;
     logic block_xcpt;
+    logic exception_throw;
     always_comb begin
-        block_commit = (rob_state !=S_NORMAL && rob_state != S_WAIT_TILL_EMPTY);
+        block_commit = (rob_state !=S_NORMAL && rob_state != S_WAIT_TILL_EMPTY) || exception_throw_d1 || exception_throw_d2;
         block_xcpt = 1'b0;
+        exception_throw = 1'b0;
         will_commit = '0;
 
         for(int w = 0; w < CORE_WIDTH; w++) begin
             can_commit[w] = rob_head_vals[w] && !rob_head_bsy[w] && !csr_stall && !brupdate.b2.mispredict;
             can_throw_exception[w] = rob_head_vals[w] && rob_head_exception[w];
             will_commit[w] = can_commit[w] && !can_throw_exception[w] && !block_commit;
+
+            if(can_throw_exception[w] && !block_commit && !block_xcpt) exception_throw = 1'b1;
 
             if(rob_head_vals[w] && (!can_commit[w] || can_throw_exception[w])) begin
                 block_commit = 1'b1;
@@ -149,7 +153,57 @@ module rob #(
         end
     end
 
-    wire exception_throw = |can_throw_exception & ~block_xcpt;
+    logic [$clog2(CORE_WIDTH)-1:0] xcpt_bank;
+    uop_t xcpt_uop;
+    always_comb begin
+        xcpt_bank = priority_encoder(can_throw_exception);
+        xcpt_uop = rob_uop[xcpt_bank][rob_head];
+    end
+
+    always_comb begin
+        com_xcpt = '0;
+
+        com_xcpt.valid = exception_throw;
+        com_xcpt.pc = xcpt_uop.pc[XLEN-1:0];
+        com_xcpt.ftq_idx = xcpt_uop.ftq_idx;
+        com_xcpt.edge_inst = xcpt_uop.edge_inst;
+        com_xcpt.is_16bit = 1'b0;
+        com_xcpt.pc_lob = xcpt_uop.pc_lob;
+        com_xcpt.cause = xcpt_uop.exc_cause;
+        com_xcpt.badvaddr = '0;
+        com_xcpt.flush_typ = exception_throw ? FT_XCPT : '0;
+    end
+
+    logic [CORE_WIDTH-1:0] flush_commit_mask;
+    logic [$clog2(CORE_WIDTH)-1:0] flush_bank;
+    uop_t flush_uop;
+    always_comb begin
+        for(int w = 0; w < CORE_WIDTH; w++) begin
+            flush_commit_mask[w] = commit.valids[w] && commit.uops[w].flush_on_commit;
+        end
+        flush_bank = priority_encoder(flush_commit_mask);
+        flush_uop = exception_throw ? xcpt_uop : commit.uops[flush_bank];
+    end
+
+    always_comb begin
+        flush = '0;
+
+        flush.valid = exception_throw || (|flush_commit_mask);
+        flush.pc = flush_uop.pc[XLEN-1:0];
+        flush.ftq_idx = flush_uop.ftq_idx;
+        flush.edge_inst = flush_uop.edge_inst;
+        flush.is_16bit = 1'b0;
+        flush.pc_lob = flush_uop.pc_lob;
+
+        if(exception_throw) begin
+            flush.cause = com_xcpt.cause;
+            flush.badvaddr = com_xcpt.badvaddr;
+            flush.flush_typ = FT_XCPT;
+        end else if(flush_uop.is_eret) flush.flush_typ = FT_ERET;
+        else if(|flush_commit_mask) flush.flush_typ = FT_REFETCH;
+    end
+
+    assign flush_frontend = flush.valid;
 
     for(genvar w = 0; w < CORE_WIDTH; w++) begin
         assign commit.valids[w] = will_commit[w];
@@ -158,9 +212,14 @@ module rob #(
     end
 
     logic exception_throw_d1, exception_throw_d2;
-    always_ff @(posedge clk) begin
-        exception_throw_d1 <= exception_throw;
-        exception_throw_d2 <= exception_throw_d1;
+    always_ff @(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            exception_throw_d1 <= 1'b0;
+            exception_throw_d2 <= 1'b0;
+        end else begin
+            exception_throw_d1 <= exception_throw;
+            exception_throw_d2 <= exception_throw_d1;
+        end
     end
 
     wire finished_committing_row = (|commit.valids) && ((will_commit ^ rob_head_vals) == '0);
