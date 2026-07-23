@@ -63,9 +63,9 @@ int main(int argc, char** argv) {
     expect_eq("or", execute(dut, ALU_OR, 0xf0, 0x5a), 0xfa);
     expect_eq("xor", execute(dut, ALU_XOR, 0xf0, 0x5a), 0xaa);
     expect_eq("nor", execute(dut, ALU_NOR, 0xf0, 0x5a), uint32_t(~0xfaU));
-    expect_eq("shift left", execute(dut, ALU_SLL, 4, 3), 48);
-    expect_eq("shift right", execute(dut, ALU_SRL, 4, 0x80), 8);
-    expect_eq("arithmetic shift", execute(dut, ALU_SRA, 4, 0x80000000), 0xf8000000);
+    expect_eq("shift left", execute(dut, ALU_SLL, 3, 4), 48);
+    expect_eq("shift right", execute(dut, ALU_SRL, 0x80, 4), 8);
+    expect_eq("arithmetic shift", execute(dut, ALU_SRA, 0x80000000, 4), 0xf8000000);
     expect_eq("immediate add",
               execute(dut, ALU_ADD, 10, 0, OP1_RS1, OP2_IMM, 5), 15);
     expect_eq("lui", execute(dut, ALU_LUI, 0, 0, OP1_ZERO, OP2_IMM, 0x12345000),

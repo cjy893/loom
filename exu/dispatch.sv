@@ -52,33 +52,36 @@ module dispatch #(
     assign dis_ready = !block;
     assign dis_uops = rn2_uops;
 
-    logic [CORE_WIDTH-1:0] block_fire;
+    int mem_slot, alu_slot, unq_slot;
     always_comb begin
         iq_mem_dis_valid = '0; iq_mem_dis_uop = '0;
         iq_alu_dis_valid = '0; iq_alu_dis_uop = '0;
         iq_unq_dis_valid = '0; iq_unq_dis_uop = '0;
-        block_fire = '0;
 
-        for(int i = 0; i < CORE_WIDTH; i++) begin
-            for(int w = CORE_WIDTH-1; w >= 0; w--) begin
-                if(dis_fire[w] && !block_fire[w]) begin
-                    unique case(rn2_uops[w].iq_type)
-                        IQ_MEM: begin
-                            iq_mem_dis_valid[i] = 1'b1;
-                            iq_mem_dis_uop[i] = rn2_uops[w];
-                        end
-                        IQ_ALU: begin
-                            iq_alu_dis_valid[i] = 1'b1;
-                            iq_alu_dis_uop[i] = rn2_uops[w];
-                        end
-                        IQ_UNQ: begin
-                            iq_unq_dis_valid[i] = 1'b1;
-                            iq_unq_dis_uop[i] = rn2_uops[w];
-                        end
-                    endcase
-                    block_fire[w] = 1'b1;
-                    break;
-                end
+        mem_slot = 0;
+        alu_slot = 0;
+        unq_slot = 0;
+
+        for(int w = 0; w < CORE_WIDTH; w++) begin
+            if(dis_fire[w]) begin
+                unique case(rn2_uops[w].iq_type)
+                    IQ_MEM: begin
+                        iq_mem_dis_valid[mem_slot] = 1'b1;
+                        iq_mem_dis_uop[mem_slot] = rn2_uops[w];
+                        mem_slot++;
+                    end
+                    IQ_ALU: begin
+                        iq_alu_dis_valid[alu_slot] = 1'b1;
+                        iq_alu_dis_uop[alu_slot] = rn2_uops[w];
+                        alu_slot++;
+                    end
+                    IQ_UNQ: begin
+                        iq_unq_dis_valid[unq_slot] = 1'b1;
+                        iq_unq_dis_uop[unq_slot] = rn2_uops[w];
+                        unq_slot++;
+                    end
+                    default:;
+                endcase
             end
         end
     end

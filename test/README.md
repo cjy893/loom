@@ -32,8 +32,8 @@ Current coverage:
   bypass, busy tracking, and release of a committed stale mapping.
 - `issue`: dispatch, ready issue, wakeup, full-queue backpressure, flush,
   misprediction kill, and grant squash/retry.
-- `rob`: two-bank enqueue, out-of-order completion with in-order commit, and
-  pointer wrap.
+- `rob`: two-bank enqueue, out-of-order completion with in-order commit,
+  pointer wrap, precise static exceptions, rollback, refetch, and ERTN flush.
 - `alu`: integer arithmetic, comparisons, logic, shifts, immediate selection,
   ROB identity propagation, early wakeup, and branch resolution.
 - `decode`: real LA32 encodings from `test.s` for integer ALU, immediate,
@@ -49,7 +49,8 @@ Current coverage:
 - `unq`: CSR request/response, signed multiply/divide latency and data, uop
   identity, and kill.
 - `integration`: the existing `tb_verilator.cpp` smoke program through Decode,
-  Rename, Dispatch, Issue, Execute, and ROB commit.
+  Rename, Dispatch, Issue, Execute, and ROB commit, including lane0/lane1
+  serializing CSR instructions and commit-time refetch.
 
 These are directed module tests. They do not yet cover full-width dispatch,
 memory partial issue, exceptions, CSR behavior, or complete branch recovery.
@@ -57,9 +58,9 @@ memory partial issue, exceptions, CSR behavior, or complete branch recovery.
 The runner continues after a failed suite so one RTL failure does not hide
 results from later modules. It returns a nonzero status if any suite fails.
 
-Current known red tests:
+Current status:
 
-- `decode`: the real `b` encoding `0x50fff800` is decoded as `B_JR`/`is_jalr`
-  instead of `B_J`/`is_jal`; `syscall 0x11` reports cause 9 instead of 11.
-- `dispatch`: two same-IQ uops are both marked in `dis_fire`, while the single
-  scalar IQ output can carry only one of them.
+- All directed module tests pass.
+- `dispatch` now packs each IQ independently and preserves program order.
+- Per-slot Issue Queue backpressure is not yet covered by the standalone
+  dispatch test.

@@ -10,6 +10,13 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->enq_ldst_1 = 0;
     dut->enq_busy_0 = 0;
     dut->enq_busy_1 = 0;
+    dut->enq_exception = 0;
+    dut->enq_flush_on_commit = 0;
+    dut->enq_is_eret = 0;
+    dut->enq_exc_cause_0 = 0;
+    dut->enq_exc_cause_1 = 0;
+    dut->enq_pc_0 = 0;
+    dut->enq_pc_1 = 0;
     dut->wb_valid = 0;
     dut->wb_rob_idx_0 = 0;
     dut->wb_rob_idx_1 = 0;
@@ -130,6 +137,81 @@ int main(int argc, char** argv) {
     expect_eq("LSU-cleared younger lane1 identity", dut->commit_ldst_1, 23);
     eval_cycle(dut);
     expect_eq("ROB empty after LSU clears", dut->empty, 1);
+
+    // An older normal instruction commits first. The younger exception then
+    // produces one notification pulse and rolls the speculative ROB back.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_0 = 24;
+    dut->enq_ldst_1 = 25;
+    dut->enq_exception = 2;
+    dut->enq_exc_cause_1 = 13;
+    dut->enq_pc_0 = 0x1c000100;
+    dut->enq_pc_1 = 0x1c000104;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("older instruction commits before exception", dut->commit_valid, 1);
+    expect_eq("exception waits behind older commit", dut->com_xcpt_valid, 0);
+
+    eval_cycle(dut);
+    expect_eq("exception does not commit", dut->commit_valid, 0);
+    expect_eq("exception notification", dut->com_xcpt_valid, 1);
+    expect_eq("exception PC", dut->com_xcpt_pc, 0x1c000104);
+    expect_eq("exception cause", dut->com_xcpt_cause, 13);
+    expect_eq("exception flush", dut->flush_valid, 1);
+    expect_eq("exception flush type", dut->flush_typ, 1);
+    expect_eq("frontend flush pulse", dut->flush_frontend, 1);
+
+    eval_cycle(dut);
+    expect_eq("exception notification is one cycle", dut->com_xcpt_valid, 0);
+    expect_eq("flush notification is one cycle", dut->flush_valid, 0);
+    expect_eq("rollback delay cycle 1", dut->rollback, 0);
+    eval_cycle(dut);
+    expect_eq("rollback delay cycle 2", dut->rollback, 0);
+    eval_cycle(dut);
+    expect_eq("ROB enters rollback", dut->rollback, 1);
+    eval_cycle(dut);
+    expect_eq("ROB empty after exception rollback", dut->empty, 1);
+    expect_eq("ROB leaves rollback", dut->rollback, 0);
+
+    // A successfully committed serialization instruction requests a frontend
+    // refetch; ERTN uses the dedicated return-from-exception flush type.
+    dut->enq_valid = 1;
+    dut->enq_rob_idx_0 = dut->tail_idx;
+    dut->enq_pc_0 = 0x1c000200;
+    dut->enq_flush_on_commit = 1;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("flush-on-commit instruction commits", dut->commit_valid, 1);
+    expect_eq("refetch flush", dut->flush_valid, 1);
+    expect_eq("refetch flush type", dut->flush_typ, 2);
+    expect_eq("refetch frontend flush", dut->flush_frontend, 1);
+    eval_cycle(dut);
+    expect_eq("refetch flush is one cycle", dut->flush_valid, 0);
+
+    dut->enq_valid = 1;
+    dut->enq_rob_idx_0 = dut->tail_idx;
+    dut->enq_pc_0 = 0x1c000204;
+    dut->enq_flush_on_commit = 1;
+    dut->enq_is_eret = 1;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("ERTN instruction commits", dut->commit_valid, 1);
+    expect_eq("ERTN flush", dut->flush_valid, 1);
+    expect_eq("ERTN flush type", dut->flush_typ, 3);
+    expect_eq("ERTN frontend flush", dut->flush_frontend, 1);
+    eval_cycle(dut);
+    expect_eq("ERTN flush is one cycle", dut->flush_valid, 0);
+    expect_eq("ROB empty after commit flush tests", dut->empty, 1);
 
     pass("rob");
     delete dut;

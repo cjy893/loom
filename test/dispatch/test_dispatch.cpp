@@ -31,9 +31,9 @@ int main(int argc, char** argv) {
     expect_eq("different queues both fire", dut->dis_fire, 3);
     expect_eq("different queues packet ready", dut->dis_ready, 1);
     expect_eq("ALU dispatch valid", dut->iq_alu_dis_valid, 1);
-    expect_eq("ALU dispatch identity", dut->iq_alu_rob_idx, 10);
+    expect_eq("ALU dispatch identity", dut->iq_alu_rob_idx_0, 10);
     expect_eq("MEM dispatch valid", dut->iq_mem_dis_valid, 1);
-    expect_eq("MEM dispatch identity", dut->iq_mem_rob_idx, 11);
+    expect_eq("MEM dispatch identity", dut->iq_mem_rob_idx_0, 11);
     expect_eq("dispatch uop 0 preserved", dut->dis_uop_rob_idx_0, 10);
     expect_eq("dispatch uop 1 preserved", dut->dis_uop_rob_idx_1, 11);
 
@@ -44,17 +44,24 @@ int main(int argc, char** argv) {
     expect_eq("blocked ALU output invalid", dut->iq_alu_dis_valid, 0);
     expect_eq("younger MEM output invalid", dut->iq_mem_dis_valid, 0);
 
+    dut->iq_alu_ready = 1;
+    dut->iq_mem_ready = 0;
+    dut->eval();
+    expect_eq("ready oldest fires before blocked younger", dut->dis_fire, 1);
+    expect_eq("partially accepted packet not ready", dut->dis_ready, 0);
+    expect_eq("accepted oldest reaches ALU", dut->iq_alu_dis_valid, 1);
+    expect_eq("blocked younger does not reach MEM", dut->iq_mem_dis_valid, 0);
+
     dut->rn2_mask = 2;
     dut->iq_type_1 = IQ_UNQ;
     dut->iq_unq_ready = 1;
     dut->eval();
     expect_eq("invalid lane 0 does not block lane 1", dut->dis_fire, 2);
     expect_eq("UNQ dispatch valid", dut->iq_unq_dis_valid, 1);
-    expect_eq("UNQ dispatch identity", dut->iq_unq_rob_idx, 11);
+    expect_eq("UNQ dispatch identity", dut->iq_unq_rob_idx_0, 11);
 
-    // A scalar IQ input cannot accept two uops in one cycle. Do not prescribe
-    // packet blocking versus partial acceptance here, but both lanes cannot be
-    // reported consumed while only one uop is observable on the IQ output.
+    // Each IQ now has two dispatch inputs. Same-IQ uops must both be observable
+    // and retain program order in the packed output.
     dut->rn2_mask = 3;
     dut->iq_type_0 = IQ_ALU;
     dut->iq_type_1 = IQ_ALU;
@@ -62,8 +69,10 @@ int main(int argc, char** argv) {
     dut->rob_idx_1 = 21;
     dut->iq_alu_ready = 1;
     dut->eval();
-    expect_true("same IQ scalar output cannot consume both lanes",
-                dut->dis_fire != 3);
+    expect_eq("same IQ lanes both fire", dut->dis_fire, 3);
+    expect_eq("same IQ outputs both valid", dut->iq_alu_dis_valid, 3);
+    expect_eq("same IQ older identity", dut->iq_alu_rob_idx_0, 20);
+    expect_eq("same IQ younger identity", dut->iq_alu_rob_idx_1, 21);
 
     pass("dispatch");
     delete dut;

@@ -8,7 +8,7 @@
 | 常量编码 | `common/consts_pkg.sv` | 完成 |
 | 类型定义 | `common/types_pkg.sv` | 完成 |
 | 译码器 | `exu/decode.sv` | 指令分类完成，CACHE/TLB 子指令细节待补 |
-| ROB | `exu/rob.sv` | 基本框架完成，缺异常输出连接 |
+| ROB | `exu/rob.sv` | 基本提交、静态异常和 flush 完成，动态异常待补 |
 | Map Table | `exu/rename/rename_maptable.sv` | 完成 |
 | Free List | `exu/rename/rename_freelist.sv` | 完成 |
 | Busy Table | `exu/rename/rename_busytable.sv` | 完成 |
@@ -20,13 +20,13 @@
 
 ## ROB 缺口
 
-### 1. 异常处理输出未连接
+### 1. 异常处理输出
 
 | 端口 | 说明 | 需要做什么 |
 |------|------|-----------|
-| `com_xcpt` | 提交异常信号（发给 CSR 文件） | 当 `exception_throw` 时填充 `com_xcpt.cause`, `com_xcpt.badvaddr`, `com_xcpt.ftq_idx`, `com_xcpt.flush_typ` |
-| `flush` | 流水线刷新信号（发往前端） | 异常/flush_on_commit/ertn 时产生，含 `flush_typ` (xcpt/eret/refetch/next) 和重定向 PC 信息 |
-| `flush_frontend` | 提前通知前端即将刷新 | 异常 pending 时拉高，让前端提前停下来 |
+| `com_xcpt` | 已生成静态译码异常的 PC、cause 和 flush 类型 | 后续接入 CSR 文件 |
+| `flush` | 已覆盖异常、flush_on_commit 和 ERTN 类型 | 异常入口和 ERTN 目标仍需真实前端/CSR 提供 |
+| `flush_frontend` | 已连接到临时顶层并阻止继续分发 | 后续接入真实前端 |
 
 ### 2. LSU/CSR 异常输入未使用
 
@@ -174,9 +174,14 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 顶层连线时统一接到 ROB 的 flush 输出（或 `rob.io.flush.valid`）。
 
-### 3. Dispatch 到 Issue Queue 的端口需扩展
+### 3. Dispatch 到 Issue Queue 的打包仍需修正
 
-当前 dispatch 每个 IQ 只有单条输入端口。如果 `dispatchWidth > 1`，需要扩为多端口，否则同周期两条同类型 uop 会丢一条。
+`dispatch.sv` 已改为每个 IQ 两条输入端口，但当前使用全局输出槽号：
+
+- 不同 IQ 同拍分发时，各 IQ 的第一条 uop 不一定落在 slot0。
+- 同一 IQ 双分发时，输出 uop 顺序与程序顺序相反。
+
+`test/dispatch/` 已用红测固定“各 IQ 独立从 slot0 打包且保持程序顺序”的预期。
 
 ## UNQ 执行单元简化项
 
@@ -208,4 +213,4 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 ---
 
-*最后更新: 2026-07-20*
+*最后更新: 2026-07-24*

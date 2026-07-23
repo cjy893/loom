@@ -64,6 +64,7 @@ module boom_core #(
     output logic [CORE_WIDTH-1:0]        ren_stalls_dbg,
     output logic [CORE_WIDTH-1:0]        rn2_mask_dbg,
     output logic [CORE_WIDTH-1:0]        dis_fire_dbg,
+    output logic                         dis_unique_dbg,
     output logic [ALU_WIDTH-1:0]         alu_iss_valid_dbg,
     output logic [ALU_WIDTH-1:0]         alu_res_valid_dbg,
     output logic [NUM_WAKEUPS-1:0]       rob_wb_valid_dbg
@@ -80,8 +81,14 @@ module boom_core #(
     logic [CORE_WIDTH-1:0]       dec_xcpts;
     logic [31:0]                 fetch_pc;
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
-    logic [$clog2(CORE_WIDTH+1)-1:0] accepted_insts;
+    logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        pre_dispatch_ready;
+    logic [CORE_WIDTH-1:0]       fe_buf_valid;
+    logic [CORE_WIDTH-1:0][31:0] fe_buf_insts;
+    logic [CORE_WIDTH-1:0][31:0] fe_buf_pcs;
+    logic [CORE_WIDTH-1:0][31:0] incoming_pcs;
+    logic [$clog2(CORE_WIDTH+1)-1:0] incoming_count;
+    logic                        fe_accept;
 
     logic [CORE_WIDTH-1:0] iq_mem_dis_valid;
     logic [CORE_WIDTH-1:0] iq_alu_dis_valid;
@@ -96,41 +103,83 @@ module boom_core #(
     always_comb begin
         logic [$clog2(CORE_WIDTH+1)-1:0] slot_offset;
 
-        accepted_insts = '0;
-        dec_pcs = '0;
+        incoming_count = '0;
+        incoming_pcs = '0;
         slot_offset = '0;
         for (int w = 0; w < CORE_WIDTH; w++) begin
-            dec_pcs[w] = fetch_pc + (32'(slot_offset) << 2);
-            if (dec_valids[w])
+            incoming_pcs[w] = fetch_pc + (32'(slot_offset) << 2);
+            if (fe_valid[w]) begin
                 slot_offset += 1'b1;
-            accepted_insts += dec_fire[w];
+                incoming_count += 1'b1;
+            end
         end
     end
 
+    assign fe_ready = (fe_buf_valid == '0) &&
+                      rob_ready_w && !rob_flush_frontend_w;
+    assign fe_accept = fe_ready && (|fe_valid[CORE_WIDTH-1:0]);
+
     always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n)
+        if (!rst_n) begin
             fetch_pc <= 32'h1c00_0000;
-        else if (|dec_fire)
-            fetch_pc <= fetch_pc + (32'(accepted_insts) << 2);
+            fe_buf_valid <= '0;
+            fe_buf_insts <= '0;
+            fe_buf_pcs <= '0;
+        end else if (rob_flush_w.valid) begin
+            fe_buf_valid <= '0;
+            if (rob_flush_w.flush_typ == FT_REFETCH)
+                fetch_pc <= rob_flush_w.pc + 32'd4;
+        end else begin
+            fe_buf_valid <= fe_buf_valid & ~dec_fire;
+            if (fe_accept) begin
+                fe_buf_valid <= fe_valid[CORE_WIDTH-1:0];
+                for (int w = 0; w < CORE_WIDTH; w++) begin
+                    fe_buf_insts[w] <= fe_insts[w];
+                    fe_buf_pcs[w] <= incoming_pcs[w];
+                end
+                fetch_pc <= fetch_pc + (32'(incoming_count) << 2);
+            end
+        end
     end
 
-    // 前端 fetch packet → decode: 取 CORE_WIDTH 条有效指令
+    // The input packet is buffered so a serializing instruction can consume
+    // one lane while the remaining lane stays pending.
     for (genvar w = 0; w < CORE_WIDTH; w++) begin : gen_decode
-        logic dec_valid;
-        assign dec_valid = (w < FETCH_WIDTH) ? fe_valid[w] : 1'b0;
-
         decode decode_inst (
-            .inst       (fe_insts[w]),
-            .pc         (dec_pcs[w]),
+            .inst       (fe_buf_insts[w]),
+            .pc         (fe_buf_pcs[w]),
             .status_prv (2'b00),
             .uop        (dec_uops_raw[w])
         );
 
-        assign dec_valids[w] = dec_valid;
+        assign dec_valids[w] = fe_buf_valid[w];
+        assign dec_pcs[w] = fe_buf_pcs[w];
     end
 
-    assign dec_fire  = dec_valids & {CORE_WIDTH{dec_ready}};
-    assign fe_ready  = dec_ready;
+    // A unique uop waits for an empty ROB and cannot share a dispatch cycle
+    // with an older or younger valid lane.
+    always_comb begin
+        logic prior_valid;
+        logic prior_unique;
+
+        dec_lane_eligible = '0;
+        prior_valid = 1'b0;
+        prior_unique = 1'b0;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_valids[w]) begin
+                if (!prior_unique &&
+                    (!dec_uops_raw[w].is_unique ||
+                     (rob_empty && !prior_valid)))
+                    dec_lane_eligible[w] = 1'b1;
+
+                prior_valid |= dec_valids[w];
+                prior_unique |= dec_uops_raw[w].is_unique;
+            end
+        end
+    end
+
+    assign dec_fire  = dec_valids & dec_lane_eligible &
+                       {CORE_WIDTH{dec_ready}};
     assign dec_ready = pre_dispatch_ready && !(|rn_stalls);
 
     // ================================================================
@@ -170,10 +219,10 @@ module boom_core #(
         alu_count = 0;
         mem_count = 0;
         unq_count = 0;
-        pre_dispatch_ready = rob_ready_w;
+        pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
-            if (dec_valids[w]) begin
+            if (dec_valids[w] && dec_lane_eligible[w]) begin
                 if (bm_is_full[w])
                     pre_dispatch_ready = 1'b0;
 
@@ -579,7 +628,10 @@ module boom_core #(
     logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
     logic [ROB_ADDR_SZ-1:0]            rob_head_idx_w;
     exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
+    commit_exception_signals_t          rob_com_xcpt_w;
+    commit_exception_signals_t          rob_flush_w;
     logic                               rob_rollback_w;
+    logic                               rob_flush_frontend_w;
     logic                               rob_ready_w;
 
     assign rob_enq_valids = dis_fire;
@@ -608,17 +660,17 @@ module boom_core #(
         .csr_replay ('0),
         .csr_stall  (1'b0),
         .commit     (commit),
-        .com_xcpt   (),
-        .flush      (),
+        .com_xcpt   (rob_com_xcpt_w),
+        .flush      (rob_flush_w),
         .empty      (rob_empty),
         .ready      (rob_ready_w),
         .rollback   (rob_rollback_w),
-        .flush_frontend(),
+        .flush_frontend(rob_flush_frontend_w),
         .rob_head_idx(rob_head_idx_w),
         .rob_pnr_idx()
     );
 
-    assign bm_flush = rob_rollback_w;
+    assign bm_flush = rob_rollback_w || rob_flush_w.valid;
 
     // ================================================================
     // 分支更新
@@ -693,6 +745,11 @@ module boom_core #(
     assign ren_stalls_dbg = rn_stalls;
     assign rn2_mask_dbg = rn2_mask;
     assign dis_fire_dbg = dis_fire;
+    always_comb begin
+        dis_unique_dbg = 1'b0;
+        for (int w = 0; w < CORE_WIDTH; w++)
+            dis_unique_dbg |= dis_fire[w] && dis_uops_w[w].is_unique;
+    end
     assign alu_iss_valid_dbg = alu_iss_valid;
     assign alu_res_valid_dbg = alu_res_valid;
     for (genvar d = 0; d < NUM_WAKEUPS; d++)

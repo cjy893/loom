@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
 
     decode(dut, 0xffffffff);
     expect_eq("illegal instruction exception", dut->exception, 1);
-    expect_eq("illegal instruction cause", dut->exc_cause, 2);
+    expect_eq("illegal instruction cause", dut->exc_cause, 13);
 
     if (failures != 0) {
         std::fprintf(stderr, "FAIL: decode: %u checks failed\n", failures);
