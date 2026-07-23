@@ -11,6 +11,7 @@ module rename_stage #(
     input logic clk,
     input logic rst_n,
 
+    input logic [CORE_WIDTH-1:0] dec_valids,
     input logic [CORE_WIDTH-1:0] dec_fire,
     input uop_t [CORE_WIDTH-1:0] dec_uops,
 
@@ -36,6 +37,7 @@ module rename_stage #(
     localparam int LREG_SZ = $clog2(LOGICAL_REGS);
     localparam int PREG_SZ = $clog2(PHYSICAL_REGS);
     localparam int NUM_READS = 3 * CORE_WIDTH;
+    localparam int ALLOC_COUNT_W = $clog2(CORE_WIDTH+1);
 
     logic [NUM_READS-1:0] mt_read_en;
     logic [NUM_READS-1:0] [LREG_SZ-1:0] mt_lreg;
@@ -52,6 +54,8 @@ module rename_stage #(
     logic [CORE_WIDTH-1:0] [PREG_SZ-1:0] fl_alloc_preg;
     logic [CORE_WIDTH-1:0] fl_free_en;
     logic [CORE_WIDTH-1:0] [PREG_SZ-1:0] fl_free_preg;
+    logic [ALLOC_COUNT_W-1:0] alloc_need;
+    logic [ALLOC_COUNT_W-1:0] fl_free_count;
     logic fl_busy;
 
     logic [NUM_READS-1:0] bt_read_en;
@@ -97,6 +101,7 @@ module rename_stage #(
         .free_preg(fl_free_preg),
         .rollback(rollback),
         .rollback_busy_vec(mt_arch_busy_vec),
+        .free_count(fl_free_count),
         .busy(fl_busy)
     );
 
@@ -119,6 +124,13 @@ module rename_stage #(
     );
 
     always_comb begin
+        alloc_need = '0;
+        for(int w = 0; w < CORE_WIDTH; w++) begin
+            if(dec_valids[w] && dec_uops[w].ldst != '0 && dec_uops[w].dst_rtype != RT_X) alloc_need = alloc_need + ALLOC_COUNT_W'(1);
+        end
+    end
+
+    always_comb begin
         mt_read_en = '0; mt_lreg = '0;
         mt_write_en = '0; mt_write_lreg = '0; mt_write_preg = '0;
         mt_commit_en = '0; mt_commit_lreg = '0; mt_commit_preg = '0;
@@ -139,7 +151,7 @@ module rename_stage #(
 
             mt_read_en[3*w+0] = dec_uops[w].lrs1_rtype == RT_FIX;
             mt_lreg[3*w+0] = dec_uops[w].lrs1;
-            mt_read_en[3*w+1] = dec_uops[w].lrs1_rtype == RT_FIX;
+            mt_read_en[3*w+1] = dec_uops[w].lrs2_rtype == RT_FIX;
             mt_lreg[3*w+1] = dec_uops[w].lrs2;
             mt_read_en[3*w+2] = (dec_uops[w].ldst != '0);
             mt_lreg[3*w+2] = dec_uops[w].ldst;
@@ -164,7 +176,7 @@ module rename_stage #(
             rn2_uops[w].pdst = fl_alloc_en[w] ? fl_alloc_preg[w] : '0;
             rn2_uops[w].stale_pdst = mt_preg[3*w+2];
             rn2_uops[w].prs1_busy = dec_uops[w].lrs1_rtype == RT_FIX ? bt_busy[3*w+0] : 1'b0;
-            rn2_uops[w].prs2_busy = dec_uops[w].lrs1_rtype == RT_FIX ? bt_busy[3*w+1] : 1'b0;
+            rn2_uops[w].prs2_busy = dec_uops[w].lrs2_rtype == RT_FIX ? bt_busy[3*w+1] : 1'b0;
             rn2_mask[w] = 1'b1;
         end
     
@@ -181,5 +193,5 @@ module rename_stage #(
     end
     // Stall is a resource condition; the caller combines it with instruction
     // valid to form fire. Keeping it independent avoids a ready/fire loop.
-    assign rn_stalls = {CORE_WIDTH{fl_busy || !dis_ready}};
+    assign rn_stalls = {CORE_WIDTH{!dis_ready || (alloc_need > fl_free_count)}};
 endmodule

@@ -85,6 +85,39 @@ int main(int argc, char** argv) {
     dut->eval();
     expect_eq("committed stale register reused", dut->out_pdst_0, 13);
 
+    // Exhaust all but one free register. A two-destination packet must stall
+    // instead of assigning p0 to its second lane.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+    for (int pair = 0; pair < 7; pair++) {
+        dut->in_valid = 3;
+        dut->in_ldst_0 = 1;
+        dut->in_ldst_1 = 2;
+        dut->eval();
+        expect_eq("free-list pair does not stall", dut->stalls, 0);
+        expect_eq("free-list lane0 allocation", dut->out_pdst_0, 32 + 2 * pair);
+        expect_eq("free-list lane1 allocation", dut->out_pdst_1, 33 + 2 * pair);
+        eval_cycle(dut);
+    }
+
+    dut->in_valid = 1;
+    dut->eval();
+    expect_eq("fifteenth allocation does not stall", dut->stalls, 0);
+    expect_eq("fifteenth allocation", dut->out_pdst_0, 46);
+    eval_cycle(dut);
+
+    dut->in_valid = 3;
+    dut->eval();
+    expect_eq("two allocations with one free register stall", dut->stalls, 3);
+    expect_eq("stalled packet does not rename", dut->out_valid, 0);
+
+    dut->in_valid = 1;
+    dut->eval();
+    expect_eq("one allocation with one free register proceeds", dut->stalls, 0);
+    expect_eq("last physical register allocation", dut->out_pdst_0, 47);
+
     pass("rename");
     delete dut;
     return 0;

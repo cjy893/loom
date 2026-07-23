@@ -18,6 +18,10 @@ module rob_test_top (
     input  logic [5:0] wb_rob_idx_0,
     input  logic [5:0] wb_rob_idx_1,
 
+    input  logic [1:0] lsu_clr_bsy_valid,
+    input  logic [2:0] lsu_clr_bsy_addr_0,
+    input  logic [2:0] lsu_clr_bsy_addr_1,
+
     output logic [5:0] tail_idx,
     output logic [5:0] head_idx,
     output logic       ready,
@@ -28,6 +32,7 @@ module rob_test_top (
 );
     uop_t [1:0] enq_uops;
     exe_unit_resp_t [1:0] wb_resps;
+    logic [1:0][2:0] lsu_clr_bsy_addr;
     commit_signal_t commit;
     br_update_info_t brupdate;
 
@@ -47,6 +52,8 @@ module rob_test_top (
         wb_resps[0].uop.rob_idx = wb_rob_idx_0;
         wb_resps[1].valid = wb_valid[1];
         wb_resps[1].uop.rob_idx = wb_rob_idx_1;
+        lsu_clr_bsy_addr[0] = lsu_clr_bsy_addr_0;
+        lsu_clr_bsy_addr[1] = lsu_clr_bsy_addr_1;
         brupdate = '0;
     end
 
@@ -64,8 +71,8 @@ module rob_test_top (
         .enq_partial_stall(1'b0),
         .rob_tail_idx(tail_idx),
         .wb_resps,
-        .lsu_clr_bsy_valid('0),
-        .lsu_clr_bsy_addr('0),
+        .lsu_clr_bsy_valid,
+        .lsu_clr_bsy_addr,
         .brupdate,
         .lxcpt('0),
         .csr_replay('0),

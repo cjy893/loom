@@ -14,10 +14,12 @@ module rename_freelist #(
 
     input logic rollback,
     input logic [PHYSICAL_REGS-1:0] rollback_busy_vec,
+    output logic [$clog2(ALLOC_PORTS+1)-1:0] free_count,
 
     output logic busy
 );
     localparam int PREG_SZ = $clog2(PHYSICAL_REGS);
+    localparam int FREE_COUNT_W = $clog2(ALLOC_PORTS+1);
 
     function automatic logic [PREG_SZ-1:0] priority_encoder(logic [PHYSICAL_REGS-1:0] vec);
         for(int i = 1; i < PHYSICAL_REGS; i++) begin
@@ -27,7 +29,15 @@ module rename_freelist #(
     endfunction
 
     logic [PHYSICAL_REGS-1:0] free_vec;
-    assign busy = ~(|free_vec[PHYSICAL_REGS-1:1]);
+    assign busy = (free_count == '0);
+
+    always_comb begin
+        free_count = '0;
+
+        for(int i = 1; i < PHYSICAL_REGS; i++) begin
+            if(free_vec[i] && free_count < FREE_COUNT_W'(ALLOC_PORTS)) free_count = free_count + FREE_COUNT_W'(1);
+        end
+    end
 
     logic [ALLOC_PORTS-1:0] [PREG_SZ-1:0] alloc_cand;
     always_comb begin
