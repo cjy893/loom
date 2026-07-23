@@ -1,0 +1,26 @@
+[TB] Reset done @ 20
+[    0] Feed inst[1] = 0x028005ad
+[    0] DEBUG: fe_ready=1 rob_empty=0 rob_ready=1 ren_stalls=0 rn2_mask=1 dis_fire=1 alu_iss=1 alu_res=0 rob_wb=0
+[    1] Feed inst[2] = 0x028005ad
+[    2] Feed inst[3] = 0x00100019
+[    2] REGWR: r0 pdst=0 data=0 rs1=0 imm=0 imm_p=0 imm_s=0
+[    3] Feed inst[4] = 0x0380040c
+[    3] REGWR: r13 pdst=32 data=1 rs1=1 imm=1 imm_p=1 imm_s=0
+[    3] COMMIT: r0
+[    4] Feed inst[5] = 0x03400000
+[    4] COMMIT: r13
+[    5] Feed inst[6] = 0x03400000
+[    5] REGWR: r13 pdst=33 data=2 rs1=0 imm=0 imm_p=0 imm_s=0
+[    6] Feed inst[7] = 0x03400000
+[    6] REGWR: r12 pdst=35 data=1 rs1=0 imm=0 imm_p=0 imm_s=0
+[    6] COMMIT: r13
+[    7] REGWR: r0 pdst=0 data=0 rs1=0 imm=0 imm_p=0 imm_s=0
+[    7] COMMIT: r25
+[    8] REGWR: r0 pdst=0 data=0 rs1=0 imm=0 imm_p=0 imm_s=0
+[    8] COMMIT: r12
+[    9] REGWR: r0 pdst=0 data=0 rs1=0 imm=0 imm_p=0 imm_s=0
+[    9] COMMIT: r0
+[   10] COMMIT: r0
+[   11] COMMIT: r0
+[   12] ROB empty: commits=8 r13=2 r25=0 r12=1 — PASS
+[TB] Sim complete @ 66

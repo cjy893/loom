@@ -1,0 +1,211 @@
+# LOOM (LA32 Out-of-Order Processor) — 功能缺口记录
+
+## 已完成模块
+
+| 模块 | 文件 | 状态 |
+|------|------|------|
+| 参数定义 | `common/params_pkg.sv` | 完成 |
+| 常量编码 | `common/consts_pkg.sv` | 完成 |
+| 类型定义 | `common/types_pkg.sv` | 完成 |
+| 译码器 | `exu/decode.sv` | 指令分类完成，CACHE/TLB 子指令细节待补 |
+| ROB | `exu/rob.sv` | 基本框架完成，缺异常输出连接 |
+| Map Table | `exu/rename/rename_maptable.sv` | 完成 |
+| Free List | `exu/rename/rename_freelist.sv` | 完成 |
+| Busy Table | `exu/rename/rename_busytable.sv` | 完成 |
+| Rename Stage | `exu/rename/rename_stage.sv` | 完成 |
+| Dispatch | `exu/dispatch.sv` | 完成（单端口，待扩多端口） |
+| Issue Slot | `exu/issue/issue_slot.sv` | 基本完成，优化项见下 |
+
+---
+
+## ROB 缺口
+
+### 1. 异常处理输出未连接
+
+| 端口 | 说明 | 需要做什么 |
+|------|------|-----------|
+| `com_xcpt` | 提交异常信号（发给 CSR 文件） | 当 `exception_throw` 时填充 `com_xcpt.cause`, `com_xcpt.badvaddr`, `com_xcpt.ftq_idx`, `com_xcpt.flush_typ` |
+| `flush` | 流水线刷新信号（发往前端） | 异常/flush_on_commit/ertn 时产生，含 `flush_typ` (xcpt/eret/refetch/next) 和重定向 PC 信息 |
+| `flush_frontend` | 提前通知前端即将刷新 | 异常 pending 时拉高，让前端提前停下来 |
+
+### 2. LSU/CSR 异常输入未使用
+
+| 端口 | 说明 | 需要做什么 |
+|------|------|-----------|
+| `lxcpt` | LSU 发来的 load/store 异常 | 在 always_ff 中标记 `rob_exception[bank][row] <= 1'b1`，记录最老的异常 uop |
+| `csr_replay` | CSR 指令需要重放 | 同上，CSR 读-修改-写冲突时需要 flush 并重试 |
+
+### 3. 异常跟踪机制
+
+- 需要寄存器 `r_xcpt_val`, `r_xcpt_uop`, `r_xcpt_badvaddr` 存储最老的未决异常
+- 异常只能从 head 抛出（最老的在最前面）
+- mini-exception（mem ordering/CSR replay）触发 flush 但不写 CSR
+- 异常和 flush_on_commit 不能同时发生（同一周期只抛一个）
+
+### 4. 小缺口
+
+| 项目 | 说明 |
+|------|------|
+| `next_rob_state` | 声明了没用，死代码 |
+| commit 时的 `debug_wdata` | trace/debug 用的写回数据存储器未实现 |
+| `com_load_is_at_rob_head` | 端口未声明——LSU 需要知道 head 是否是 load（某些 load 只能在 head 时发射） |
+| `rob_uop` 存储优化 | 当前存储完整 `uop_t`（~700bit），后续可以压缩为只存提交需要的字段 |
+
+---
+
+## Decode 缺口
+
+### 1. CACHE/TLB 子指令未细分
+
+当前 `INSTR_CACHE` 只处理了 ERTN 和 CACOP，以下子指令的 uop 字段未填充：
+
+| 指令 | 编码 | 需要设什么 |
+|------|------|-----------|
+| TLBSRCH | `32'h0648_2800` | `fu_code[FC_CSR]=1`, TLB 查找操作 |
+| TLBRD | `32'h0648_2c00` | `fu_code[FC_CSR]=1`, TLB 读 |
+| TLBWR | `32'h0648_3000` | `fu_code[FC_CSR]=1`, TLB 写 |
+| TLBFILL | `32'h0648_3400` | `fu_code[FC_CSR]=1`, TLB 填充 |
+| INVTLB | `inst[31:15]==17'b00000110010010011` | `fu_code[FC_CSR]=1`, 无效化 TLB 条目 |
+| IDLE | `32'h0648_8000` | `is_unique=1`, 等中断 |
+| DBAR | `inst[31:15]==17'b00111000011100100` | `is_fence=1`, 数据屏障 |
+| IBAR | `inst[31:15]==17'b00111000011100101` | `is_fencei=1`, 指令屏障 |
+
+### 2. 特权级检查未实现
+
+- 当前 `status_prv` 输入声明了但未使用
+- CSR 指令在非内核态（prv!=0）时应标记 `exception`
+- CACHE/TLB 特权指令同上
+
+---
+
+## uop_t 缺口
+
+| 字段 | 说明 |
+|------|------|
+| `iw_p1_speculative_child` / `iw_p2_speculative_child` | Issue Queue squash 逻辑需要，当前 decode 未填 |
+| `iw_p1_bypass` / `iw_p2_bypass` / `iw_p3_bypass` | bypass 网络提示，当前 decode 未填 |
+| `ppred` | 谓词预测（SFB 优化），当前未使用 |
+| `fcn_dw` | 双字操作标记，LA32 下始终为 0 |
+| `imm_rename` | 立即数重命名，当前未使用 |
+
+---
+
+## Issue Slot 优化项
+
+以下功能不影响基本乱序执行正确性，属于性能/优化项：
+
+| 项目 | 说明 | 何时需要 |
+|------|------|---------|
+| `bypass_hint` | 唤醒时标记操作数可从 bypass 网络获取，省去 regfile 读端口 | 性能优化时补（结果功能正确，只是多读一次 regfile） |
+| `speculative_child` + `rebusy` | 投机唤醒后若生产者被 branch flush，消费者需重新标记 busy | **启用投机唤醒前必须补**，否则被误唤醒的消费者可能读到错误数据 |
+| `pred_wakeup_port` | SFB 谓词化优化的唤醒端口 | SFB 启用时补 |
+| `squash_grant` | 发射后因资源冲突被 squash，防止重复发射 | Issue Unit 写完后补 |
+
+## Issue Unit 优化项
+
+| 项目 | 说明 | 何时需要 |
+|------|------|---------|
+| 移位压缩网络 | 当前用简单填坑式 compaction（找到一个空位放一个），BOOM 用的是双向移位网络——快槽一次移多位、慢槽一次移一位，dispatch 吞吐更高 | 性能优化时补 |
+| `fu_types` 端口匹配 | 当前同 IQ 内所有槽位对任意 issue 端口兼容，未按 FU 类型区分。有多个不同 FU 共享 IQ 时需要区分 | 执行单元写完后补 |
+| dispatch→slot 流水寄存器 | 当前 dispatch 组合逻辑直连 slot 输入，时序路径较长（compaction + slot CAM）。加寄存器切一拍可改善频率 | 时序收敛时补 |
+
+## ALU 执行单元简化项
+
+| 项目 | 说明 | 何时需要 |
+|------|------|---------|
+| `OP1_PC` 未连接 | ALU 内部 `OP1_PC` 分支 op1='0，`pcaddu12i` 等指令的 PC 值需由顶层填入 `rs1_data` | `boom_core.sv` 连线时处理 |
+| 立即数扩展在顶层 | 当前 `imm_data` 由顶层扩展好喂入（IS_I/IS_S/IS_U 等），未在 ALU 内部扩展 | `boom_core.sv` 连线时处理 |
+| JAL/JALR 强制 mispredict | 无条件跳转始终 `mispredict=1`，因为没有分支预测器验证目标地址。前端+FTQ 写完后改为比较预测目标 vs 实际目标 | 前端+FTQ 写完后改 |
+| `br_mask` 更新未做 | `res.uop.br_mask` 未用 `GetNewBrMask(brupdate)` 清已解析分支位。不影响功能（提交或 flush 时会清），但多占用 br_tag 槽位 | 后续优化 |
+| `squash_iss` / `child_rebusy` / `pred_wakeup` | 省略。跟 issue_slot 优化项对应，等 issue_slot 补齐后同步加 | issue_slot 优化项完成后补 |
+
+## 立即数扩展规范
+
+`decode` 对每条指令只生成 `imm_sel`（扩展类型）和 `imm_packed`（原始未扩展的立即数）。实际 32 位立即数的扩展在 `boom_core.sv` 顶层完成后再喂给执行单元。规则如下：
+
+| `imm_sel` | 意义 | 原始位宽 | 扩展方式 |
+|-----------|------|---------|---------|
+| `IS_I` | I 型 12 位 | `imm_packed[11:0]` | `{{20{imm[11]}}, imm[11:0]}` |
+| `IS_S` | S 型 12 位 | `imm_packed[11:0]` | `{{20{imm[11]}}, imm[11:0]}` |
+| `IS_B` | B 型 16 位 | `imm_packed[15:0]` | `{{16{imm[15]}}, imm[15:0]}` |
+| `IS_U` | U 型 20 位 | `imm_packed[19:0]` | `{imm[19:0], 12'b0}` |
+| `IS_J` | J 型 26 位 | `imm_packed[25:0]` | `{{6{imm[25]}}, imm[25:0]}` |
+| `IS_SH` | 5 位移位量 | `imm_packed[4:0]` | `{27'b0, imm[4:0]}` |
+| `IS_N` | 无立即数 | — | `32'b0` |
+| `IS_F3` | CSR 地址 | `imm_packed[13:0]` | `{18'b0, imm[13:0]}` |
+
+另外 `I20` 类指令的 20 位立即数移位同理：`imm_data = {i20, 12'b0}`，`imm_sel = IS_U`。
+
+### 验证：跟备份代码的对应关系
+
+| 备份信号 | 备份计算 | 我们的等价逻辑 |
+|---------|---------|--------------|
+| `i12_extend` | `SignExt ? sign : zero` | IS_I + 顶层 sign-ext |
+| `i20_sllD` | `{i20, 12'b0}` | IS_U + `imm_packed[19:0] = i20` |
+| `offs_26_extend` | `{6{bit25}, offs_26}` | IS_J + `imm_packed[25:0] = offs_26` |
+| `offs_16_extend` | `{16{bit15}, offs_16}` | IS_B + `imm_packed[15:0] = offs_16` |
+
+---
+
+---
+
+## 顶层连线注意事项
+
+写 `boom_core.sv` 时必须处理的接口对接：
+
+### 1. `br_tag` / `br_mask` 灌入 uop
+
+`br_mask` 模块和 `decode` 是独立的。decode 出的 uop 里 `br_tag`=0, `br_mask`=0。需要在 decode 之后、rename 之前用 `br_mask` 的输出填入：
+
+```systemverilog
+// boom_core.sv 中
+dec_uops[w].br_tag  = br_mask_inst.br_tag[w];
+dec_uops[w].br_mask = br_mask_inst.br_mask[w];
+```
+
+### 2. flush/kill 信号统一命名
+
+| 模块 | 当前端口名 |
+|------|-----------|
+| ROB | `flush` |
+| rename_stage | `kill` |
+| issue_slot | `kill` |
+| br_mask | `flush_pipeline` |
+
+顶层连线时统一接到 ROB 的 flush 输出（或 `rob.io.flush.valid`）。
+
+### 3. Dispatch 到 Issue Queue 的端口需扩展
+
+当前 dispatch 每个 IQ 只有单条输入端口。如果 `dispatchWidth > 1`，需要扩为多端口，否则同周期两条同类型 uop 会丢一条。
+
+## UNQ 执行单元简化项
+
+| 项目 | 说明 | 何时需要 |
+|------|------|---------|
+| DIV 组合除法器 | 当前 `$signed(a) / $signed(b)` 综合出巨大的组合除法器，面积和时序均不可接受 | 替换为迭代除法器 |
+| MUL/DIV 操作码不全 | `mulh.w`/`mulh.wu`（取高 32 位）、`div.wu`（无符号除）、`mod.w`/`mod.wu`（取余）未区分 | 完善乘除法单元时补 |
+| DIV 拍数固定 | 当前固定 5 拍，实际应随操作数宽度动态变化 | 迭代除法器自带变长 |
+| 无 fast wakeup | 多周期操作不拉快速 bypass，MUL/DIV 结果多等一拍 | 性能优化 |
+| `pipe_uop` 在 `kill` 时未刷新 | 多周期执行中发生 flush，`pipe_uop` 不会清。`res_valid` 已被 `state` 归零挡住 | 无害，可优化 |
+
+---
+
+## 待写模块（按依赖顺序）
+
+```
+[  ] rob.sv            — 补异常输出
+[✓] rename/           — 寄存器重命名 (maptable + freelist + busytable + stage)
+[✓] dispatch.sv       — 分发到 Issue Queue
+[✓] issue_slot.sv     — 单槽位 (优化项见上)
+[  ] issue_unit.sv    — 发射队列 (唤醒 + 选择)
+[✓] branch_mask.sv     — 分支标签分配 + br_mask 生成
+[  ] alu_exe_unit.sv / mem_exe_unit.sv / unq_exe_unit.sv — 执行单元
+[  ] regfile_banked.sv — 物理寄存器文件
+[  ] frontend.sv + ftq.sv + fetch_buffer.sv + bpd/* — 前端 + 分支预测
+[  ] lsu.sv + dcache.sv — 访存单元
+[  ] boom_core.sv     — 顶层连线
+```
+
+---
+
+*最后更新: 2026-07-20*

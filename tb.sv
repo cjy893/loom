@@ -1,0 +1,237 @@
+`timescale 1ns / 1ps
+
+module tb;
+    import loom_params::*;
+    import loom_consts::*;
+    import loom_types::*;
+
+    logic clk;
+    logic rst_n;
+
+    // ── 前端 ──
+    logic [FETCH_WIDTH-1:0]         fe_valid;
+    logic [FETCH_WIDTH-1:0][31:0]   fe_insts;
+    logic                           fe_ready;
+
+    // ── LSU stub ──
+    logic                           lsu_agen_valid;
+    logic [31:0]                    lsu_agen_addr;
+    uop_t                           lsu_agen_uop;
+    logic                           lsu_dgen_valid;
+    logic [31:0]                    lsu_dgen_data;
+    uop_t                           lsu_dgen_uop;
+    logic                           lsu_resp_valid;
+    exe_unit_resp_t                 lsu_resp;
+
+    // ── CSR stub ──
+    logic                           csr_req_valid;
+    logic [13:0]                    csr_addr;
+    logic [1:0]                     csr_cmd;
+    logic [31:0]                    csr_wdata;
+    logic [31:0]                    csr_rdata;
+
+    // ── 提交 ──
+    commit_signal_t                 commit;
+
+    // ── 调试 ──
+    logic                           rob_empty;
+    logic [31:0]                    debug_pc;
+
+    // ================================================================
+    // DUT
+    // ================================================================
+    boom_core dut (
+        .clk(clk), .rst_n(rst_n),
+        .fe_valid, .fe_insts, .fe_ready,
+        .lsu_agen_valid, .lsu_agen_addr, .lsu_agen_uop,
+        .lsu_dgen_valid, .lsu_dgen_data, .lsu_dgen_uop,
+        .lsu_resp_valid, .lsu_resp,
+        .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_rdata,
+        .commit,
+        .rob_empty, .debug_pc
+    );
+
+    // ================================================================
+    // 时钟
+    // ================================================================
+    initial clk = 0;
+    always #5 clk = ~clk;   // 100 MHz
+
+    // ================================================================
+    // 复位
+    // ================================================================
+    initial begin
+        rst_n = 0;
+        fe_valid = '0;
+        fe_insts = '0;
+        lsu_resp_valid = 1'b0;
+        lsu_resp = '0;
+        csr_rdata = '0;
+        repeat (10) @(posedge clk);
+        rst_n = 1;
+        repeat (5) @(posedge clk);
+        $display("[TB] Reset done, starting test");
+    end
+
+    // ================================================================
+    // 简易指令存储器：LA32 指令 hex
+    // 用户填入自己的指令编码
+    // ================================================================
+    localparam int PROG_SIZE = 16;
+    logic [31:0] prog_mem [0:PROG_SIZE-1];
+
+    initial begin
+        // ── 程序：来自 test.s 反汇编的真实 LA32 指令 ──
+        // addi.w $r12, $r0, -1   = 0x02bffc0c
+        // addi.w $r13, $r13, 1   = 0x028005ad
+        // add.w  $r25, $r0, $r0  = 0x00100019  (r25 = 0)
+        // add.w  $r15, $r17, $r18= 0x00104a2f  (r15 = r17 + r18)
+        // lu12i.w $r12, -524288  = 0x1500000c
+        // andi   $r0, $r0, 0x0   = 0x03400000  (NOP)
+        // ori    $r12, $r0, 0x1  = 0x0380040c
+        // b      28               = 0x50001c00
+        // syscall 0x11            = 0x002b0011
+        prog_mem[0]  = 32'h03400000;  // andi r0, r0, 0 → NOP (warmup)
+        prog_mem[1]  = 32'h028005ad;  // addi.w r13, r13, 1
+        prog_mem[2]  = 32'h028005ad;  // addi.w r13, r13, 1
+        prog_mem[3]  = 32'h00100019;  // add.w r25, r0, r0
+        prog_mem[4]  = 32'h0380040c;  // ori r12, r0, 0x1
+        prog_mem[5]  = 32'h03400000;  // NOP
+        prog_mem[6]  = 32'h03400000;  // NOP
+        prog_mem[7]  = 32'h03400000;  // NOP
+        prog_mem[8]  = 32'h03400000;  // NOP
+        prog_mem[9]  = 32'h03400000;  // NOP
+        prog_mem[10] = 32'h03400000;  // NOP
+        prog_mem[11] = 32'h03400000;  // NOP
+        prog_mem[12] = 32'h03400000;  // NOP
+        prog_mem[13] = 32'h03400000;  // NOP
+        prog_mem[14] = 32'h03400000;  // NOP
+        prog_mem[15] = 32'h03400000;  // NOP
+    end
+
+    // ================================================================
+    // 前端：逐条喂指令
+    // ================================================================
+    int pc;
+    initial begin
+        pc = 0;
+        @(posedge rst_n);         // 等复位释放
+        repeat (2) @(posedge clk);
+
+        while (pc < PROG_SIZE) begin
+            @(posedge clk);
+            if (fe_ready) begin
+                fe_valid[0] <= 1'b1;
+                fe_insts[0] <= prog_mem[pc];
+                pc <= pc + 1;
+                $display("[TB] Feed inst[%0d] = 0x%08h", pc, prog_mem[pc]);
+            end else begin
+                fe_valid[0] <= 1'b0;
+            end
+        end
+        fe_valid[0] <= 1'b0;
+    end
+
+    // ================================================================
+    // LSU stub：load 返回 0，store 不报错
+    // ================================================================
+    logic [31:0] lsu_resp_data;
+    uop_t        lsu_resp_uop;
+    logic [4:0]  lsu_delay_cnt;
+    logic        lsu_pending;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            lsu_resp_valid <= 1'b0;
+            lsu_pending    <= 1'b0;
+            lsu_delay_cnt  <= '0;
+        end else begin
+            if (lsu_agen_valid && lsu_agen_uop.uses_ldq) begin
+                lsu_resp_uop   <= lsu_agen_uop;
+                lsu_resp_data  <= 32'hDEAD_BEEF;
+                lsu_pending    <= 1'b1;
+                lsu_delay_cnt  <= '0;
+                $display("[LSU] Load AGEN: addr=0x%08h", lsu_agen_addr);
+            end
+
+            if (lsu_agen_valid && lsu_agen_uop.uses_stq)
+                $display("[LSU] Store AGEN: addr=0x%08h", lsu_agen_addr);
+            if (lsu_dgen_valid)
+                $display("[LSU] Store DGEN: data=0x%08h", lsu_dgen_data);
+
+            lsu_resp_valid <= 1'b0;
+            if (lsu_pending) begin
+                lsu_delay_cnt <= lsu_delay_cnt + 1;
+                if (lsu_delay_cnt == LOAD_USE_DELAY - 1) begin
+                    lsu_resp_valid <= 1'b1;
+                    lsu_resp.uop   <= lsu_resp_uop;
+                    lsu_resp.data  <= lsu_resp_data;
+                    lsu_resp.predicated <= 1'b0;
+                    lsu_pending <= 1'b0;
+                end
+            end
+        end
+    end
+
+    // ================================================================
+    // CSR stub：读返回 0，写不报错
+    // ================================================================
+    always_comb begin
+        if (csr_req_valid) begin
+            csr_rdata = 32'h0000_0000;
+        end else begin
+            csr_rdata = 32'h0000_0000;
+        end
+    end
+
+    // ================================================================
+    // 提交监控
+    // ================================================================
+    int commit_cnt;
+    initial commit_cnt = 0;
+
+    always_ff @(posedge clk) begin
+        if (rst_n) begin
+            for (int w = 0; w < CORE_WIDTH; w++) begin
+                if (commit.arch_valids[w]) begin
+                    commit_cnt <= commit_cnt + 1;
+                    $display("[COMMIT] cnt=%0d  rob_idx=%0d  ldst=x%d  data=0x%08h  pc_lob=%0d",
+                             commit_cnt,
+                             commit.uops[w].rob_idx,
+                             commit.uops[w].ldst,
+                             commit.debug_wdata[w],
+                             commit.uops[w].pc_lob);
+                end
+            end
+        end
+    end
+
+    // ================================================================
+    // 超时保护
+    // ================================================================
+    initial begin
+        #1000000;   // 1 ms
+        $display("[TB] TIMEOUT — pipeline hung");
+        $finish;
+    end
+
+    // ================================================================
+    // 完成检测：rob_empty && 最后一条指令已提交
+    // ================================================================
+    initial begin
+        wait (rst_n);
+        wait (commit_cnt >= PROG_SIZE && rob_empty);
+        repeat (10) @(posedge clk);
+        $display("[TB] All %0d instructions committed, ROB empty — PASS", commit_cnt);
+        $finish;
+    end
+
+    // ================================================================
+    // 波形输出（用你习惯的仿真器）
+    // ================================================================
+    initial begin
+        $dumpfile("tb.vcd");
+        $dumpvars(0, tb);
+    end
+
+endmodule

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+TEST_DIR="$ROOT/test/integration"
+
+verilator --cc --trace --build -j 1 -Wno-fatal \
+  -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
+  --Mdir "$TEST_DIR/obj_dir" \
+  --top-module boom_core \
+  --exe "$ROOT/tb_verilator.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
+  "$ROOT/exu/decode.sv" \
+  "$ROOT/exu/br_mask.sv" \
+  "$ROOT/exu/rename/rename_maptable.sv" \
+  "$ROOT/exu/rename/rename_freelist.sv" \
+  "$ROOT/exu/rename/rename_busytable.sv" \
+  "$ROOT/exu/rename/rename_stage.sv" \
+  "$ROOT/exu/dispatch.sv" \
+  "$ROOT/exu/issue/issue_slot.sv" \
+  "$ROOT/exu/issue/issue_unit_collapsing.sv" \
+  "$ROOT/exu/regfile.sv" \
+  "$ROOT/exu/exe/alu.sv" \
+  "$ROOT/exu/exe/mem.sv" \
+  "$ROOT/exu/exe/unq.sv" \
+  "$ROOT/exu/rob.sv" \
+  "$ROOT/boom_core.sv"
+
+(
+  cd "$TEST_DIR"
+  ./obj_dir/Vboom_core
+)
