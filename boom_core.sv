@@ -125,7 +125,8 @@ module boom_core #(
     end
 
     assign fe_ready = (fe_buf_valid == '0) &&
-                      rob_ready_w && !rob_flush_frontend_w;
+                      rob_ready_w && !rob_flush_frontend_w &&
+                      !brupdate_w.b2.mispredict;
     assign fe_accept = fe_ready && (|fe_valid[CORE_WIDTH-1:0]);
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -138,6 +139,19 @@ module boom_core #(
             fe_buf_valid <= '0;
             if (rob_flush_w.flush_typ == FT_REFETCH)
                 fetch_pc <= rob_flush_w.pc + 32'd4;
+        end else if (brupdate_w.b2.mispredict) begin
+            fe_buf_valid <= '0;
+            unique case (brupdate_w.b2.pc_sel)
+                PC_PLUS4:
+                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
+                PC_BRJMP:
+                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] +
+                                brupdate_w.b2.target_offset[31:0];
+                PC_JALR:
+                    fetch_pc <= brupdate_w.b2.jalr_target[31:0];
+                default:
+                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
+            endcase
         end else begin
             fe_buf_valid <= fe_buf_valid & ~dec_fire;
             if (fe_accept) begin

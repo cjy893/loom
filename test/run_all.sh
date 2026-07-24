@@ -14,6 +14,7 @@ suites=(
   regfile
   mem
   unq
+  branch_recovery
   integration
 )
 

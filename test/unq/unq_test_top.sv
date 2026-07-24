@@ -14,8 +14,13 @@ module unq_test_top (
     input  logic [31:0] rs1_data,
     input  logic [31:0] rs2_data,
     input  logic [31:0] csr_rdata,
+    input  logic [3:0]  uop_br_mask,
+    input  logic [3:0]  resolve_mask,
+    input  logic [3:0]  mispredict_mask,
+    input  logic        br_mispredict,
     input  logic        kill,
 
+    output logic        iss_ready,
     output logic        csr_req_valid,
     output logic [13:0] csr_addr,
     output logic [1:0]  csr_cmd,
@@ -27,6 +32,7 @@ module unq_test_top (
     uop_t iss_uop;
     exe_unit_resp_t res;
     br_update_info_t brupdate;
+    logic [31:0] csr_wmask_unused;
 
     always_comb begin
         iss_uop = '0;
@@ -34,6 +40,7 @@ module unq_test_top (
         iss_uop.fcn_op = fcn_op;
         iss_uop.imm_packed[13:0] = csr_addr_in;
         iss_uop.csr_cmd = csr_cmd_in;
+        iss_uop.br_mask = uop_br_mask;
         case (op_class)
             2'd0: iss_uop.fu_code[FC_CSR] = 1'b1;
             2'd1: iss_uop.fu_code[FC_MUL] = 1'b1;
@@ -41,6 +48,9 @@ module unq_test_top (
             default: begin end
         endcase
         brupdate = '0;
+        brupdate.b1.resolve_mask = resolve_mask;
+        brupdate.b1.mispredict_mask = mispredict_mask;
+        brupdate.b2.mispredict = br_mispredict;
     end
 
     unq dut (
@@ -48,12 +58,14 @@ module unq_test_top (
         .rst_n,
         .iss_valid,
         .iss_uop,
+        .iss_ready,
         .rs1_data,
         .rs2_data,
         .csr_req_valid,
         .csr_addr,
         .csr_cmd,
         .csr_wdata,
+        .csr_wmask(csr_wmask_unused),
         .csr_rdata,
         .res_valid,
         .res,

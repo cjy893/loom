@@ -12,6 +12,10 @@ module mem_test_top (
     input  logic [31:0] rs1_data,
     input  logic [31:0] rs2_data,
     input  logic [31:0] imm_data,
+    input  logic [3:0]  uop_br_mask,
+    input  logic [3:0]  resolve_mask,
+    input  logic [3:0]  mispredict_mask,
+    input  logic        br_mispredict,
     input  logic        kill,
 
     output logic        agen_valid,
@@ -31,7 +35,11 @@ module mem_test_top (
         iss_uop.rob_idx = rob_idx;
         iss_uop.fu_code[FC_AGEN] = use_agen;
         iss_uop.fu_code[FC_DGEN] = use_dgen;
+        iss_uop.br_mask = uop_br_mask;
         brupdate = '0;
+        brupdate.b1.resolve_mask = resolve_mask;
+        brupdate.b1.mispredict_mask = mispredict_mask;
+        brupdate.b2.mispredict = br_mispredict;
     end
 
     mem #(

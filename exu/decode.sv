@@ -428,31 +428,38 @@ module decode(
                     7'b0111000: begin  // mul.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_MUL_W;
                     end
                     7'b0111001: begin  // mulh.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_MULH_W;
                     end
                     7'b0111010: begin  // mulh.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_MULH_WU;
                     end
                     // pattern 000000000010: inst[21]=1, inst[20]=0
                     7'b1000000: begin  // div.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_DIV_W;
                     end
                     7'b1000010: begin  // div.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_DIV_WU;
                     end
                     7'b1000001: begin  // mod.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_MOD_W;
                     end
                     7'b1000011: begin  // mod.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
                         uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.fcn_op = MULDIV_MOD_WU;
                     end
                     default: begin
                         uop.exception = 1'b1;
