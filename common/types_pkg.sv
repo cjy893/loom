@@ -256,4 +256,13 @@ package loom_types;
         logic [3:0] iq_type;
         logic use_matrix_issue;
     } issue_params_t;
+
+    typedef struct packed {
+        logic valid;
+        logic addr_valid;
+        logic requested;
+        logic completed;
+        logic [31:0] addr;
+        uop_t uop;
+    } ldq_entry_t;
 endpackage

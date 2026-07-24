@@ -80,11 +80,12 @@
 - [x] 覆盖标签耗尽时的阻塞。
 - [ ] 增加正确预测和同周期 resolve/allocate 的组合测试。
 
-### Regfile、MEM 和 UNQ
+### Regfile、MEM、UNQ 和 LSU
 
 - [x] 新建 `test/regfile/`，覆盖多读、多写和同周期旁路行为。
 - [x] 新建 `test/mem/`，覆盖地址生成、store data、流水延迟和 kill。
 - [x] 新建 `test/unq/`，覆盖完整乘除法语义、CSR 请求和 kill。
+- [x] 新建 `test/lsu/`，固定 Load Queue 请求身份、恢复和迟到响应契约。
 - [x] 明确并测试除零、溢出、高位乘法、取余和无符号乘除法语义。
 
 ### 阶段完成条件
@@ -108,7 +109,9 @@
 - [x] 覆盖正确解析标签被复用后，旧 uop 不得被年轻分支误杀。
 - [ ] 覆盖 dispatch、wakeup、issue、squash 和 flush 同周期组合。
 - [ ] 覆盖多个操作数由不同端口同时唤醒。
-- [ ] 覆盖多个槽位竞争同一 issue 端口。
+- [x] 覆盖多个槽位竞争同一 MEM issue 端口。
+- [x] 覆盖 MEM 发射、wakeup 和空槽补位同周期发生。
+- [x] 覆盖当前未启用部分发射时，store 等待地址和数据操作数全部 ready。
 - [ ] 覆盖 MEM uop 的部分发射语义。
 - [ ] 覆盖不同 `NUM_ENTRIES`、`ISSUE_WIDTH` 和 `DISPATCH_WIDTH` 参数。
 - [ ] 增加队列内容和软件参考队列逐周期对拍。

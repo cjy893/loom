@@ -23,6 +23,7 @@ Run one suite:
 ./test/regfile/run.sh
 ./test/mem/run.sh
 ./test/unq/run.sh
+./test/lsu/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -47,10 +48,16 @@ Current coverage:
 - `regfile`: simultaneous reads and writes, combinational write bypass, the
   hardwired zero register, and write-port conflict priority.
 - `mem`: address generation, store-data generation, pipeline latency, uop
-  identity, XLEN wraparound, and kill.
+  identity, XLEN wraparound, kill, single-port MEM IQ contention, conservative
+  store operand waiting, and same-cycle issue/wakeup/refill behavior.
 - `unq`: CSR request/response, all seven LA32 multiply/divide variants,
   signed overflow, deterministic divide-by-zero results, uop identity, branch
   recovery, and kill.
+- `lsu`: the load-queue contract for allocation, request backpressure, normal
+  response writeback, branch recovery, resolved branch-tag reuse, and stale
+  response rejection after a physical slot is reused. This suite intentionally
+  fails at `rtl_present` until a real `module lsu` replaces the current
+  placeholder.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
