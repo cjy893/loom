@@ -10,9 +10,15 @@ module rename_test_top (
     input  logic [4:0] in_lrs1_0,
     input  logic [4:0] in_lrs2_0,
     input  logic [4:0] in_ldst_0,
+    input  logic [3:0] in_br_mask_0,
     input  logic [4:0] in_lrs1_1,
     input  logic [4:0] in_lrs2_1,
     input  logic [4:0] in_ldst_1,
+    input  logic [3:0] in_br_mask_1,
+    input  logic       in_allocate_brtag_0,
+    input  logic [1:0] in_br_tag_0,
+    input  logic       in_allocate_brtag_1,
+    input  logic [1:0] in_br_tag_1,
 
     input  logic wakeup_valid,
     input  logic [5:0] wakeup_pdst,
@@ -22,7 +28,11 @@ module rename_test_top (
     input  logic [5:0] commit_pdst,
     input  logic [5:0] commit_stale_pdst,
     input  logic rollback,
+    input  logic kill,
+    input  logic br_mispredict,
+    input  logic [1:0] br_mispredict_tag,
     input  logic dis_ready,
+    input  logic [1:0] dis_fire,
 
     output logic [1:0] out_valid,
     output logic [5:0] out_prs1_0,
@@ -54,6 +64,9 @@ module rename_test_top (
         dec_uops[0].dst_rtype = RT_FIX;
         dec_uops[0].lrs1_rtype = RT_FIX;
         dec_uops[0].lrs2_rtype = RT_FIX;
+        dec_uops[0].allocate_brtag = in_allocate_brtag_0;
+        dec_uops[0].br_tag = in_br_tag_0;
+        dec_uops[0].br_mask = in_br_mask_0;
 
         dec_uops[1].lrs1 = in_lrs1_1;
         dec_uops[1].lrs2 = in_lrs2_1;
@@ -61,6 +74,9 @@ module rename_test_top (
         dec_uops[1].dst_rtype = RT_FIX;
         dec_uops[1].lrs1_rtype = RT_FIX;
         dec_uops[1].lrs2_rtype = RT_FIX;
+        dec_uops[1].allocate_brtag = in_allocate_brtag_1;
+        dec_uops[1].br_tag = in_br_tag_1;
+        dec_uops[1].br_mask = in_br_mask_1;
 
         wakeups = '0;
         wakeups[0].valid = wakeup_valid;
@@ -72,6 +88,12 @@ module rename_test_top (
         commit_uops[0].stale_pdst = commit_stale_pdst;
         commit_uops[0].dst_rtype = RT_FIX;
         brupdate = '0;
+        brupdate.b2.mispredict = br_mispredict;
+        brupdate.b2.uop.br_tag = br_mispredict_tag;
+        if(br_mispredict) begin
+            brupdate.b1.resolve_mask[br_mispredict_tag] = 1'b1;
+            brupdate.b1.mispredict_mask[br_mispredict_tag] = 1'b1;
+        end
     end
 
     rename_stage #(
@@ -87,10 +109,11 @@ module rename_test_top (
         .dec_uops,
         .wakeups,
         .brupdate,
-        .kill(1'b0),
+        .kill,
         .commit_valids({1'b0, commit_valid}),
         .commit_uops,
         .rollback,
+        .dis_fire,
         .dis_ready,
         .rn_stalls(stalls),
         .rn2_mask(out_valid),

@@ -83,6 +83,7 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        pre_dispatch_ready;
+    logic                        branch_alloc_ready;
     logic [CORE_WIDTH-1:0]       fe_buf_valid;
     logic [CORE_WIDTH-1:0][31:0] fe_buf_insts;
     logic [CORE_WIDTH-1:0][31:0] fe_buf_pcs;
@@ -99,6 +100,14 @@ module boom_core #(
     logic [CORE_WIDTH-1:0] alu_iq_dis_ready;
     logic [CORE_WIDTH-1:0] mem_iq_dis_ready;
     logic [CORE_WIDTH-1:0] unq_iq_dis_ready;
+
+    logic [CORE_WIDTH-1:0]       rn_stalls;
+    logic [CORE_WIDTH-1:0]       rn2_mask;
+    uop_t [CORE_WIDTH-1:0]       rn2_uops_raw;
+    uop_t [CORE_WIDTH-1:0]       rn2_uops;
+    logic [CORE_WIDTH-1:0]       dis_fire;
+    logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
+    logic [CORE_WIDTH-1:0]       rn2_exception_q;
 
     always_comb begin
         logic [$clog2(CORE_WIDTH+1)-1:0] slot_offset;
@@ -178,9 +187,18 @@ module boom_core #(
         end
     end
 
+    always_comb begin
+        branch_alloc_ready = 1'b1;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_valids[w] && dec_lane_eligible[w] && bm_is_full[w])
+                branch_alloc_ready = 1'b0;
+        end
+    end
+
     assign dec_fire  = dec_valids & dec_lane_eligible &
                        {CORE_WIDTH{dec_ready}};
-    assign dec_ready = pre_dispatch_ready && !(|rn_stalls);
+    assign dec_ready = pre_dispatch_ready && branch_alloc_ready &&
+                       !(|rn_stalls);
 
     // ================================================================
     // Branch Mask Logic
@@ -208,9 +226,9 @@ module boom_core #(
         .flush_pipeline(bm_flush)
     );
 
-    // The temporary harness has no registered rename2 stage. Determine whether
-    // the complete decode packet can be accepted without depending on dec_fire,
-    // so the frontend ready path remains acyclic.
+    // Determine whether the complete registered Rename2 packet can dispatch.
+    // Keeping this all-or-none in the temporary harness avoids a combinational
+    // ready/fire loop while the standalone dispatcher is integrated separately.
     always_comb begin
         int alu_count;
         int mem_count;
@@ -219,15 +237,15 @@ module boom_core #(
         alu_count = 0;
         mem_count = 0;
         unq_count = 0;
-        pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w;
+        pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w &&
+                             !(|rn_stalls) &&
+                             !(|brupdate_w.b1.mispredict_mask) &&
+                             !brupdate_w.b2.mispredict;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
-            if (dec_valids[w] && dec_lane_eligible[w]) begin
-                if (bm_is_full[w])
-                    pre_dispatch_ready = 1'b0;
-
-                if (!dec_uops_raw[w].exception) begin
-                    unique case (dec_uops_raw[w].iq_type)
+            if (rn2_mask[w]) begin
+                if (!rn2_exception_q[w]) begin
+                    unique case (rn2_iq_type_q[w])
                         IQ_ALU: begin
                             if (alu_count >= CORE_WIDTH ||
                                 !alu_iq_dis_ready[alu_count])
@@ -265,13 +283,29 @@ module boom_core #(
     // ================================================================
     // Rename Stage
     // ================================================================
-    logic [CORE_WIDTH-1:0]       rn_stalls;
-    logic [CORE_WIDTH-1:0]       rn2_mask;
-    uop_t [CORE_WIDTH-1:0]       rn2_uops_raw;
-    uop_t [CORE_WIDTH-1:0]       rn2_uops;
-
     wakeup_t [NUM_WAKEUPS-1:0]   wakeups;
     logic                         dis_ready_w;
+
+    // Keep the fields used by dispatch-ready calculation independent from the
+    // physical rename result, which itself legitimately depends on dis_fire.
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n || bm_flush || rob_rollback_w) begin
+            rn2_iq_type_q <= '0;
+            rn2_exception_q <= '0;
+        end else if (dis_ready_w) begin
+            for (int w = 0; w < CORE_WIDTH; w++) begin
+                rn2_iq_type_q[w] <= dec_uops[w].iq_type;
+                rn2_exception_q[w] <= dec_uops[w].exception;
+            end
+        end else begin
+            for (int w = 0; w < CORE_WIDTH; w++) begin
+                if (dis_fire[w]) begin
+                    rn2_iq_type_q[w] <= '0;
+                    rn2_exception_q[w] <= 1'b0;
+                end
+            end
+        end
+    end
 
     rename_stage #(.CORE_WIDTH(CORE_WIDTH), .PHYSICAL_REGS(PHYSICAL_REGS),
                    .WAKEUP_PORTS(NUM_WAKEUPS), .IS_FP(0))
@@ -280,9 +314,10 @@ module boom_core #(
         .dec_valids(dec_valids),
         .dec_fire  (dec_fire),
         .dec_uops  (dec_uops),
+        .dis_fire  (dis_fire),
         .wakeups   (wakeups),
         .brupdate  (brupdate_w),
-        .kill      (1'b0),
+        .kill      (bm_flush),
         .commit_valids(commit.valids),
         .commit_uops  (commit.uops),
         .rollback  (rob_rollback_w),
@@ -306,9 +341,9 @@ module boom_core #(
     // ================================================================
     // Dispatch
     // ================================================================
-    logic [CORE_WIDTH-1:0] dis_fire;
     uop_t [CORE_WIDTH-1:0] dis_uops_w;
     assign dis_ready_w = pre_dispatch_ready;
+    assign dis_fire = rn2_mask & {CORE_WIDTH{dis_ready_w}};
 
     // Pack each IQ independently. Exceptions bypass all issue queues but still
     // fire into the ROB so they can be observed at the commit boundary.
@@ -326,12 +361,11 @@ module boom_core #(
         iq_alu_dis_uop = '0;
         iq_mem_dis_uop = '0;
         iq_unq_dis_uop = '0;
-        dis_fire = rn2_mask;
         dis_uops_w = rn2_uops;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
-            if (rn2_mask[w] && !rn2_uops[w].exception) begin
-                unique case (rn2_uops[w].iq_type)
+            if (dis_fire[w] && !rn2_exception_q[w]) begin
+                unique case (rn2_iq_type_q[w])
                     IQ_ALU: begin
                         iq_alu_dis_valid[alu_count] = 1'b1;
                         iq_alu_dis_uop[alu_count] = rn2_uops[w];
@@ -347,7 +381,7 @@ module boom_core #(
                         iq_unq_dis_uop[unq_count] = rn2_uops[w];
                         unq_count++;
                     end
-                    default: dis_fire[w] = 1'b0;
+                    default:;
                 endcase
             end
         end

@@ -8,9 +8,11 @@ module dispatch_test_top (
     input  logic [3:0] iq_type_1,
     input  logic [5:0] rob_idx_0,
     input  logic [5:0] rob_idx_1,
-    input  logic       iq_mem_ready,
-    input  logic       iq_alu_ready,
-    input  logic       iq_unq_ready,
+    input  logic       exception_0,
+    input  logic       exception_1,
+    input  logic [1:0] iq_mem_ready,
+    input  logic [1:0] iq_alu_ready,
+    input  logic [1:0] iq_unq_ready,
 
     output logic [1:0] iq_mem_dis_valid,
     output logic [5:0] iq_mem_rob_idx_0,
@@ -36,8 +38,10 @@ module dispatch_test_top (
         rn2_uops = '0;
         rn2_uops[0].iq_type = iq_type_0;
         rn2_uops[0].rob_idx = rob_idx_0;
+        rn2_uops[0].exception = exception_0;
         rn2_uops[1].iq_type = iq_type_1;
         rn2_uops[1].rob_idx = rob_idx_1;
+        rn2_uops[1].exception = exception_1;
     end
 
     dispatch #(.CORE_WIDTH(2)) dut (

@@ -62,5 +62,5 @@ Current status:
 
 - All directed module tests pass.
 - `dispatch` now packs each IQ independently and preserves program order.
-- Per-slot Issue Queue backpressure is not yet covered by the standalone
-  dispatch test.
+- `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
+- `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.

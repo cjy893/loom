@@ -8,9 +8,9 @@ module dispatch #(
     input logic [CORE_WIDTH-1:0] rn2_mask,
     input uop_t [CORE_WIDTH-1:0] rn2_uops,
 
-    input logic iq_mem_ready,
-    input logic iq_alu_ready,
-    input logic iq_unq_ready,
+    input logic [CORE_WIDTH-1:0] iq_mem_ready,
+    input logic [CORE_WIDTH-1:0] iq_alu_ready,
+    input logic [CORE_WIDTH-1:0] iq_unq_ready,
 
     output logic [CORE_WIDTH-1:0] iq_mem_dis_valid,
     output uop_t [CORE_WIDTH-1:0] iq_mem_dis_uop,
@@ -23,29 +23,49 @@ module dispatch #(
     output logic [CORE_WIDTH-1:0] dis_fire,
     output uop_t [CORE_WIDTH-1:0] dis_uops
 );
-
-    logic [CORE_WIDTH-1:0] iq_ready;
-    always_comb begin
-        iq_ready = '0;
-        for(int w = 0; w < CORE_WIDTH; w++) begin
-            if(rn2_mask[w]) begin
-                unique case(rn2_uops[w].iq_type)
-                    IQ_MEM: iq_ready[w] = iq_mem_ready;
-                    IQ_ALU: iq_ready[w] = iq_alu_ready;
-                    IQ_UNQ: iq_ready[w] = iq_unq_ready;
-                    default: iq_ready[w] = 1'b0;
-                endcase
-            end
-        end
-    end
-
     logic block;
+    int mem_need, alu_need, unq_need;
     always_comb begin
         block = 1'b0;
         dis_fire = '0;
+
+        mem_need = 0;
+        alu_need = 0;
+        unq_need = 0;
         for(int w = 0; w < CORE_WIDTH; w++) begin
-            if(rn2_mask[w] && iq_ready[w] && !block) dis_fire[w] = 1'b1;
-            else if(rn2_mask[w]) block = 1'b1;
+            if(rn2_mask[w] && !block) begin
+                if(rn2_uops[w].exception) begin
+                    dis_fire[w] = 1'b1;
+                end else begin
+                    unique case(rn2_uops[w].iq_type)
+                        IQ_MEM: begin
+                            if(iq_mem_ready[mem_need]) begin
+                                dis_fire[w] = 1'b1;
+                                mem_need++;
+                            end else begin
+                                block = 1'b1;
+                            end
+                        end
+                        IQ_ALU: begin
+                            if(iq_alu_ready[alu_need]) begin
+                                dis_fire[w] = 1'b1;
+                                alu_need++;
+                            end else begin
+                                block = 1'b1;
+                            end
+                        end
+                        IQ_UNQ: begin
+                            if(iq_unq_ready[unq_need]) begin
+                                dis_fire[w] = 1'b1;
+                                unq_need++;
+                            end else begin
+                                block = 1'b1;
+                            end
+                        end
+                        default: block = 1'b1;
+                    endcase
+                end
+            end
         end
     end
 
@@ -63,7 +83,7 @@ module dispatch #(
         unq_slot = 0;
 
         for(int w = 0; w < CORE_WIDTH; w++) begin
-            if(dis_fire[w]) begin
+            if(dis_fire[w] && !rn2_uops[w].exception) begin
                 unique case(rn2_uops[w].iq_type)
                     IQ_MEM: begin
                         iq_mem_dis_valid[mem_slot] = 1'b1;

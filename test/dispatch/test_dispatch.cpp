@@ -10,6 +10,8 @@ static void clear_inputs(Vdispatch_test_top* dut) {
     dut->iq_type_1 = 0;
     dut->rob_idx_0 = 0;
     dut->rob_idx_1 = 0;
+    dut->exception_0 = 0;
+    dut->exception_1 = 0;
     dut->iq_mem_ready = 0;
     dut->iq_alu_ready = 0;
     dut->iq_unq_ready = 0;
@@ -60,8 +62,8 @@ int main(int argc, char** argv) {
     expect_eq("UNQ dispatch valid", dut->iq_unq_dis_valid, 1);
     expect_eq("UNQ dispatch identity", dut->iq_unq_rob_idx_0, 11);
 
-    // Each IQ now has two dispatch inputs. Same-IQ uops must both be observable
-    // and retain program order in the packed output.
+    // Each IQ has two dispatch inputs. A single ready slot accepts only the
+    // oldest same-IQ uop; two ready slots accept both in program order.
     dut->rn2_mask = 3;
     dut->iq_type_0 = IQ_ALU;
     dut->iq_type_1 = IQ_ALU;
@@ -69,10 +71,49 @@ int main(int argc, char** argv) {
     dut->rob_idx_1 = 21;
     dut->iq_alu_ready = 1;
     dut->eval();
+    expect_eq("only oldest same-IQ uop fires", dut->dis_fire, 1);
+    expect_eq("partial same-IQ packet not ready", dut->dis_ready, 0);
+    expect_eq("only one ALU slot is valid", dut->iq_alu_dis_valid, 1);
+    expect_eq("partial ALU identity", dut->iq_alu_rob_idx_0, 20);
+
+    dut->iq_alu_ready = 3;
+    dut->eval();
     expect_eq("same IQ lanes both fire", dut->dis_fire, 3);
+    expect_eq("same IQ packet ready", dut->dis_ready, 1);
     expect_eq("same IQ outputs both valid", dut->iq_alu_dis_valid, 3);
     expect_eq("same IQ older identity", dut->iq_alu_rob_idx_0, 20);
     expect_eq("same IQ younger identity", dut->iq_alu_rob_idx_1, 21);
+
+    // Static exceptions enter the ROB through dis_fire but bypass every IQ.
+    dut->rn2_mask = 1;
+    dut->iq_type_0 = 0;
+    dut->rob_idx_0 = 30;
+    dut->exception_0 = 1;
+    dut->exception_1 = 0;
+    dut->iq_mem_ready = 0;
+    dut->iq_alu_ready = 0;
+    dut->iq_unq_ready = 0;
+    dut->eval();
+    expect_eq("exception fires without an IQ slot", dut->dis_fire, 1);
+    expect_eq("exception packet ready", dut->dis_ready, 1);
+    expect_eq("exception bypasses MEM", dut->iq_mem_dis_valid, 0);
+    expect_eq("exception bypasses ALU", dut->iq_alu_dis_valid, 0);
+    expect_eq("exception bypasses UNQ", dut->iq_unq_dis_valid, 0);
+    expect_eq("exception identity preserved", dut->dis_uop_rob_idx_0, 30);
+
+    // A younger exception cannot pass an older uop blocked by its IQ.
+    dut->rn2_mask = 3;
+    dut->iq_type_0 = IQ_ALU;
+    dut->rob_idx_0 = 31;
+    dut->exception_0 = 0;
+    dut->iq_type_1 = 0;
+    dut->rob_idx_1 = 32;
+    dut->exception_1 = 1;
+    dut->iq_alu_ready = 0;
+    dut->eval();
+    expect_eq("blocked oldest stops younger exception", dut->dis_fire, 0);
+    expect_eq("blocked exception packet not ready", dut->dis_ready, 0);
+    expect_eq("blocked packet emits no ALU uop", dut->iq_alu_dis_valid, 0);
 
     pass("dispatch");
     delete dut;
