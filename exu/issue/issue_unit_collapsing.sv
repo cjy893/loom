@@ -33,6 +33,17 @@ module issue_unit_collapsing #(
     logic [NUM_ENTRIES-1:0] slot_ready;
     logic [NUM_ENTRIES-1:0] slot_grant;
     logic [DISPATCH_WIDTH-1:0][$clog2(NUM_ENTRIES)-1:0] dis_slot;
+    logic [DISPATCH_WIDTH-1:0] dis_br_killed;
+    uop_t [DISPATCH_WIDTH-1:0] dis_uop_updated;
+
+    always_comb begin
+        dis_br_killed = '0;
+        dis_uop_updated = dis_uop;
+        for(int d = 0; d < DISPATCH_WIDTH; d++) begin
+            dis_br_killed[d] = dis_valid[d] && |(dis_uop[d].br_mask & brupdate.b1.mispredict_mask);
+            dis_uop_updated[d].br_mask = dis_uop[d].br_mask & ~brupdate.b1.resolve_mask;
+        end
+    end
 
     always_comb begin
         logic [NUM_ENTRIES-1:0] available;
@@ -55,6 +66,7 @@ module issue_unit_collapsing #(
                 if (slot_ready[i] && !port_used[p]) begin
                     iss_valid[p] = !squash_grant;
                     iss_uop[p] = slot_uop[i];
+                    iss_uop[p].br_mask = slot_uop[i].br_mask & ~brupdate.b1.resolve_mask;
                     slot_grant[i] = !squash_grant;
                     port_used[p] = 1'b1;
                     break;
@@ -82,6 +94,7 @@ module issue_unit_collapsing #(
             slot_valid <= '0;
         end else begin
             for (int i = 0; i < NUM_ENTRIES; i++) begin
+                slot_uop[i].br_mask <= slot_uop[i].br_mask & ~brupdate.b1.resolve_mask;
                 if (slot_grant[i] || slot_killed[i])
                     slot_valid[i] <= 1'b0;
 
@@ -98,16 +111,16 @@ module issue_unit_collapsing #(
             end
 
             for (int d = 0; d < DISPATCH_WIDTH; d++) begin
-                if (dis_valid[d] && dis_ready[d]) begin
+                if (dis_valid[d] && dis_ready[d] && !dis_br_killed[d]) begin
                     slot_valid[dis_slot[d]] <= 1'b1;
-                    slot_uop[dis_slot[d]] <= dis_uop[d];
+                    slot_uop[dis_slot[d]] <= dis_uop_updated[d];
                     for (int w = 0; w < NUM_WAKEUP_PORTS; w++) begin
                         if (wakeup_valid[w]) begin
-                            if (dis_uop[d].prs1 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
+                            if (dis_uop_updated[d].prs1 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
                                 slot_uop[dis_slot[d]].prs1_busy <= 1'b0;
-                            if (dis_uop[d].prs2 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
+                            if (dis_uop_updated[d].prs2 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
                                 slot_uop[dis_slot[d]].prs2_busy <= 1'b0;
-                            if (dis_uop[d].prs3 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
+                            if (dis_uop_updated[d].prs3 == wakeup_pdst[w] && wakeup_pdst[w] != '0)
                                 slot_uop[dis_slot[d]].prs3_busy <= 1'b0;
                         end
                     end

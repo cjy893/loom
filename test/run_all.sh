@@ -14,6 +14,10 @@ suites=(
   regfile
   mem
   unq
+  lsu
+  core_lsu
+  core_program
+  branch_recovery
   integration
 )
 

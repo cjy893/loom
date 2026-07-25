@@ -18,13 +18,17 @@ static void check_eq(const char* name, unsigned long long actual,
 
 enum {
     IQ_MEM = 1, IQ_UNQ = 2, IQ_ALU = 4,
-    FC_ALU = 0, FC_AGEN = 1, FC_DGEN = 2, FC_CSR = 5,
+    FC_ALU = 0, FC_AGEN = 1, FC_DGEN = 2, FC_MUL = 3, FC_DIV = 4,
+    FC_CSR = 5,
     OP1_RS1 = 0, OP1_ZERO = 1,
     OP2_RS2 = 0, OP2_IMM = 1,
     RT_FIX = 0, RT_X = 2,
     IS_I = 0, IS_B = 2, IS_U = 3, IS_J = 4, IS_N = 6, IS_F3 = 7,
     B_EQ = 2, B_J = 7,
     ALU_ADD = 0, ALU_OR = 5,
+    MULDIV_MUL_W = 0, MULDIV_MULH_W = 1, MULDIV_MULH_WU = 2,
+    MULDIV_DIV_W = 3, MULDIV_DIV_WU = 4,
+    MULDIV_MOD_W = 5, MULDIV_MOD_WU = 6,
 };
 
 static void decode(Vdecode_test_top* dut, uint32_t inst) {
@@ -35,6 +39,19 @@ static void decode(Vdecode_test_top* dut, uint32_t inst) {
 
 static void expect_fu(const char* name, Vdecode_test_top* dut, unsigned bit) {
     expect_true(name, (dut->fu_code & (1U << bit)) != 0);
+}
+
+static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
+                                 unsigned fu, unsigned fcn,
+                                 const char* fcn_name) {
+    decode(dut, inst);
+    expect_eq("mul/div queue", dut->iq_type, IQ_UNQ);
+    expect_fu("mul/div functional unit", dut, fu);
+    expect_eq("mul/div source 1", dut->lrs1, 12);
+    expect_eq("mul/div source 2", dut->lrs2, 13);
+    expect_eq("mul/div destination", dut->ldst, 15);
+    expect_eq(fcn_name, dut->fcn_op, fcn);
+    expect_eq("mul/div no exception", dut->exception, 0);
 }
 
 int main(int argc, char** argv) {
@@ -63,6 +80,22 @@ int main(int argc, char** argv) {
     expect_eq("add operand 2", dut->op2_sel, OP2_RS2);
     expect_eq("add immediate kind", dut->imm_sel, IS_N);
     expect_eq("add operation", dut->fcn_op, ALU_ADD);
+
+    // Real encodings from nscscc_func/obj/test.s.
+    expect_muldiv_decode(dut, 0x001c358f, FC_MUL, MULDIV_MUL_W,
+                         "mul.w operation");
+    expect_muldiv_decode(dut, 0x001cb58f, FC_MUL, MULDIV_MULH_W,
+                         "mulh.w operation");
+    expect_muldiv_decode(dut, 0x001d358f, FC_MUL, MULDIV_MULH_WU,
+                         "mulh.wu operation");
+    expect_muldiv_decode(dut, 0x0020358f, FC_DIV, MULDIV_DIV_W,
+                         "div.w operation");
+    expect_muldiv_decode(dut, 0x0021358f, FC_DIV, MULDIV_DIV_WU,
+                         "div.wu operation");
+    expect_muldiv_decode(dut, 0x0020b58f, FC_DIV, MULDIV_MOD_W,
+                         "mod.w operation");
+    expect_muldiv_decode(dut, 0x0021b58f, FC_DIV, MULDIV_MOD_WU,
+                         "mod.wu operation");
 
     // 1c008008: ori $r12,$r0,0x1
     decode(dut, 0x0380040c);

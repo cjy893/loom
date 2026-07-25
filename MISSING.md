@@ -13,7 +13,7 @@
 | Free List | `exu/rename/rename_freelist.sv` | 完成 |
 | Busy Table | `exu/rename/rename_busytable.sv` | 完成 |
 | Rename Stage | `exu/rename/rename_stage.sv` | 完成 |
-| Dispatch | `exu/dispatch.sv` | 完成（单端口，待扩多端口） |
+| Dispatch | `exu/dispatch.sv` | 完成（双路独立打包和逐入口反压） |
 | Issue Slot | `exu/issue/issue_slot.sv` | 基本完成，优化项见下 |
 
 ---
@@ -174,24 +174,40 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 顶层连线时统一接到 ROB 的 flush 输出（或 `rob.io.flush.valid`）。
 
-### 3. Dispatch 到 Issue Queue 的打包仍需修正
+### 3. Dispatch 到 Issue Queue 的打包已完成
 
-`dispatch.sv` 已改为每个 IQ 两条输入端口，但当前使用全局输出槽号：
-
-- 不同 IQ 同拍分发时，各 IQ 的第一条 uop 不一定落在 slot0。
-- 同一 IQ 双分发时，输出 uop 顺序与程序顺序相反。
-
-`test/dispatch/` 已用红测固定“各 IQ 独立从 slot0 打包且保持程序顺序”的预期。
+`dispatch.sv` 现在按 IQ 独立压缩输出，保持程序顺序，并根据各 IQ 的
+逐入口 `ready` 向量执行前缀派发。`test/dispatch/` 覆盖不同 IQ、同 IQ
+双派发以及仅一个入口可用时的反压行为。
 
 ## UNQ 执行单元简化项
 
 | 项目 | 说明 | 何时需要 |
 |------|------|---------|
 | DIV 组合除法器 | 当前 `$signed(a) / $signed(b)` 综合出巨大的组合除法器，面积和时序均不可接受 | 替换为迭代除法器 |
-| MUL/DIV 操作码不全 | `mulh.w`/`mulh.wu`（取高 32 位）、`div.wu`（无符号除）、`mod.w`/`mod.wu`（取余）未区分 | 完善乘除法单元时补 |
+| MUL/DIV 串行化 | 七种 LA32 乘除法语义已完成，但当前仍标记为 `is_unique`，会等待 ROB 清空后串行执行 | 完成长延迟并行执行和回滚验证后解除 |
 | DIV 拍数固定 | 当前固定 5 拍，实际应随操作数宽度动态变化 | 迭代除法器自带变长 |
 | 无 fast wakeup | 多周期操作不拉快速 bypass，MUL/DIV 结果多等一拍 | 性能优化 |
 | `pipe_uop` 在 `kill` 时未刷新 | 多周期执行中发生 flush，`pipe_uop` 不会清。`res_valid` 已被 `state` 归零挡住 | 无害，可优化 |
+
+## 后端恢复边界
+
+| 项目 | 当前状态 | 剩余工作 |
+|------|---------|------|
+| LSU 晚到响应 | `boom_core` 已改用正式 LSU，LDQ 会用有效位和 generation 拒绝错误路径的迟到响应 | 后续接入 cache replay 时继续保持同一 tag/generation 契约 |
+
+## LSU load/store 顺序
+
+| 项目 | 当前问题 | 影响 |
+|------|---------|------|
+| 正式 LSU 集成 | 已实例化 LDQ/STQ 并连接查询、阻塞、转发、commit 和恢复接口 | 基础集成完成，仍缺动态访存异常和 cache replay |
+| 共享内存端口 | 已实现锁定式轮询仲裁，握手后在 load/store 间翻转优先级 | `test_lsu_formal.cpp` 已覆盖反压稳定性和后到请求不抢占 |
+| 迟到响应恢复 | 正式 LSU 按响应类型路由 tag，LDQ 按 generation 和 flush 拒绝迟到响应 | 正式 LSU 和 `branch_recovery` 集成测试均已通过 |
+
+对应定向测试位于 `test/lsu/test_lsu_ordering.cpp` 和
+`test/lsu/test_lsu_formal.cpp`。当前队列级的阻塞、转发、ROB 回绕、
+store 提交、双队列并发反压、flush 迟到响应，以及正式 LSU 仲裁和响应
+分流测试均已通过。
 
 ---
 
@@ -207,10 +223,10 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 [  ] alu_exe_unit.sv / mem_exe_unit.sv / unq_exe_unit.sv — 执行单元
 [  ] regfile_banked.sv — 物理寄存器文件
 [  ] frontend.sv + ftq.sv + fetch_buffer.sv + bpd/* — 前端 + 分支预测
-[  ] lsu.sv + dcache.sv — 访存单元
+[✓] lsu.sv / [  ] dcache.sv — 访存单元 / 数据缓存
 [  ] boom_core.sv     — 顶层连线
 ```
 
 ---
 
-*最后更新: 2026-07-24*
+*最后更新: 2026-07-25*

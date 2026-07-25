@@ -1,7 +1,8 @@
 module rename_freelist #(
     parameter int PHYSICAL_REGS = 48,
     parameter int ALLOC_PORTS = 2,
-    parameter int FREE_PORTS = 2
+    parameter int FREE_PORTS = 2,
+    parameter int MAX_BR_COUNT = 4
 )(
     input logic clk,
     input logic rst_n,
@@ -11,6 +12,11 @@ module rename_freelist #(
 
     input logic [FREE_PORTS-1:0] free_en,
     input logic [FREE_PORTS-1:0] [$clog2(PHYSICAL_REGS)-1:0] free_preg,
+
+    input logic [ALLOC_PORTS-1:0] br_snapshot_en,
+    input logic [ALLOC_PORTS-1:0] [$clog2(MAX_BR_COUNT)-1:0] br_snapshot_tag,
+    input logic br_mispredict,
+    input logic [$clog2(MAX_BR_COUNT)-1:0] br_mispredict_tag,
 
     input logic rollback,
     input logic [PHYSICAL_REGS-1:0] rollback_busy_vec,
@@ -28,6 +34,15 @@ module rename_freelist #(
         return '0;
     endfunction
 
+    logic [PHYSICAL_REGS-1:0] br_alloc_q [MAX_BR_COUNT-1:0];
+
+    logic [PHYSICAL_REGS-1:0] alloc_mask [ALLOC_PORTS-1:0];
+    logic [ALLOC_PORTS:0] [PHYSICAL_REGS-1:0] alloc_suffix;
+
+    logic [PHYSICAL_REGS-1:0] alloc_mask_all;
+    logic [PHYSICAL_REGS-1:0] commit_free_mask;
+    logic [PHYSICAL_REGS-1:0] br_free_mask;
+    logic [PHYSICAL_REGS-1:0] free_vec_next;
     logic [PHYSICAL_REGS-1:0] free_vec;
     assign busy = (free_count == '0);
 
@@ -51,28 +66,58 @@ module rename_freelist #(
         end
     end
 
+    always_comb begin
+        for(int w = 0; w < ALLOC_PORTS; w++) begin
+            alloc_mask[w] = 0;
+            if(alloc_en[w] && (alloc_cand[w] != '0)) alloc_mask[w][alloc_cand[w]] = 1'b1;
+        end
+
+        alloc_suffix = '0;
+        for(int w = ALLOC_PORTS-1; w >= 0; w--) begin
+            alloc_suffix[w] = alloc_suffix[w+1] | alloc_mask[w];
+        end
+
+        alloc_mask_all = alloc_suffix[0];
+
+        commit_free_mask = '0;
+        for(int w = 0; w < FREE_PORTS; w++) begin
+            if(free_en[w] && (free_preg[w] != '0)) commit_free_mask[free_preg[w]] = 1'b1;
+        end
+
+        br_free_mask = '0;
+        if(br_mispredict) br_free_mask = br_alloc_q[br_mispredict_tag];
+
+        free_vec_next = (free_vec & ~alloc_mask_all) | commit_free_mask | br_free_mask;
+        free_vec_next[0] = 1'b0;
+    end
+
     assign alloc_preg = alloc_cand;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
-            // The reset map table maps architectural r0-r31 to p0-p31.
-            // Only physical registers above that committed mapping are free.
             for (int i = 0; i < PHYSICAL_REGS; i++) begin
                 free_vec[i] <= (i >= 32);
+            end
+
+            for(int b = 0; b < MAX_BR_COUNT; b++) begin
+                br_alloc_q[b] <= '0;
             end
         end else if(rollback) begin
             free_vec <= ~rollback_busy_vec;
             free_vec[0] <= 1'b0;
-        end else begin
-            for(int i = 0; i < ALLOC_PORTS; i++) begin
-                if(alloc_en[i]) begin
-                    free_vec[alloc_cand[i]] <= 1'b0;
-                end
+
+            for(int b = 0; b < MAX_BR_COUNT; b++) begin
+                br_alloc_q[b] <= '0;
             end
-            for(int i = 0; i < FREE_PORTS; i++) begin
-                if(free_en[i] && (free_preg[i] != '0)) begin
-                    free_vec[free_preg[i]] <= 1'b1;
-                end
+        end else begin
+            free_vec <= free_vec_next;
+
+            for(int b = 0; b < MAX_BR_COUNT; b++) begin
+                br_alloc_q[b] <= (br_alloc_q[b] & ~br_free_mask) | alloc_mask_all;
+            end
+
+            for(int w = 0; w < ALLOC_PORTS; w++) begin
+                if(br_snapshot_en[w]) br_alloc_q[br_snapshot_tag[w]] <= alloc_suffix[w+1];
             end
         end
     end

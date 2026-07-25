@@ -23,6 +23,17 @@ static uint32_t prog_mem[] = {
     0x03400000,  // NOP
     0x0010018c,  // add.w r12, r12, r0
     0x03400000,  // NOP
+    0x02be7001,  // addi.w  r1, r0, -100
+    0x02801c02,  // addi.w  r2, r0, 7
+    0x0020082e,  // div.w   r14, r1, r2
+    0x0020882f,  // mod.w   r15, r1, r2
+    0x15000005,  // lu12i.w r5, 0x80000
+    0x02800806,  // addi.w  r6, r0, 2
+    0x001c98b0,  // mulh.w  r16, r5, r6
+    0x001d18b1,  // mulh.wu r17, r5, r6
+    0x001c0832,  // mul.w   r18, r1, r2
+    0x002118b3,  // div.wu  r19, r5, r6
+    0x002198b4,  // mod.wu  r20, r5, r6
 };
 static const int PROG_SIZE = sizeof(prog_mem) / sizeof(prog_mem[0]);
 
@@ -48,7 +59,11 @@ int main(int argc, char** argv) {
     top->fe_valid = 0;
     top->fe_insts[0] = 0;
     top->fe_insts[1] = 0;
-    top->lsu_resp_valid = 0;
+    top->dmem_req_ready = 1;
+    top->dmem_resp_valid = 0;
+    top->dmem_resp_is_store = 0;
+    top->dmem_resp_data = 0;
+    top->dmem_resp_idx = 0;
     top->csr_rdata = 0x12345678;
 
     // reset
@@ -119,8 +134,9 @@ int main(int argc, char** argv) {
             last_good = cycle;
         }
 
-        // LSU stub: 同周期返回
-        top->lsu_resp_valid = top->lsu_agen_valid;
+        // The current integration program has no memory operations. Keep the
+        // memory port ready and require any future response to arrive later.
+        top->dmem_resp_valid = 0;
         if (top->csr_req_valid)
             csr_request_count++;
 
@@ -164,18 +180,26 @@ int main(int argc, char** argv) {
             break;
         }
 
-        if (top->rob_empty && top->fe_ready && saw_program_end) {
+        if (top->rob_empty && top->fe_ready && saw_program_end &&
+            cycle - last_good > 20) {
             passed = commit_count == PROG_SIZE &&
                      saw_dual_dispatch &&
                      saw_dual_commit &&
-                     unique_dispatch_count == 2 &&
+                     unique_dispatch_count == 9 &&
                      csr_request_count == 2 &&
                      !unique_violation &&
                      arch_regs[13] == 2 &&
                      arch_regs[25] == 0 &&
                      arch_regs[12] == 1 &&
                      arch_regs[10] == 0x12345678 &&
-                     arch_regs[11] == 0x12345678;
+                     arch_regs[11] == 0x12345678 &&
+                     arch_regs[14] == 0xfffffff2 &&
+                     arch_regs[15] == 0xfffffffe &&
+                     arch_regs[16] == 0xffffffff &&
+                     arch_regs[17] == 1 &&
+                     arch_regs[18] == 0xfffffd44 &&
+                     arch_regs[19] == 0x40000000 &&
+                     arch_regs[20] == 0;
             printf("[%5d] ROB empty: commits=%d dual_dis=%d dual_com=%d "
                    "unique=%d csr=%d r13=%u r25=%u r12=%u — %s\n",
                    cycle, commit_count, saw_dual_dispatch, saw_dual_commit,

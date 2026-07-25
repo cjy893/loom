@@ -91,6 +91,14 @@ package loom_consts;
     localparam logic [3:0] ALU_SRA  = 4'd10;
     localparam logic [3:0] ALU_LUI  = 4'd11;
 
+    localparam logic [3:0] MULDIV_MUL_W    = 4'd0;
+    localparam logic [3:0] MULDIV_MULH_W   = 4'd1;
+    localparam logic [3:0] MULDIV_MULH_WU  = 4'd2;
+    localparam logic [3:0] MULDIV_DIV_W    = 4'd3;
+    localparam logic [3:0] MULDIV_DIV_WU   = 4'd4;
+    localparam logic [3:0] MULDIV_MOD_W    = 4'd5;
+    localparam logic [3:0] MULDIV_MOD_WU   = 4'd6;
+
     localparam logic [5:0] ECODE_SYS = 6'd11;
     localparam logic [5:0] ECODE_BRK = 6'd12;
     localparam logic [5:0] ECODE_INE = 6'd13;

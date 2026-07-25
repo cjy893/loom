@@ -16,3 +16,17 @@ verilator --cc --build -j -Wno-fatal --output-split 100 --output-split-cfuncs 10
   "$TEST_DIR/mem_test_top.sv"
 
 "$TEST_DIR/obj_dir/Vmem_test_top"
+
+verilator --cc --build -j -Wno-fatal --output-split 100 --output-split-cfuncs 100 \
+  -Wno-DECLFILENAME -Wno-WIDTH -Wno-UNUSEDSIGNAL \
+  --Mdir "$TEST_DIR/obj_dir_issue" \
+  --top-module mem_issue_test_top \
+  --exe "$TEST_DIR/test_mem_issue.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
+  "$ROOT/exu/issue/issue_unit_collapsing.sv" \
+  "$ROOT/exu/exe/mem.sv" \
+  "$TEST_DIR/mem_issue_test_top.sv"
+
+"$TEST_DIR/obj_dir_issue/Vmem_issue_test_top"

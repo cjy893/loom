@@ -16,6 +16,10 @@ module alu_test_top (
     input  logic       is_br,
     input  logic [3:0] br_type,
     input  logic       predicted_taken,
+    input  logic [3:0] uop_br_mask,
+    input  logic [3:0] resolve_mask,
+    input  logic [3:0] mispredict_mask,
+    input  logic       br_mispredict,
     input  logic       kill,
 
     output logic        wakeup_valid,
@@ -43,7 +47,11 @@ module alu_test_top (
         uop.is_br = is_br;
         uop.br_type = br_type;
         uop.taken = predicted_taken;
+        uop.br_mask = uop_br_mask;
         brupdate = '0;
+        brupdate.b1.resolve_mask = resolve_mask;
+        brupdate.b1.mispredict_mask = mispredict_mask;
+        brupdate.b2.mispredict = br_mispredict;
     end
 
     alu dut (

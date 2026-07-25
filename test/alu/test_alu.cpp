@@ -22,6 +22,10 @@ static void clear_inputs(Valu_test_top* dut) {
     dut->is_br = 0;
     dut->br_type = 0;
     dut->predicted_taken = 0;
+    dut->uop_br_mask = 0;
+    dut->resolve_mask = 0;
+    dut->mispredict_mask = 0;
+    dut->br_mispredict = 0;
     dut->kill = 0;
 }
 
@@ -85,6 +89,68 @@ int main(int argc, char** argv) {
     expect_eq("branch response valid", dut->brinfo_valid, 1);
     expect_eq("branch taken", dut->branch_taken, 1);
     expect_eq("branch mispredict", dut->mispredict, 1);
+
+    // A wrong-path uop presented during recovery must not enter RRD.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+    dut->valid = 1;
+    dut->uop_br_mask = 1;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    eval_cycle(dut);
+    expect_eq("mispredict rejects issue uop", dut->wakeup_valid, 0);
+    clear_inputs(dut);
+    eval_cycle(dut);
+    expect_eq("rejected issue uop has no result", dut->result_valid, 0);
+
+    // Recovery arriving while the uop is in RRD suppresses its early wakeup
+    // immediately and prevents it from advancing to EXE.
+    dut->valid = 1;
+    dut->uop_br_mask = 1;
+    eval_cycle(dut);
+    expect_eq("RRD uop initially wakes up", dut->wakeup_valid, 1);
+    dut->valid = 0;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    dut->eval();
+    expect_eq("mispredict suppresses RRD wakeup", dut->wakeup_valid, 0);
+    eval_cycle(dut);
+    expect_eq("killed RRD uop has no result", dut->result_valid, 0);
+
+    // Recovery arriving after the uop reaches EXE must suppress the result
+    // before the next clock edge can consume it.
+    clear_inputs(dut);
+    dut->valid = 1;
+    dut->uop_br_mask = 1;
+    eval_cycle(dut);
+    dut->valid = 0;
+    eval_cycle(dut);
+    expect_eq("EXE uop initially has a result", dut->result_valid, 1);
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    dut->eval();
+    expect_eq("mispredict suppresses EXE result", dut->result_valid, 0);
+
+    // Once a branch resolves correctly, its tag must be removed from the uop.
+    // A later branch reusing that tag must not kill the older uop.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+    dut->valid = 1;
+    dut->uop_br_mask = 1;
+    dut->resolve_mask = 1;
+    eval_cycle(dut);
+    dut->valid = 0;
+    dut->resolve_mask = 0;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    dut->eval();
+    expect_eq("resolved tag does not suppress wakeup", dut->wakeup_valid, 1);
+    eval_cycle(dut);
+    expect_eq("resolved tag does not suppress result", dut->result_valid, 1);
 
     pass("alu");
     delete dut;

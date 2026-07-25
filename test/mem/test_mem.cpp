@@ -11,6 +11,10 @@ static void clear_inputs(Vmem_test_top* dut) {
     dut->rs1_data = 0;
     dut->rs2_data = 0;
     dut->imm_data = 0;
+    dut->uop_br_mask = 0;
+    dut->resolve_mask = 0;
+    dut->mispredict_mask = 0;
+    dut->br_mispredict = 0;
     dut->kill = 0;
 }
 
@@ -82,6 +86,81 @@ int main(int argc, char** argv) {
     dut->kill = 0;
     eval_cycle(dut);
     expect_eq("killed operation stays cancelled", dut->agen_valid | dut->dgen_valid, 0);
+
+    // A wrong-path request presented during recovery must not enter RRD.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+    dut->iss_valid = 1;
+    dut->use_agen = 1;
+    dut->use_dgen = 1;
+    dut->uop_br_mask = 1;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    eval_cycle(dut);
+    expect_eq("mispredict rejects issue request",
+              dut->agen_valid | dut->dgen_valid, 0);
+
+    // A request killed in RRD must never reach either LSU request channel.
+    dut->iss_valid = 1;
+    dut->use_agen = 1;
+    dut->use_dgen = 1;
+    dut->uop_br_mask = 1;
+    eval_cycle(dut);
+    dut->iss_valid = 0;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    eval_cycle(dut);
+    expect_eq("mispredict kills RRD AGEN", dut->agen_valid, 0);
+    expect_eq("mispredict kills RRD DGEN", dut->dgen_valid, 0);
+
+    // A request already in EXE must have both outputs suppressed immediately.
+    clear_inputs(dut);
+    dut->iss_valid = 1;
+    dut->use_agen = 1;
+    dut->use_dgen = 1;
+    dut->uop_br_mask = 1;
+    dut->rs1_data = 0x5000;
+    dut->rs2_data = 0xa5a5a5a5;
+    dut->imm_data = 8;
+    eval_cycle(dut);
+    dut->iss_valid = 0;
+    eval_cycle(dut);
+    expect_eq("EXE AGEN initially valid", dut->agen_valid, 1);
+    expect_eq("EXE DGEN initially valid", dut->dgen_valid, 1);
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    dut->eval();
+    expect_eq("mispredict suppresses EXE AGEN", dut->agen_valid, 0);
+    expect_eq("mispredict suppresses EXE DGEN", dut->dgen_valid, 0);
+
+    // Correctly resolving a tag removes it before that tag can be reused.
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
+    dut->iss_valid = 1;
+    dut->use_agen = 1;
+    dut->use_dgen = 1;
+    dut->uop_br_mask = 1;
+    dut->resolve_mask = 1;
+    dut->rs1_data = 0x6000;
+    dut->rs2_data = 0x12345678;
+    dut->imm_data = 4;
+    eval_cycle(dut);
+    dut->iss_valid = 0;
+    dut->resolve_mask = 0;
+    dut->br_mispredict = 1;
+    dut->mispredict_mask = 1;
+    eval_cycle(dut);
+    expect_eq("resolved tag keeps AGEN", dut->agen_valid, 1);
+    expect_eq("resolved tag keeps DGEN", dut->dgen_valid, 1);
+    expect_eq("resolved tag keeps address", dut->agen_addr, 0x6004);
+    expect_eq("resolved tag keeps store data",
+              dut->dgen_data, 0x12345678);
 
     pass("mem");
     delete dut;
