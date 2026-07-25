@@ -153,6 +153,7 @@ module store_queue_test_top (
         .clk,
         .rst_n,
         .enq_valid,
+        .enq_fire(enq_valid),
         .enq_uops,
         .enq_ready,
         .enq_idx,

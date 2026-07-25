@@ -192,21 +192,22 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 ## 后端恢复边界
 
-| 项目 | 当前问题 | 影响 |
+| 项目 | 当前状态 | 剩余工作 |
 |------|---------|------|
-| LSU 晚到响应 | 临时 LSU 响应路径没有验证请求仍有效；错误路径 pdst 被回收复用后，旧响应仍会写回和唤醒 | 新指令被错误数据提前唤醒并产生错误结果 |
+| LSU 晚到响应 | `boom_core` 已改用正式 LSU，LDQ 会用有效位和 generation 拒绝错误路径的迟到响应 | 后续接入 cache replay 时继续保持同一 tag/generation 契约 |
 
 ## LSU load/store 顺序
 
 | 项目 | 当前问题 | 影响 |
 |------|---------|------|
-| 正式 LSU 集成 | LDQ/STQ 的查询、阻塞和转发接口已实现，但临时 `lsu.sv` 仍只实例化 LDQ | `lsu.sv` 尚不能执行 store，也没有共享内存端口仲裁 |
-| 共享内存端口 | 队列级测试允许 load/store 请求同时保持，正式 LSU 尚未选择并锁存其中一个请求 | 接入单端口 DCache 前必须定义仲裁和反压规则 |
-| 迟到响应恢复 | LDQ 能按 generation 和 flush 拒绝迟到响应，正式 LSU 集成后仍需验证响应路由不丢失 tag | 错误路径响应不得写回已复用的物理寄存器 |
+| 正式 LSU 集成 | 已实例化 LDQ/STQ 并连接查询、阻塞、转发、commit 和恢复接口 | 基础集成完成，仍缺动态访存异常和 cache replay |
+| 共享内存端口 | 已实现锁定式轮询仲裁，握手后在 load/store 间翻转优先级 | `test_lsu_formal.cpp` 已覆盖反压稳定性和后到请求不抢占 |
+| 迟到响应恢复 | 正式 LSU 按响应类型路由 tag，LDQ 按 generation 和 flush 拒绝迟到响应 | 正式 LSU 和 `branch_recovery` 集成测试均已通过 |
 
-对应定向测试位于 `test/lsu/test_lsu_ordering.cpp`。当前队列级的阻塞、
-转发、ROB 回绕、store 提交、双队列并发反压和 flush 迟到响应测试均已
-通过；正式 `lsu.sv` 接入后必须复用同一组行为契约。
+对应定向测试位于 `test/lsu/test_lsu_ordering.cpp` 和
+`test/lsu/test_lsu_formal.cpp`。当前队列级的阻塞、转发、ROB 回绕、
+store 提交、双队列并发反压、flush 迟到响应，以及正式 LSU 仲裁和响应
+分流测试均已通过。
 
 ---
 
@@ -222,10 +223,10 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 [  ] alu_exe_unit.sv / mem_exe_unit.sv / unq_exe_unit.sv — 执行单元
 [  ] regfile_banked.sv — 物理寄存器文件
 [  ] frontend.sv + ftq.sv + fetch_buffer.sv + bpd/* — 前端 + 分支预测
-[  ] lsu.sv + dcache.sv — 访存单元
+[✓] lsu.sv / [  ] dcache.sv — 访存单元 / 数据缓存
 [  ] boom_core.sv     — 顶层连线
 ```
 
 ---
 
-*最后更新: 2026-07-24*
+*最后更新: 2026-07-25*

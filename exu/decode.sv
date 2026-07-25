@@ -295,7 +295,7 @@ module decode(
                     uop.ldst         = rd;
                     uop.dst_rtype    = RT_FIX;
                     uop.mem_cmd      = 5'd0;       // M_XRD
-                    uop.mem_signed   = ~bit22;      // LA: bit22 区分 signed/unsigned
+                    uop.mem_signed   = ~bit25;      // LA: bit25 区分 signed/unsigned
                     uop.imm_sel      = IS_I;
                     uop.imm_packed   = {{14{i12[11]}}, i12};
                 end else begin

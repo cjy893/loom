@@ -3,7 +3,7 @@ import loom_types::*;
 
 // Temporary scalar adapter used by test/lsu. The production LSU will replace
 // this module after the load and store queue interfaces are both established.
-module lsu (
+module lsu_test (
     input  logic                         clk,
     input  logic                         rst_n,
 
@@ -83,12 +83,19 @@ module lsu (
         .clk,
         .rst_n,
         .enq_valid,
+        .enq_fire(enq_valid),
         .enq_uops,
         .enq_ready,
         .enq_idx,
         .agen_valid,
         .agen_uops,
         .agen_addr,
+        .ld_query_valid(),
+        .ld_query_uop(),
+        .ld_query_addr(),
+        .ld_query_block(1'b0),
+        .ld_query_forward_valid(1'b0),
+        .ld_query_forward_data('0),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_addr,

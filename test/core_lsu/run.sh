@@ -2,13 +2,13 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-TEST_DIR="$ROOT/test/branch_recovery"
+TEST_DIR="$ROOT/test/core_lsu"
 
 verilator --cc --build -j 1 -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
   --Mdir "$TEST_DIR/obj_dir" \
-  --top-module branch_recovery_test_top \
-  --exe "$TEST_DIR/test_branch_recovery.cpp" \
+  --top-module core_lsu_test_top \
+  --exe "$TEST_DIR/test_core_lsu.cpp" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
@@ -30,9 +30,9 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
   "$ROOT/boom_core.sv" \
-  "$TEST_DIR/branch_recovery_test_top.sv"
+  "$TEST_DIR/core_lsu_test_top.sv"
 
 (
   cd "$TEST_DIR"
-  ./obj_dir/Vbranch_recovery_test_top
+  ./obj_dir/Vcore_lsu_test_top
 )

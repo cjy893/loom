@@ -3,16 +3,16 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TEST_DIR="$ROOT/test/lsu"
-LSU_RTL="$ROOT/lsu/lsu.sv"
+LSU_TEST_RTL="$ROOT/lsu/lsu_test.sv"
 rtl_args=()
 
-if [[ -f "$LSU_RTL" ]] &&
-   rg -q '^[[:space:]]*module[[:space:]]+lsu([[:space:]]|#|\()' "$LSU_RTL"; then
-  rtl_args=(-DLSU_RTL_PRESENT "$ROOT/lsu/load_queue.sv" "$LSU_RTL")
+if [[ -f "$LSU_TEST_RTL" ]] &&
+   rg -q '^[[:space:]]*module[[:space:]]+lsu_test([[:space:]]|#|\()' "$LSU_TEST_RTL"; then
+  rtl_args=(-DLSU_TEST_RTL_PRESENT "$ROOT/lsu/load_queue.sv" "$LSU_TEST_RTL")
 fi
 
-verilator --cc --build -j -Wno-fatal --output-split 100 \
-  --output-split-cfuncs 100 \
+verilator --cc --build -j -Wno-fatal --output-split 10000 \
+  --output-split-cfuncs 10000 \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-UNUSEDSIGNAL -Wno-WIDTH \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module lsu_test_top \
@@ -52,6 +52,37 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$TEST_DIR/store_queue_test_top.sv"
 
 "$TEST_DIR/obj_dir_store/Vstore_queue_test_top"
+
+verilator --cc --build -j -Wno-fatal --output-split 10000 \
+  --output-split-cfuncs 10000 \
+  -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-UNUSEDSIGNAL -Wno-WIDTH \
+  --Mdir "$TEST_DIR/obj_dir_allocation" \
+  --top-module lsq_allocation_test_top \
+  --exe "$TEST_DIR/test_lsq_allocation.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
+  "$ROOT/lsu/load_queue.sv" \
+  "$ROOT/lsu/store_queue.sv" \
+  "$TEST_DIR/lsq_allocation_test_top.sv"
+
+"$TEST_DIR/obj_dir_allocation/Vlsq_allocation_test_top"
+
+verilator --cc --build -j -Wno-fatal --output-split 10000 \
+  --output-split-cfuncs 10000 \
+  -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-UNUSEDSIGNAL -Wno-WIDTH \
+  --Mdir "$TEST_DIR/obj_dir_formal" \
+  --top-module lsu_formal_test_top \
+  --exe "$TEST_DIR/test_lsu_formal.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
+  "$ROOT/lsu/load_queue.sv" \
+  "$ROOT/lsu/store_queue.sv" \
+  "$ROOT/lsu/lsu.sv" \
+  "$TEST_DIR/lsu_formal_test_top.sv"
+
+"$TEST_DIR/obj_dir_formal/Vlsu_formal_test_top"
 
 verilator --cc --build -j -Wno-fatal --output-split 10000 \
   --output-split-cfuncs 10000 \

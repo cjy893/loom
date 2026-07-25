@@ -2,10 +2,10 @@ import loom_params::*;
 import loom_consts::*;
 import loom_types::*;
 
-`ifndef LSU_RTL_PRESENT
+`ifndef LSU_TEST_RTL_PRESENT
 // Keeps the test harness buildable before the real LSU is introduced. The
 // C++ test checks rtl_present first and intentionally fails in this mode.
-module lsu (
+module lsu_test (
     input  logic                         clk,
     input  logic                         rst_n,
     input  logic                         ldq_enq_valid,
@@ -106,7 +106,7 @@ module lsu_test_top (
         brupdate.b2.mispredict = br_mispredict;
     end
 
-    lsu dut (
+    lsu_test dut (
         .clk,
         .rst_n,
         .ldq_enq_valid,
@@ -138,7 +138,7 @@ module lsu_test_top (
     assign load_wb_ldq_idx = load_wb_resp.uop.ldq_idx;
     assign load_wb_br_mask = load_wb_resp.uop.br_mask;
 
-`ifdef LSU_RTL_PRESENT
+`ifdef LSU_TEST_RTL_PRESENT
     assign rtl_present = 1'b1;
 `else
     assign rtl_present = 1'b0;

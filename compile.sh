@@ -23,7 +23,10 @@ EXU="$ROOT/exu/decode.sv \
      $ROOT/exu/exe/alu.sv \
      $ROOT/exu/exe/mem.sv \
      $ROOT/exu/exe/unq.sv \
-     $ROOT/exu/rob.sv"
+     $ROOT/exu/rob.sv \
+     $ROOT/lsu/load_queue.sv \
+     $ROOT/lsu/store_queue.sv \
+     $ROOT/lsu/lsu.sv"
 
 TOP="$ROOT/boom_core.sv"
 TB="$ROOT/tb.sv"

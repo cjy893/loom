@@ -151,7 +151,7 @@ module alu(
         if(exe_uop.is_jalr) resolved_pc_sel = PC_JALR;
     end
 
-    assign brinfo.mispredict = exe_uop.is_br ? (exe_uop.taken != cond_true) : exe_uop.is_jalr;
+    assign brinfo.mispredict = (exe_uop.is_br && (exe_uop.taken != cond_true)) || exe_uop.is_jal || exe_uop.is_jalr;
     assign brinfo.cfi_type = exe_uop.is_br ? CFI_BR :
                              exe_uop.is_jal ? CFI_JAL :
                              exe_uop.is_jalr ? CFI_JALR : CFI_X;

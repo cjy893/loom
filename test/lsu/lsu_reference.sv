@@ -2,7 +2,9 @@ import loom_params::*;
 import loom_consts::*;
 import loom_types::*;
 
-module lsu #(
+// Lint-checked reference implementation for lsu/lsu.sv. This module is not
+// included by test/lsu/run.sh and deliberately uses a non-production name.
+module lsu_reference #(
     parameter int DISPATCH_WIDTH = DECODE_WIDTH,
     parameter int AGEN_WIDTH = LSU_WIDTH,
     parameter int DGEN_WIDTH = MEM_WIDTH,

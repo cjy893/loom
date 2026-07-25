@@ -13,15 +13,20 @@ module tb;
     logic [FETCH_WIDTH-1:0][31:0]   fe_insts;
     logic                           fe_ready;
 
-    // ── LSU stub ──
-    logic                           lsu_agen_valid;
-    logic [31:0]                    lsu_agen_addr;
-    uop_t                           lsu_agen_uop;
-    logic                           lsu_dgen_valid;
-    logic [31:0]                    lsu_dgen_data;
-    uop_t                           lsu_dgen_uop;
-    logic                           lsu_resp_valid;
-    exe_unit_resp_t                 lsu_resp;
+    // ── 测试存储器 ──
+    logic                           dmem_req_valid;
+    logic                           dmem_req_ready;
+    logic                           dmem_req_is_store;
+    logic [31:0]                    dmem_req_addr;
+    logic [31:0]                    dmem_req_data;
+    logic [3:0]                     dmem_req_mask;
+    logic [1:0]                     dmem_req_size;
+    logic [LSU_ADDR_SZ+1:0]         dmem_req_idx;
+    uop_t                           dmem_req_uop;
+    logic                           dmem_resp_valid;
+    logic                           dmem_resp_is_store;
+    logic [31:0]                    dmem_resp_data;
+    logic [LSU_ADDR_SZ+1:0]         dmem_resp_idx;
 
     // ── CSR stub ──
     logic                           csr_req_valid;
@@ -43,9 +48,11 @@ module tb;
     boom_core dut (
         .clk(clk), .rst_n(rst_n),
         .fe_valid, .fe_insts, .fe_ready,
-        .lsu_agen_valid, .lsu_agen_addr, .lsu_agen_uop,
-        .lsu_dgen_valid, .lsu_dgen_data, .lsu_dgen_uop,
-        .lsu_resp_valid, .lsu_resp,
+        .dmem_req_valid, .dmem_req_ready, .dmem_req_is_store,
+        .dmem_req_addr, .dmem_req_data, .dmem_req_mask,
+        .dmem_req_size, .dmem_req_idx, .dmem_req_uop,
+        .dmem_resp_valid, .dmem_resp_is_store,
+        .dmem_resp_data, .dmem_resp_idx,
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_rdata,
         .commit,
         .rob_empty, .debug_pc
@@ -64,8 +71,11 @@ module tb;
         rst_n = 0;
         fe_valid = '0;
         fe_insts = '0;
-        lsu_resp_valid = 1'b0;
-        lsu_resp = '0;
+        dmem_req_ready = 1'b1;
+        dmem_resp_valid = 1'b0;
+        dmem_resp_is_store = 1'b0;
+        dmem_resp_data = '0;
+        dmem_resp_idx = '0;
         csr_rdata = '0;
         repeat (10) @(posedge clk);
         rst_n = 1;
@@ -133,42 +143,25 @@ module tb;
     end
 
     // ================================================================
-    // LSU stub：load 返回 0，store 不报错
+    // 测试存储器：请求握手后一拍返回，load 返回固定数据，store 返回 ack。
     // ================================================================
-    logic [31:0] lsu_resp_data;
-    uop_t        lsu_resp_uop;
-    logic [4:0]  lsu_delay_cnt;
-    logic        lsu_pending;
-
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            lsu_resp_valid <= 1'b0;
-            lsu_pending    <= 1'b0;
-            lsu_delay_cnt  <= '0;
+            dmem_resp_valid <= 1'b0;
+            dmem_resp_is_store <= 1'b0;
+            dmem_resp_data <= '0;
+            dmem_resp_idx <= '0;
         end else begin
-            if (lsu_agen_valid && lsu_agen_uop.uses_ldq) begin
-                lsu_resp_uop   <= lsu_agen_uop;
-                lsu_resp_data  <= 32'hDEAD_BEEF;
-                lsu_pending    <= 1'b1;
-                lsu_delay_cnt  <= '0;
-                $display("[LSU] Load AGEN: addr=0x%08h", lsu_agen_addr);
-            end
-
-            if (lsu_agen_valid && lsu_agen_uop.uses_stq)
-                $display("[LSU] Store AGEN: addr=0x%08h", lsu_agen_addr);
-            if (lsu_dgen_valid)
-                $display("[LSU] Store DGEN: data=0x%08h", lsu_dgen_data);
-
-            lsu_resp_valid <= 1'b0;
-            if (lsu_pending) begin
-                lsu_delay_cnt <= lsu_delay_cnt + 1;
-                if (lsu_delay_cnt == LOAD_USE_DELAY - 1) begin
-                    lsu_resp_valid <= 1'b1;
-                    lsu_resp.uop   <= lsu_resp_uop;
-                    lsu_resp.data  <= lsu_resp_data;
-                    lsu_resp.predicated <= 1'b0;
-                    lsu_pending <= 1'b0;
-                end
+            dmem_resp_valid <= 1'b0;
+            if (dmem_req_valid && dmem_req_ready) begin
+                dmem_resp_valid <= 1'b1;
+                dmem_resp_is_store <= dmem_req_is_store;
+                dmem_resp_data <= dmem_req_is_store ?
+                                  32'b0 : 32'hDEAD_BEEF;
+                dmem_resp_idx <= dmem_req_idx;
+                $display("[DMEM] %s addr=0x%08h data=0x%08h mask=0x%h",
+                         dmem_req_is_store ? "store" : "load",
+                         dmem_req_addr, dmem_req_data, dmem_req_mask);
             end
         end
     end

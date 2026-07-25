@@ -59,7 +59,11 @@ int main(int argc, char** argv) {
     top->fe_valid = 0;
     top->fe_insts[0] = 0;
     top->fe_insts[1] = 0;
-    top->lsu_resp_valid = 0;
+    top->dmem_req_ready = 1;
+    top->dmem_resp_valid = 0;
+    top->dmem_resp_is_store = 0;
+    top->dmem_resp_data = 0;
+    top->dmem_resp_idx = 0;
     top->csr_rdata = 0x12345678;
 
     // reset
@@ -130,8 +134,9 @@ int main(int argc, char** argv) {
             last_good = cycle;
         }
 
-        // LSU stub: 同周期返回
-        top->lsu_resp_valid = top->lsu_agen_valid;
+        // The current integration program has no memory operations. Keep the
+        // memory port ready and require any future response to arrive later.
+        top->dmem_resp_valid = 0;
         if (top->csr_req_valid)
             csr_request_count++;
 

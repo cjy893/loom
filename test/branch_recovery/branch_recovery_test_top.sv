@@ -38,36 +38,50 @@ module branch_recovery_test_top (
 );
     localparam int LSU_LOG_ENTRIES = 8;
 
-    logic                         core_lsu_agen_valid;
-    logic [31:0]                  core_lsu_agen_addr;
-    uop_t                         core_lsu_agen_uop;
-    logic                         core_lsu_dgen_valid;
-    logic [31:0]                  core_lsu_dgen_data;
-    uop_t                         core_lsu_dgen_uop;
-    exe_unit_resp_t               core_lsu_resp;
+    logic                         core_dmem_req_valid;
+    logic                         core_dmem_req_ready;
+    logic                         core_dmem_req_is_store;
+    logic [31:0]                  core_dmem_req_addr;
+    logic [31:0]                  core_dmem_req_data;
+    logic [3:0]                   core_dmem_req_mask;
+    logic [1:0]                   core_dmem_req_size;
+    logic [LSU_ADDR_SZ+1:0]       core_dmem_req_idx;
+    uop_t                         core_dmem_req_uop;
+    logic                         core_dmem_resp_valid;
+    logic                         core_dmem_resp_is_store;
+    logic [31:0]                  core_dmem_resp_data;
+    logic [LSU_ADDR_SZ+1:0]       core_dmem_resp_idx;
     commit_signal_t               core_commit;
 
     logic [3:0]                   lsu_req_count_q;
     uop_t [LSU_LOG_ENTRIES-1:0]   lsu_req_uops;
+    logic [LSU_LOG_ENTRIES-1:0][LSU_ADDR_SZ+1:0] lsu_req_idxs;
+
+    assign core_dmem_req_ready = 1'b1;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             lsu_req_count_q <= '0;
             lsu_req_uops <= '0;
-        end else if (core_lsu_agen_valid &&
+            lsu_req_idxs <= '0;
+        end else if (core_dmem_req_valid && core_dmem_req_ready &&
+                     !core_dmem_req_is_store &&
                      lsu_req_count_q < LSU_LOG_ENTRIES) begin
-            lsu_req_uops[lsu_req_count_q] <= core_lsu_agen_uop;
+            lsu_req_uops[lsu_req_count_q] <= core_dmem_req_uop;
+            lsu_req_idxs[lsu_req_count_q] <= core_dmem_req_idx;
             lsu_req_count_q <= lsu_req_count_q + 1'b1;
         end
     end
 
     always_comb begin
-        core_lsu_resp = '0;
+        core_dmem_resp_valid = 1'b0;
+        core_dmem_resp_is_store = 1'b0;
+        core_dmem_resp_data = lsu_resp_data;
+        core_dmem_resp_idx = '0;
         if (lsu_resp_slot < lsu_req_count_q) begin
-            core_lsu_resp.uop = lsu_req_uops[lsu_resp_slot];
-            core_lsu_resp.data = lsu_resp_data;
+            core_dmem_resp_valid = lsu_resp_valid;
+            core_dmem_resp_idx = lsu_req_idxs[lsu_resp_slot];
         end
-        core_lsu_resp.valid = lsu_resp_valid;
     end
 
     assign lsu_req_count = lsu_req_count_q;
@@ -87,14 +101,19 @@ module branch_recovery_test_top (
         .fe_valid,
         .fe_insts,
         .fe_ready,
-        .lsu_agen_valid(core_lsu_agen_valid),
-        .lsu_agen_addr(core_lsu_agen_addr),
-        .lsu_agen_uop(core_lsu_agen_uop),
-        .lsu_dgen_valid(core_lsu_dgen_valid),
-        .lsu_dgen_data(core_lsu_dgen_data),
-        .lsu_dgen_uop(core_lsu_dgen_uop),
-        .lsu_resp_valid,
-        .lsu_resp(core_lsu_resp),
+        .dmem_req_valid(core_dmem_req_valid),
+        .dmem_req_ready(core_dmem_req_ready),
+        .dmem_req_is_store(core_dmem_req_is_store),
+        .dmem_req_addr(core_dmem_req_addr),
+        .dmem_req_data(core_dmem_req_data),
+        .dmem_req_mask(core_dmem_req_mask),
+        .dmem_req_size(core_dmem_req_size),
+        .dmem_req_idx(core_dmem_req_idx),
+        .dmem_req_uop(core_dmem_req_uop),
+        .dmem_resp_valid(core_dmem_resp_valid),
+        .dmem_resp_is_store(core_dmem_resp_is_store),
+        .dmem_resp_data(core_dmem_resp_data),
+        .dmem_resp_idx(core_dmem_resp_idx),
         .csr_req_valid(),
         .csr_addr(),
         .csr_cmd(),
@@ -134,7 +153,7 @@ module branch_recovery_test_top (
         rf_write_ldst = '0;
         for (int i = 0; i < 3; i++)
             rf_write_ldst[i] = core.alu_res[i].uop.ldst;
-        rf_write_ldst[3] = core_lsu_resp.uop.ldst;
+        rf_write_ldst[3] = core.lsu_resp_w.uop.ldst;
         rf_write_ldst[4] = core.unq_res.uop.ldst;
     end
 

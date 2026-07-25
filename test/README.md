@@ -24,6 +24,8 @@ Run one suite:
 ./test/mem/run.sh
 ./test/unq/run.sh
 ./test/lsu/run.sh
+./test/core_lsu/run.sh
+./test/core_program/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -56,11 +58,23 @@ Current coverage:
 - `lsu`: scalar and two-wide load-queue contracts plus store-queue allocation,
   split address/data arrival, ROB busy clearing, pre-commit write suppression,
   SB/SH/SW formatting, commit-order draining, backpressure, recovery, stale
-  generation rejection, and initial load/store ordering contracts. The
+  generation rejection, and initial load/store ordering contracts. Formal LSU
+  coverage checks side-effect-free dispatch preview, locked shared-port
+  arbitration, load-to-store priority rotation, and response routing. The
   ordering groups cover unresolved older stores, non-alias and byte-mask
   non-overlap, exact-match forwarding, waiting for late store data, store
   commit/drain behavior, ROB-index wraparound, simultaneous LDQ/STQ requests,
   and rejection of load responses arriving after a flush.
+- `core_lsu`: real LA32 load/store instructions through Decode, Rename, Issue,
+  MEM, the production LSU, DMem, writeback, and ROB commit. It checks word-load
+  dependencies, SB/SH/SW requests, commit-gated stores, signed and unsigned
+  load formatting, stalled-request stability, store-to-load forwarding,
+  wrong-path store suppression, older committed stores with delayed
+  acknowledgements, and 20-operation LDQ/STQ pressure recovery.
+- `core_program`: continuous real-PC instruction streams through the temporary
+  core, including an ALU block copied from `test.s`, conditional branches,
+  direct `b`/`bl` redirects, `jirl`, link-register writeback, frontend
+  backpressure stability, and suppression of wrong-path stores.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -72,20 +86,22 @@ Current coverage:
 These are directed module tests. They do not yet cover full-width dispatch,
 memory partial issue, exceptions, or CSR behavior.
 
-The recovery additions currently expose one RTL gap: the temporary LSU
-response path accepts a delayed wrong-path response after recovery. The
-`branch_recovery` suite intentionally returns nonzero until that behavior is
-fixed.
-
 The runner continues after a failed suite so one RTL failure does not hide
 results from later modules. It returns a nonzero status if any suite fails.
 
 Current status:
 
 - Existing LDQ and STQ directed tests pass.
-- All queue-level LSU ordering groups pass. The production `lsu.sv` still needs
-  to instantiate the STQ and preserve the tested contract while arbitrating the
-  shared memory interface.
+- All queue-level LSU ordering groups pass. The production `lsu.sv` now
+  instantiates both queues, locks stalled shared-port requests, rotates
+  load/store preference after each handshake, and passes its directed
+  integration test.
+- The temporary `boom_core.sv` now uses the production LSU request/response
+  path. The branch recovery suite verifies that an old wrong-path memory
+  response cannot write back, wake a consumer, or complete a reused ROB entry.
+- The `core_lsu` suite passes word loads, all byte/half/word load extensions,
+  all store masks, DMem backpressure, store-to-load forwarding, branch recovery,
+  and queue-full recovery without dropped or duplicated memory operations.
 - `dispatch` now packs each IQ independently and preserves program order.
 - `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.

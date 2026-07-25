@@ -3,6 +3,7 @@ import loom_consts::*;
 import loom_types::*;
 
 module boom_core #(
+    parameter logic [31:0] RESET_PC = 32'h1c00_0000,
     parameter int CORE_WIDTH     = 2,
     parameter int FETCH_WIDTH    = 4,
     parameter int ALU_WIDTH      = 3,
@@ -25,15 +26,20 @@ module boom_core #(
     input  logic [FETCH_WIDTH-1:0][31:0] fe_insts,
     output logic                         fe_ready,
 
-    // ── LSU 接口（stub） ──
-    output logic                         lsu_agen_valid,
-    output logic [31:0]                  lsu_agen_addr,
-    output uop_t                         lsu_agen_uop,
-    output logic                         lsu_dgen_valid,
-    output logic [31:0]                  lsu_dgen_data,
-    output uop_t                         lsu_dgen_uop,
-    input  logic                         lsu_resp_valid,
-    input  exe_unit_resp_t               lsu_resp,
+    // ── 测试存储器接口 ──
+    output logic                         dmem_req_valid,
+    input  logic                         dmem_req_ready,
+    output logic                         dmem_req_is_store,
+    output logic [31:0]                  dmem_req_addr,
+    output logic [31:0]                  dmem_req_data,
+    output logic [3:0]                   dmem_req_mask,
+    output logic [1:0]                   dmem_req_size,
+    output logic [LSU_ADDR_SZ+1:0]       dmem_req_idx,
+    output uop_t                         dmem_req_uop,
+    input  logic                         dmem_resp_valid,
+    input  logic                         dmem_resp_is_store,
+    input  logic [31:0]                  dmem_resp_data,
+    input  logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx,
 
     // ── CSR 接口（stub） ──
     output logic                         csr_req_valid,
@@ -131,7 +137,7 @@ module boom_core #(
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            fetch_pc <= 32'h1c00_0000;
+            fetch_pc <= RESET_PC;
             fe_buf_valid <= '0;
             fe_buf_insts <= '0;
             fe_buf_pcs <= '0;
@@ -211,8 +217,7 @@ module boom_core #(
 
     assign dec_fire  = dec_valids & dec_lane_eligible &
                        {CORE_WIDTH{dec_ready}};
-    assign dec_ready = pre_dispatch_ready && branch_alloc_ready &&
-                       !(|rn_stalls);
+    assign dec_ready = dis_ready_w && branch_alloc_ready;
 
     // ================================================================
     // Branch Mask Logic
@@ -356,7 +361,20 @@ module boom_core #(
     // Dispatch
     // ================================================================
     uop_t [CORE_WIDTH-1:0] dis_uops_w;
-    assign dis_ready_w = pre_dispatch_ready;
+    logic [CORE_WIDTH-1:0] lsu_dis_ready;
+    logic [CORE_WIDTH-1:0][LDQ_ADDR_SZ+1:0] lsu_dis_ldq_idx;
+    logic [CORE_WIDTH-1:0][STQ_ADDR_SZ+1:0] lsu_dis_stq_idx;
+    logic lsu_dispatch_ready;
+
+    always_comb begin
+        lsu_dispatch_ready = 1'b1;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (rn2_mask[w] && !lsu_dis_ready[w])
+                lsu_dispatch_ready = 1'b0;
+        end
+    end
+
+    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready;
     assign dis_fire = rn2_mask & {CORE_WIDTH{dis_ready_w}};
 
     // Pack each IQ independently. Exceptions bypass all issue queues but still
@@ -378,21 +396,26 @@ module boom_core #(
         dis_uops_w = rn2_uops;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (rn2_uops[w].uses_ldq)
+                dis_uops_w[w].ldq_idx = lsu_dis_ldq_idx[w];
+            if (rn2_uops[w].uses_stq)
+                dis_uops_w[w].stq_idx = lsu_dis_stq_idx[w];
+
             if (dis_fire[w] && !rn2_exception_q[w]) begin
                 unique case (rn2_iq_type_q[w])
                     IQ_ALU: begin
                         iq_alu_dis_valid[alu_count] = 1'b1;
-                        iq_alu_dis_uop[alu_count] = rn2_uops[w];
+                        iq_alu_dis_uop[alu_count] = dis_uops_w[w];
                         alu_count++;
                     end
                     IQ_MEM: begin
                         iq_mem_dis_valid[mem_count] = 1'b1;
-                        iq_mem_dis_uop[mem_count] = rn2_uops[w];
+                        iq_mem_dis_uop[mem_count] = dis_uops_w[w];
                         mem_count++;
                     end
                     IQ_UNQ: begin
                         iq_unq_dis_valid[unq_count] = 1'b1;
-                        iq_unq_dis_uop[unq_count] = rn2_uops[w];
+                        iq_unq_dis_uop[unq_count] = dis_uops_w[w];
                         unq_count++;
                     end
                     default:;
@@ -559,13 +582,59 @@ module boom_core #(
             .brupdate(brupdate_w), .kill(bm_flush));
     end
 
-    // 当前测试顶层只有一个 LSU 请求通道，MEM 端口 0 同时承担 AGEN/DGEN。
-    assign lsu_agen_valid = mem_agen_valid[0];
-    assign lsu_agen_addr  = mem_agen_addr[0];
-    assign lsu_agen_uop   = mem_agen_uop[0];
-    assign lsu_dgen_valid = mem_dgen_valid[0];
-    assign lsu_dgen_data  = mem_dgen_data[0];
-    assign lsu_dgen_uop   = mem_dgen_uop[0];
+    logic [CORE_WIDTH-1:0] lsu_clr_bsy_valid;
+    logic [CORE_WIDTH-1:0][ROB_ADDR_SZ-1:0] lsu_clr_bsy_rob_idx;
+    logic lsu_load_wb_valid;
+    exe_unit_resp_t lsu_load_wb_resp;
+    logic lsu_ldq_empty;
+    logic lsu_stq_empty;
+
+    lsu #(
+        .DISPATCH_WIDTH(CORE_WIDTH),
+        .AGEN_WIDTH(MEM_WIDTH),
+        .DGEN_WIDTH(MEM_WIDTH),
+        .COMMIT_WIDTH(CORE_WIDTH),
+        .CLR_WIDTH(CORE_WIDTH)
+    ) lsu_inst (
+        .clk,
+        .rst_n,
+        .dis_valid(rn2_mask),
+        .dis_uops(rn2_uops),
+        .dis_lsq_ready(lsu_dis_ready),
+        .dis_ldq_idx(lsu_dis_ldq_idx),
+        .dis_stq_idx(lsu_dis_stq_idx),
+        .dis_fire,
+        .agen_valid(mem_agen_valid),
+        .agen_uops(mem_agen_uop),
+        .agen_addr(mem_agen_addr),
+        .dgen_valid(mem_dgen_valid),
+        .dgen_uops(mem_dgen_uop),
+        .dgen_data(mem_dgen_data),
+        .commit_valid(commit.valids),
+        .commit_uops(commit.uops),
+        .rob_head_idx(rob_head_idx_w),
+        .clr_bsy_valid(lsu_clr_bsy_valid),
+        .clr_bsy_rob_idx(lsu_clr_bsy_rob_idx),
+        .load_wb_valid(lsu_load_wb_valid),
+        .load_wb_resp(lsu_load_wb_resp),
+        .dmem_req_valid,
+        .dmem_req_ready,
+        .dmem_req_is_store,
+        .dmem_req_addr,
+        .dmem_req_data,
+        .dmem_req_mask,
+        .dmem_req_size,
+        .dmem_req_idx,
+        .dmem_req_uop,
+        .dmem_resp_valid,
+        .dmem_resp_is_store,
+        .dmem_resp_data,
+        .dmem_resp_idx,
+        .brupdate(brupdate_w),
+        .flush_pipeline(bm_flush),
+        .ldq_empty(lsu_ldq_empty),
+        .stq_empty(lsu_stq_empty)
+    );
 
     // ================================================================
     // 执行单元——UNQ
@@ -594,8 +663,8 @@ module boom_core #(
     exe_unit_resp_t lsu_resp_w;
 
     always_comb begin
-        lsu_resp_w       = lsu_resp;
-        lsu_resp_w.valid = lsu_resp_valid;
+        lsu_resp_w       = lsu_load_wb_resp;
+        lsu_resp_w.valid = lsu_load_wb_valid;
     end
 
     for (genvar i = 0; i < ALU_WIDTH; i++) begin
@@ -604,9 +673,9 @@ module boom_core #(
         assign wakeup_valid_w[i] = alu_wakeup_valid[i];
         assign wakeup_pdst_w[i] = alu_wakeup[i].uop.pdst;
     end
-    assign wakeups[ALU_WIDTH].valid = lsu_resp_valid;
+    assign wakeups[ALU_WIDTH].valid = lsu_resp_w.valid;
     assign wakeups[ALU_WIDTH].uop   = lsu_resp_w.uop;
-    assign wakeup_valid_w[ALU_WIDTH] = lsu_resp_valid;
+    assign wakeup_valid_w[ALU_WIDTH] = lsu_resp_w.valid;
     assign wakeup_pdst_w[ALU_WIDTH] = lsu_resp_w.uop.pdst;
     // UNQ wakeup from res_valid
     assign wakeups[ALU_WIDTH+1].valid = unq_res_valid;
@@ -701,8 +770,8 @@ module boom_core #(
         .enq_partial_stall(1'b0),
         .rob_tail_idx(rob_tail_idx_w),
         .wb_resps   (rob_wb_resps),
-        .lsu_clr_bsy_valid('0),
-        .lsu_clr_bsy_addr('0),
+        .lsu_clr_bsy_valid(lsu_clr_bsy_valid),
+        .lsu_clr_bsy_addr(lsu_clr_bsy_rob_idx),
         .brupdate   (brupdate_w),
         .lxcpt      ('0),
         .csr_replay ('0),

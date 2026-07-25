@@ -22,6 +22,7 @@ module store_queue #(
     input logic rst_n,
 
     input logic [ENQ_WIDTH-1:0] enq_valid,
+    input logic [ENQ_WIDTH-1:0] enq_fire,
     input uop_t [ENQ_WIDTH-1:0] enq_uops,
     output logic [ENQ_WIDTH-1:0] enq_ready,
     output logic [ENQ_WIDTH-1:0] [TAG_WIDTH-1:0] enq_idx,
@@ -89,7 +90,7 @@ module store_queue #(
 
     stq_entry_t [ENQ_WIDTH-1:0] enq_entries;
     logic [ENQ_WIDTH-1:0] [SLOT_WIDTH-1:0] enq_slot;
-    logic [ENQ_WIDTH-1:0] enq_fire, enq_killed;
+    logic [ENQ_WIDTH-1:0] enq_write, enq_killed;
     uop_t [ENQ_WIDTH-1:0] enq_uops_updated;
     logic [SLOT_WIDTH-1:0] alloc_hint_next;
 
@@ -270,7 +271,7 @@ module store_queue #(
 
     always_comb begin
         logic [NUM_ENTRIES-1:0] available;
-        int unsigned cursor;
+        int unsigned preview_cursor;
 
         available = '0;
         for(int i = 0; i < NUM_ENTRIES; i++) begin
@@ -280,9 +281,7 @@ module store_queue #(
         enq_ready = '0;
         enq_idx = '0;
         enq_slot = '0;
-        enq_fire = '0;
-        enq_uops_updated = enq_uops;
-        cursor = alloc_hint;
+        preview_cursor = alloc_hint;
 
         for(int w = 0; w < ENQ_WIDTH; w++) begin
             logic found;
@@ -290,7 +289,7 @@ module store_queue #(
 
             for(int off = 0; off < NUM_ENTRIES; off++) begin
                 int unsigned slot;
-                slot = (cursor + off) % NUM_ENTRIES;
+                slot = (preview_cursor + off) % NUM_ENTRIES;
                 if(!found && available[slot]) begin
                     found = 1'b1;
                     enq_ready[w] = 1'b1;
@@ -299,17 +298,36 @@ module store_queue #(
                 end
             end
 
+            if(enq_valid[w] && enq_ready[w]) begin
+                available[enq_slot[w]] = 1'b0;
+                preview_cursor = (enq_slot[w] + 1) % NUM_ENTRIES;
+            end
+        end
+    end
+
+    always_comb begin
+        enq_killed = '0;
+        enq_uops_updated = enq_uops;
+        for(int w = 0; w < ENQ_WIDTH; w++) begin
             enq_killed[w] = brupdate.b2.mispredict && |(enq_uops[w].br_mask & brupdate.b1.mispredict_mask);
             enq_uops_updated[w].br_mask = enq_uops[w].br_mask & ~brupdate.b1.resolve_mask;
             enq_uops_updated[w].stq_idx = enq_idx[w];
-            enq_fire[w] = enq_valid[w] && enq_ready[w] && !enq_killed[w] && !flush_pipeline;
-
-            if(enq_fire[w]) begin
-                available[enq_slot[w]] = 1'b0;
-                cursor = (enq_slot[w] + 1) % NUM_ENTRIES;
-            end
         end
-        alloc_hint_next = cursor[SLOT_WIDTH-1:0];
+    end
+
+    always_comb begin
+        int unsigned accept_cursor;
+
+        enq_write = '0;
+        accept_cursor = alloc_hint;
+
+        for(int w = 0; w < ENQ_WIDTH; w++) begin
+            enq_write[w] = enq_fire[w] && enq_valid[w] && enq_ready[w] && !enq_killed[w] && !flush_pipeline;
+
+            if(enq_write[w]) accept_cursor = (enq_slot[w] + 1) % NUM_ENTRIES;
+        end
+
+        alloc_hint_next = accept_cursor[SLOT_WIDTH-1:0];
     end
 
     logic [NUM_ENTRIES-1:0] entry_killed;
@@ -497,13 +515,13 @@ module store_queue #(
             end
 
             for(int w = 0; w < ENQ_WIDTH; w++) begin
-                if(enq_fire[w]) begin
+                if(enq_write[w]) begin
                     entries[enq_slot[w]] <= enq_entries[w];
                     next_gen[enq_slot[w]] <= next_gen[enq_slot[w]] + 1'b1;
                 end
             end
 
-            if(|enq_fire) alloc_hint <= alloc_hint_next;
+            if(|enq_write) alloc_hint <= alloc_hint_next;
             if(store_req_fire) entries[req_hold_slot].requested <= 1'b1;
         end
     end
