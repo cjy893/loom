@@ -2,9 +2,8 @@ import loom_params::*;
 import loom_consts::*;
 import loom_types::*;
 
-// This wrapper intentionally instantiates the current queues without adding
-// ordering logic. The red tests define the contract for their future LSU
-// integration.
+// Queue-level integration harness. The production LSU must preserve this
+// ordering, recovery, and memory-side behavior when it connects these queues.
 module lsu_ordering_test_top (
     input  logic                         clk,
     input  logic                         rst_n,
@@ -32,6 +31,23 @@ module lsu_ordering_test_top (
     input  logic [STQ_ADDR_SZ+1:0]       st_dgen_idx,
     input  logic [XLEN-1:0]              st_dgen_data,
 
+    output logic                         st_clr_bsy_valid,
+    output logic [ROB_ADDR_SZ-1:0]       st_clr_bsy_rob_idx,
+
+    input  logic                         st_commit_valid,
+    input  logic [STQ_ADDR_SZ+1:0]       st_commit_idx,
+
+    output logic                         store_req_valid,
+    input  logic                         store_req_ready,
+    output logic [XLEN-1:0]              store_req_addr,
+    output logic [XLEN-1:0]              store_req_data,
+    output logic [XLEN/8-1:0]            store_req_mask,
+    output logic [STQ_ADDR_SZ+1:0]       store_req_idx,
+    output logic [ROB_ADDR_SZ-1:0]       store_req_rob_idx,
+
+    input  logic                         store_ack_valid,
+    input  logic [STQ_ADDR_SZ+1:0]       store_ack_idx,
+
     input  logic                         ld_agen_valid,
     input  logic [LDQ_ADDR_SZ+1:0]       ld_agen_idx,
     input  logic [XLEN-1:0]              ld_agen_addr,
@@ -50,6 +66,7 @@ module lsu_ordering_test_top (
     output logic [ROB_ADDR_SZ-1:0]       load_wb_rob_idx,
     output logic [LDQ_ADDR_SZ+1:0]       load_wb_ldq_idx,
 
+    input  logic [ROB_ADDR_SZ-1:0]       rob_head_idx,
     input  logic                         flush_pipeline,
     output logic                         ldq_empty,
     output logic                         stq_empty
@@ -68,6 +85,12 @@ module lsu_ordering_test_top (
     uop_t [0:0] ld_commit_uops;
     uop_t load_req_uop;
     exe_unit_resp_t load_wb_resp;
+    logic ld_query_valid;
+    uop_t ld_query_uop;
+    logic [XLEN-1:0] ld_query_addr;
+    logic ld_query_block;
+    logic ld_query_forward_valid;
+    logic [XLEN-1:0] ld_query_forward_data;
 
     logic [0:0] st_enq_valid_vec;
     uop_t [0:0] st_enq_uops;
@@ -79,15 +102,10 @@ module lsu_ordering_test_top (
     logic [0:0] st_dgen_valid_vec;
     uop_t [0:0] st_dgen_uops;
     logic [0:0][XLEN-1:0] st_dgen_data_vec;
-    logic [0:0] st_clr_bsy_valid;
-    logic [0:0][ROB_ADDR_SZ-1:0] st_clr_bsy_rob_idx;
-    logic [0:0] st_commit_valid;
+    logic [0:0] st_clr_bsy_valid_vec;
+    logic [0:0][ROB_ADDR_SZ-1:0] st_clr_bsy_rob_idx_vec;
+    logic [0:0] st_commit_valid_vec;
     uop_t [0:0] st_commit_uops;
-    logic store_req_valid;
-    logic [XLEN-1:0] store_req_addr;
-    logic [XLEN-1:0] store_req_data;
-    logic [XLEN/8-1:0] store_req_mask;
-    logic [STQ_TAG_WIDTH-1:0] store_req_idx;
     uop_t store_req_uop;
 
     br_update_info_t brupdate;
@@ -134,8 +152,10 @@ module lsu_ordering_test_top (
         st_dgen_uops[0].stq_idx = st_dgen_idx;
         st_dgen_data_vec[0] = st_dgen_data;
 
-        st_commit_valid = '0;
+        st_commit_valid_vec[0] = st_commit_valid;
         st_commit_uops = '0;
+        st_commit_uops[0].uses_stq = 1'b1;
+        st_commit_uops[0].stq_idx = st_commit_idx;
     end
 
     assign ld_enq_ready = ld_enq_ready_vec[0];
@@ -145,6 +165,9 @@ module lsu_ordering_test_top (
     assign load_wb_data = load_wb_resp.data;
     assign load_wb_rob_idx = load_wb_resp.uop.rob_idx;
     assign load_wb_ldq_idx = load_wb_resp.uop.ldq_idx;
+    assign st_clr_bsy_valid = st_clr_bsy_valid_vec[0];
+    assign st_clr_bsy_rob_idx = st_clr_bsy_rob_idx_vec[0];
+    assign store_req_rob_idx = store_req_uop.rob_idx;
 
     load_queue #(
         .NUM_ENTRIES(LDQ_ENTRIES),
@@ -165,6 +188,12 @@ module lsu_ordering_test_top (
         .agen_valid(ld_agen_valid_vec),
         .agen_uops(ld_agen_uops),
         .agen_addr(ld_agen_addr_vec),
+        .ld_query_valid,
+        .ld_query_uop,
+        .ld_query_addr,
+        .ld_query_block,
+        .ld_query_forward_valid,
+        .ld_query_forward_data,
         .dmem_req_valid(load_req_valid),
         .dmem_req_ready(load_req_ready),
         .dmem_req_addr(load_req_addr),
@@ -207,19 +236,26 @@ module lsu_ordering_test_top (
         .dgen_valid(st_dgen_valid_vec),
         .dgen_uops(st_dgen_uops),
         .dgen_data(st_dgen_data_vec),
-        .clr_bsy_valid(st_clr_bsy_valid),
-        .clr_bsy_rob_idx(st_clr_bsy_rob_idx),
+        .clr_bsy_valid(st_clr_bsy_valid_vec),
+        .clr_bsy_rob_idx(st_clr_bsy_rob_idx_vec),
         .store_req_valid,
-        .store_req_ready(1'b0),
+        .store_req_ready,
         .store_req_addr,
         .store_req_data,
         .store_req_mask,
         .store_req_idx,
         .store_req_uop,
-        .store_ack_valid(1'b0),
-        .store_ack_idx('0),
-        .commit_valid(st_commit_valid),
+        .store_ack_valid,
+        .store_ack_idx,
+        .commit_valid(st_commit_valid_vec),
         .commit_uops(st_commit_uops),
+        .ld_query_valid,
+        .ld_query_uop,
+        .ld_query_addr,
+        .rob_head_idx,
+        .ld_query_block,
+        .ld_query_forward_valid,
+        .ld_query_forward_data,
         .brupdate,
         .flush_pipeline,
         .stq_empty

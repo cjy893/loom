@@ -56,6 +56,15 @@ module store_queue_test_top (
     input  logic                         br_mispredict,
     input  logic                         flush_pipeline,
 
+    input  logic                         query_valid,
+    input  logic [ROB_ADDR_SZ-1:0]       query_rob_idx,
+    input  logic [XLEN-1:0]              query_addr,
+    input  logic [1:0]                   query_mem_size,
+    input  logic [ROB_ADDR_SZ-1:0]       rob_head_idx,
+    output logic                         query_block,
+    output logic                         query_forward_valid,
+    output logic [XLEN-1:0]              query_forward_data,
+
     output logic                         stq_empty
 );
     localparam int TAG_WIDTH = STQ_ADDR_SZ + 2;
@@ -78,6 +87,7 @@ module store_queue_test_top (
 
     logic [1:0] commit_valid;
     uop_t [1:0] commit_uops;
+    uop_t query_uop;
     uop_t store_req_uop;
     br_update_info_t brupdate;
 
@@ -115,6 +125,11 @@ module store_queue_test_top (
         commit_uops[0].stq_idx = commit0_idx;
         commit_uops[1].uses_stq = 1'b1;
         commit_uops[1].stq_idx = commit1_idx;
+
+        query_uop = '0;
+        query_uop.rob_idx = query_rob_idx;
+        query_uop.uses_ldq = 1'b1;
+        query_uop.mem_size = query_mem_size;
 
         brupdate = '0;
         brupdate.b1.resolve_mask = resolve_mask;
@@ -160,6 +175,13 @@ module store_queue_test_top (
         .store_ack_idx,
         .commit_valid,
         .commit_uops,
+        .ld_query_valid(query_valid),
+        .ld_query_uop(query_uop),
+        .ld_query_addr(query_addr),
+        .rob_head_idx,
+        .ld_query_block(query_block),
+        .ld_query_forward_valid(query_forward_valid),
+        .ld_query_forward_data(query_forward_data),
         .brupdate,
         .flush_pipeline,
         .stq_empty

@@ -58,7 +58,9 @@ Current coverage:
   SB/SH/SW formatting, commit-order draining, backpressure, recovery, stale
   generation rejection, and initial load/store ordering contracts. The
   ordering groups cover unresolved older stores, non-alias and byte-mask
-  non-overlap, exact-match forwarding, and waiting for late store data.
+  non-overlap, exact-match forwarding, waiting for late store data, store
+  commit/drain behavior, ROB-index wraparound, simultaneous LDQ/STQ requests,
+  and rejection of load responses arriving after a flush.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -81,9 +83,9 @@ results from later modules. It returns a nonzero status if any suite fails.
 Current status:
 
 - Existing LDQ and STQ directed tests pass.
-- LSU ordering groups `unknown`, `forward`, and `data_wait` intentionally fail
-  until the queues are connected by ordering and forwarding logic.
-- LSU ordering groups `non_alias` and `non_overlap` pass.
+- All queue-level LSU ordering groups pass. The production `lsu.sv` still needs
+  to instantiate the STQ and preserve the tested contract while arbitrating the
+  shared memory interface.
 - `dispatch` now packs each IQ independently and preserves program order.
 - `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.

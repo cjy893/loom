@@ -51,6 +51,15 @@ module store_queue #(
     input logic [COMMIT_WIDTH-1:0] commit_valid,
     input uop_t [COMMIT_WIDTH-1:0] commit_uops,
 
+    input logic ld_query_valid,
+    input uop_t ld_query_uop,
+    input logic [ADDR_WIDTH-1:0] ld_query_addr,
+    input logic [ROB_ADDR_SZ-1:0] rob_head_idx,
+
+    output logic ld_query_block,
+    output logic ld_query_forward_valid,
+    output logic [DATA_WIDTH-1:0] ld_query_forward_data,
+
     input br_update_info_t brupdate,
     input logic flush_pipeline,
 
@@ -59,6 +68,7 @@ module store_queue #(
     localparam int CQ_COUNT_WIDTH = $clog2(NUM_ENTRIES + 1);
     localparam int PUSH_COUNT_WIDTH = $clog2(COMMIT_WIDTH + 1);
     localparam int BYTE_OFFSET_WIDTH = (MASK_WIDTH > 1) ? $clog2(MASK_WIDTH) : 1;
+    localparam int QUERY_COUNT_WIDTH = $clog2(NUM_ENTRIES + 1);
 
     typedef struct packed {
         logic valid;
@@ -114,6 +124,54 @@ module store_queue #(
     logic ack_match;
     logic [SLOT_WIDTH-1:0] cq_head_next;
     logic [CQ_COUNT_WIDTH-1:0] cq_count_next;
+
+    logic [MASK_WIDTH-1:0] ld_query_mask;
+    logic query_unresolved_older;
+    logic [QUERY_COUNT_WIDTH-1:0] query_overlap_count;
+    logic [SLOT_WIDTH-1:0] query_overlap_slot;
+    logic [MASK_WIDTH-1:0] query_overlap_store_mask;
+
+
+    function automatic logic [MASK_WIDTH-1:0] gen_byte_mask(
+        input logic [ADDR_WIDTH-1:0] addr,
+        input logic [1:0] size
+    );
+        case(size)
+            2'd0: gen_byte_mask = {{(MASK_WIDTH-1){1'b0}}, 1'b1} << addr[BYTE_OFFSET_WIDTH-1:0];
+            2'd1: gen_byte_mask = {{(MASK_WIDTH-2){1'b0}}, 2'b11} << addr[BYTE_OFFSET_WIDTH-1:0];
+            2'd2: gen_byte_mask = '1;
+            default: gen_byte_mask = '0;
+        endcase
+    endfunction
+
+    function automatic logic [DATA_WIDTH-1:0] align_store_data(
+        input logic [DATA_WIDTH-1:0] data,
+        input logic [ADDR_WIDTH-1:0] addr,
+        input logic [1:0] size
+    );
+        logic [BYTE_OFFSET_WIDTH-1:0] byte_offset;
+
+        begin
+            byte_offset = addr[BYTE_OFFSET_WIDTH-1:0];
+            case(size)
+                2'd0: align_store_data = data << (byte_offset * 8);
+                2'd1: align_store_data = data << (byte_offset * 8);
+                2'd2: align_store_data = data;
+                default: align_store_data = '0;
+            endcase
+        end
+    endfunction
+
+    function automatic logic rob_is_older(
+        input logic [ROB_ADDR_SZ-1:0] a,
+        input logic [ROB_ADDR_SZ-1:0] b,
+        input logic [ROB_ADDR_SZ-1:0] head
+    );
+        logic [ROB_ADDR_SZ-1:0] dist_a, dist_b;
+        dist_a = a - head;
+        dist_b = b - head;
+        return dist_a < dist_b;
+    endfunction
 
     always_comb begin
         ack_slot = store_ack_idx[SLOT_WIDTH-1:0];
@@ -260,6 +318,59 @@ module store_queue #(
         entry_killed = '0;
         for(int i = 0; i < NUM_ENTRIES; i++) begin
             entry_killed[i] = entries[i].valid && !entries[i].committed && brupdate.b2.mispredict && |(entries[i].uop.br_mask & brupdate.b1.mispredict_mask);
+        end
+    end
+
+    always_comb begin
+        ld_query_mask = gen_byte_mask(ld_query_addr, ld_query_uop.mem_size);
+        query_unresolved_older = 1'b0;
+        query_overlap_count = '0;
+        query_overlap_slot = '0;
+        query_overlap_store_mask = '0;
+
+        ld_query_block = 1'b0;
+        ld_query_forward_valid = 1'b0;
+        ld_query_forward_data = '0;
+
+        for(int i = 0; i < NUM_ENTRIES; i++) begin
+            logic store_is_older;
+            logic same_word;
+            logic [MASK_WIDTH-1:0] store_mask;
+            logic mask_overlap;
+
+            store_is_older = entries[i].committed || rob_is_older(entries[i].uop.rob_idx, ld_query_uop.rob_idx, rob_head_idx);
+            same_word = entries[i].addr[ADDR_WIDTH-1:BYTE_OFFSET_WIDTH] == ld_query_addr[ADDR_WIDTH-1:BYTE_OFFSET_WIDTH];
+            store_mask = gen_byte_mask(entries[i].addr, entries[i].uop.mem_size);
+            mask_overlap = same_word && |(store_mask & ld_query_mask);
+
+            if(ld_query_valid && !flush_pipeline && entries[i].valid && !entry_killed[i] && store_is_older) begin
+                if(!entries[i].addr_valid) begin
+                    query_unresolved_older = 1'b1;
+                end else if(mask_overlap) begin
+                    query_overlap_count = query_overlap_count + 1'b1;
+                    query_overlap_slot = i[SLOT_WIDTH-1:0];
+                    query_overlap_store_mask = store_mask;
+                end
+            end
+        end
+
+        if(ld_query_valid && !flush_pipeline) begin
+            if(query_unresolved_older) begin
+                ld_query_block = 1'b1;
+            end else if(query_overlap_count > 1) begin
+                ld_query_block = 1'b1;
+            end else if(query_overlap_count == 1) begin
+                if(entries[query_overlap_slot].data_valid && ((query_overlap_store_mask & ld_query_mask) == ld_query_mask)) begin
+                    ld_query_forward_valid = 1'b1;
+                    ld_query_forward_data = align_store_data(
+                        entries[query_overlap_slot].data,
+                        entries[query_overlap_slot].addr,
+                        entries[query_overlap_slot].uop.mem_size
+                    );
+                end else begin
+                    ld_query_block = 1'b1;
+                end
+            end
         end
     end
 

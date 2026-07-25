@@ -24,6 +24,13 @@ module load_queue #(
     input uop_t [AGEN_WIDTH-1:0] agen_uops,
     input logic [AGEN_WIDTH-1:0] [ADDR_WIDTH-1:0] agen_addr,
 
+    output logic ld_query_valid,
+    output uop_t ld_query_uop,
+    output logic [ADDR_WIDTH-1:0] ld_query_addr,
+    input logic ld_query_block,
+    input logic ld_query_forward_valid,
+    input logic [XLEN-1:0] ld_query_forward_data,
+
     output logic dmem_req_valid,
     input logic dmem_req_ready,
     output logic [ADDR_WIDTH-1:0] dmem_req_addr,
@@ -52,6 +59,7 @@ module load_queue #(
         logic completed;
         logic [31:0] addr;
         uop_t uop;
+        logic forward_pending;
     } ldq_entry_t;
     
     ldq_entry_t [NUM_ENTRIES-1:0] entries;
@@ -83,6 +91,20 @@ module load_queue #(
 
     logic [XLEN-1:0] resp_shifted_data;
     logic [XLEN-1:0] resp_formatted_data;
+
+    logic query_take_memory;
+    logic query_take_forward;
+
+    logic fwd_hold_valid;
+    logic [TAG_WIDTH-1:0] fwd_hold_idx;
+    logic [XLEN-1:0] fwd_hold_data;
+    logic [SLOT_WIDTH-1:0] fwd_hold_slot;
+    logic fwd_hold_live;
+    logic fwd_hold_killed;
+    logic fwd_wb_fire;
+
+    logic [SLOT_WIDTH-1:0] wb_slot;
+    logic [XLEN-1:0] wb_raw_data;
 
     always_comb begin
         enq_entries = '0;
@@ -151,7 +173,8 @@ module load_queue #(
         req_candidate_uop = '0;
 
         for(int i = 0; i < NUM_ENTRIES; i++) begin
-            if(!req_candidate_valid && entries[i].valid && entries[i].addr_valid && !entries[i].requested && !entries[i].completed && !entry_killed[i]) begin
+            if(!req_candidate_valid && entries[i].valid && entries[i].addr_valid &&
+               !entries[i].requested && !entries[i].forward_pending && !entries[i].completed && !entry_killed[i]) begin
                 req_candidate_valid = 1'b1;
                 req_candidate_slot = i[SLOT_WIDTH-1:0];
                 req_candidate_uop = entries[i].uop;
@@ -159,6 +182,15 @@ module load_queue #(
         end
 
         req_candidate_uop.br_mask = req_candidate_uop.br_mask & ~brupdate.b1.resolve_mask;
+    end
+
+    always_comb begin
+        ld_query_valid = req_candidate_valid && !req_hold_valid && !fwd_hold_valid && !flush_pipeline;
+        ld_query_uop = req_candidate_uop;
+        ld_query_addr = entries[req_candidate_slot].addr;
+
+        query_take_forward = ld_query_valid && ld_query_forward_valid && !ld_query_block;
+        query_take_memory = ld_query_valid && !ld_query_forward_valid && !ld_query_block;
     end
 
     logic [AGEN_WIDTH-1:0] [SLOT_WIDTH-1:0] agen_slot;
@@ -180,9 +212,13 @@ module load_queue #(
             req_hold_addr <= '0;
             req_hold_idx <= '0;
             req_hold_uop <= '0;
+            fwd_hold_valid <= 1'b0;
+            fwd_hold_idx <= '0;
+            fwd_hold_data <= '0;
         end else if(flush_pipeline) begin
             entries <= '0;
             req_hold_valid <= 1'b0;
+            fwd_hold_valid <= 1'b0;
         end else begin
             for(int i = 0; i < NUM_ENTRIES; i++) begin
                 if(entries[i].valid) begin
@@ -219,16 +255,30 @@ module load_queue #(
 
             if(req_hold_valid) begin
                 if(req_hold_killed || !req_hold_live || dmem_req_fire) req_hold_valid <= 1'b0;
-            end else if(req_candidate_valid) begin
+            end else if(query_take_memory) begin
                 req_hold_valid <= 1'b1;
                 req_hold_addr <= entries[req_candidate_slot].addr;
                 req_hold_idx <= entries[req_candidate_slot].uop.ldq_idx;
                 req_hold_uop <= req_candidate_uop;
             end
 
+            if(fwd_hold_valid) begin
+                if(!fwd_hold_live || fwd_hold_killed || fwd_wb_fire) fwd_hold_valid <= 1'b0;
+            end else if(query_take_forward) begin
+                fwd_hold_valid <= 1'b1;
+                fwd_hold_idx <= entries[req_candidate_slot].uop.ldq_idx;
+                fwd_hold_data <= ld_query_forward_data;
+                entries[req_candidate_slot].forward_pending <= 1'b1;
+            end
+
             if(dmem_req_fire) entries[req_hold_slot].requested <= 1'b1;
 
             if(resp_match) entries[resp_slot].completed <= 1'b1;
+
+            if(fwd_wb_fire) begin
+                entries[fwd_hold_slot].completed <= 1'b1;
+                entries[fwd_hold_slot].forward_pending <= 1'b0;
+            end
         end
     end
 
@@ -249,16 +299,25 @@ module load_queue #(
         resp_match = dmem_resp_valid && entries[resp_slot].valid && entries[resp_slot].requested && !entries[resp_slot].completed &&
                      (entries[resp_slot].uop.ldq_idx == dmem_resp_idx) && !entry_killed[resp_slot] && !flush_pipeline;
         
-        resp_shifted_data = dmem_resp_data >> (8 * entries[resp_slot].addr[1:0]);
+        fwd_hold_slot = fwd_hold_idx[SLOT_WIDTH-1:0];
+        fwd_hold_live = fwd_hold_valid && entries[fwd_hold_slot].valid && entries[fwd_hold_slot].forward_pending &&
+                        (entries[fwd_hold_slot].uop.ldq_idx == fwd_hold_idx);
+        fwd_hold_killed = fwd_hold_live && entry_killed[fwd_hold_slot];
+        fwd_wb_fire = fwd_hold_live && !fwd_hold_killed && !flush_pipeline && !resp_match;
+
+        wb_slot = resp_match ? resp_slot : fwd_hold_slot;
+        wb_raw_data = resp_match ? dmem_resp_data : fwd_hold_data;
+
+        resp_shifted_data = wb_raw_data >> (8 * entries[wb_slot].addr[1:0]);
 
         resp_formatted_data = '0;
-        case(entries[resp_slot].uop.mem_size)
+        case(entries[wb_slot].uop.mem_size)
             2'b00: begin
-                if(entries[resp_slot].uop.mem_signed) resp_formatted_data = {{(XLEN-8){resp_shifted_data[7]}}, resp_shifted_data[7:0]};
+                if(entries[wb_slot].uop.mem_signed) resp_formatted_data = {{(XLEN-8){resp_shifted_data[7]}}, resp_shifted_data[7:0]};
                 else resp_formatted_data = {{(XLEN-8){1'b0}}, resp_shifted_data[7:0]};
             end
             2'b01: begin
-                if(entries[resp_slot].uop.mem_signed) resp_formatted_data = {{(XLEN-16){resp_shifted_data[15]}}, resp_shifted_data[15:0]};
+                if(entries[wb_slot].uop.mem_signed) resp_formatted_data = {{(XLEN-16){resp_shifted_data[15]}}, resp_shifted_data[15:0]};
                 else resp_formatted_data = {{(XLEN-16){1'b0}}, resp_shifted_data[15:0]};
             end
             2'b10: begin
@@ -267,12 +326,12 @@ module load_queue #(
             default: resp_formatted_data = '0;
         endcase
 
-        load_wb_valid = resp_match;
+        load_wb_valid = resp_match || fwd_wb_fire;
 
         load_wb_resp = '0;
-        load_wb_resp.valid = resp_match;
-        load_wb_resp.uop = entries[resp_slot].uop;
-        load_wb_resp.uop.br_mask = entries[resp_slot].uop.br_mask & ~brupdate.b1.resolve_mask;
+        load_wb_resp.valid = load_wb_valid;
+        load_wb_resp.uop = entries[wb_slot].uop;
+        load_wb_resp.uop.br_mask = entries[wb_slot].uop.br_mask & ~brupdate.b1.resolve_mask;
         load_wb_resp.data = resp_formatted_data;
     end
 

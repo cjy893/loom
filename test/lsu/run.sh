@@ -67,7 +67,8 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$TEST_DIR/lsu_ordering_test_top.sv"
 
 ordering_failures=()
-for group in unknown non_alias non_overlap forward data_wait; do
+for group in unknown non_alias non_overlap forward data_wait \
+             store_commit rob_wrap concurrent flush_late; do
   if ! "$TEST_DIR/obj_dir_ordering/Vlsu_ordering_test_top" "$group"; then
     ordering_failures+=("$group")
   fi

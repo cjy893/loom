@@ -41,6 +41,11 @@ void clear_inputs(Vstore_queue_test_top* dut) {
     dut->mispredict_mask = 0;
     dut->br_mispredict = 0;
     dut->flush_pipeline = 0;
+    dut->query_valid = 0;
+    dut->query_rob_idx = 0;
+    dut->query_addr = 0;
+    dut->query_mem_size = 2;
+    dut->rob_head_idx = 0;
 }
 
 void reset_case(Vstore_queue_test_top* dut) {
@@ -195,6 +200,21 @@ void expect_no_request(Vstore_queue_test_top* dut, int cycles,
         expect_eq(message, dut->store_req_valid, 0);
         eval_cycle(dut);
     }
+}
+
+void set_query(Vstore_queue_test_top* dut, unsigned rob, uint32_t addr,
+               unsigned size, unsigned rob_head = 0) {
+    dut->query_valid = 1;
+    dut->query_rob_idx = rob;
+    dut->query_addr = addr;
+    dut->query_mem_size = size;
+    dut->rob_head_idx = rob_head;
+    dut->eval();
+}
+
+void clear_query(Vstore_queue_test_top* dut) {
+    dut->query_valid = 0;
+    dut->eval();
 }
 
 void test_precommit_backpressure_and_word(Vstore_queue_test_top* dut) {
@@ -377,6 +397,83 @@ void test_stale_generation_inputs(Vstore_queue_test_top* dut) {
     expect_eq("matching generation ack drains STQ", dut->stq_empty, 1);
 }
 
+void test_load_query(Vstore_queue_test_top* dut) {
+    reset_case(dut);
+    const unsigned unresolved = enqueue_single(dut, 10);
+    set_query(dut, 11, 0x1000, 2);
+    expect_eq("unknown older store blocks load", dut->query_block, 1);
+    expect_eq("unknown older store cannot forward",
+              dut->query_forward_valid, 0);
+    clear_query(dut);
+
+    present_address(dut, unresolved, 0x2000);
+    present_data(dut, unresolved, 0x89abcdef);
+    set_query(dut, 11, 0x3000, 2);
+    expect_eq("known non-alias store does not block", dut->query_block, 0);
+    expect_eq("known non-alias store does not forward",
+              dut->query_forward_valid, 0);
+    clear_query(dut);
+
+    set_query(dut, 11, 0x2000, 2);
+    expect_eq("matching word store does not block", dut->query_block, 0);
+    expect_eq("matching word store forwards", dut->query_forward_valid, 1);
+    expect_eq("matching word forwarding data",
+              dut->query_forward_data, 0x89abcdef);
+    clear_query(dut);
+
+    reset_case(dut);
+    const unsigned waiting = enqueue_single(dut, 20);
+    present_address(dut, waiting, 0x4000);
+    set_query(dut, 21, 0x4000, 2);
+    expect_eq("matching store without data blocks", dut->query_block, 1);
+    expect_eq("matching store without data cannot forward",
+              dut->query_forward_valid, 0);
+    clear_query(dut);
+
+    present_data(dut, waiting, 0x12345678);
+    set_query(dut, 21, 0x4000, 2);
+    expect_eq("late store data releases block", dut->query_block, 0);
+    expect_eq("late store data enables forwarding",
+              dut->query_forward_valid, 1);
+    expect_eq("late store forwarding data",
+              dut->query_forward_data, 0x12345678);
+    clear_query(dut);
+
+    reset_case(dut);
+    const unsigned byte_store = enqueue_single(dut, 30, 0);
+    present_address(dut, byte_store, 0x5000);
+    present_data(dut, byte_store, 0xaa);
+    set_query(dut, 31, 0x5001, 0);
+    expect_eq("non-overlapping byte store does not block",
+              dut->query_block, 0);
+    expect_eq("non-overlapping byte store does not forward",
+              dut->query_forward_valid, 0);
+    clear_query(dut);
+
+    reset_case(dut);
+    const unsigned committed = enqueue_single(dut, 10);
+    complete_store(dut, committed, 10, 0x6000, 0x55667788);
+    commit_single(dut, committed);
+    set_query(dut, 21, 0x6000, 2, 20);
+    expect_eq("committed store remains older than new load",
+              dut->query_block, 0);
+    expect_eq("committed store forwards after ROB head passes it",
+              dut->query_forward_valid, 1);
+    expect_eq("committed store forwarding data",
+              dut->query_forward_data, 0x55667788);
+    clear_query(dut);
+
+    reset_case(dut);
+    const Tags aliases = enqueue_pair(dut, 40, 41);
+    complete_store(dut, aliases.lane0, 40, 0x7000, 0x11111111);
+    complete_store(dut, aliases.lane1, 41, 0x7000, 0x22222222);
+    set_query(dut, 42, 0x7000, 2);
+    expect_eq("multiple overlapping stores block", dut->query_block, 1);
+    expect_eq("multiple overlapping stores do not choose arbitrarily",
+              dut->query_forward_valid, 0);
+    clear_query(dut);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -388,6 +485,7 @@ int main(int argc, char** argv) {
     test_dual_commit_order_and_push_pop(dut);
     test_recovery(dut);
     test_stale_generation_inputs(dut);
+    test_load_query(dut);
 
     pass("store_queue");
     delete dut;

@@ -200,13 +200,13 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 | 项目 | 当前问题 | 影响 |
 |------|---------|------|
-| 未解析旧 store | LDQ 与 STQ 尚未连接，旧 store 地址未知时年轻 load 仍会访问内存 | 可能读到被旧 store 覆盖前的数据 |
-| store-to-load forwarding | STQ 的地址、byte mask 和数据没有送入 load 冲突检查与写回路径 | 同地址 load 无法从旧 store 取得最新数据 |
-| store data 晚到 | 同地址 load 没有等待和重试状态 | store 地址已命中但数据未就绪时无法正确完成 load |
+| 正式 LSU 集成 | LDQ/STQ 的查询、阻塞和转发接口已实现，但临时 `lsu.sv` 仍只实例化 LDQ | `lsu.sv` 尚不能执行 store，也没有共享内存端口仲裁 |
+| 共享内存端口 | 队列级测试允许 load/store 请求同时保持，正式 LSU 尚未选择并锁存其中一个请求 | 接入单端口 DCache 前必须定义仲裁和反压规则 |
+| 迟到响应恢复 | LDQ 能按 generation 和 flush 拒绝迟到响应，正式 LSU 集成后仍需验证响应路由不丢失 tag | 错误路径响应不得写回已复用的物理寄存器 |
 
-对应定向测试位于 `test/lsu/test_lsu_ordering.cpp`。当前 `unknown`、
-`forward` 和 `data_wait` 三组预期失败，`non_alias` 与 `non_overlap`
-用于保护正常放行路径。
+对应定向测试位于 `test/lsu/test_lsu_ordering.cpp`。当前队列级的阻塞、
+转发、ROB 回绕、store 提交、双队列并发反压和 flush 迟到响应测试均已
+通过；正式 `lsu.sv` 接入后必须复用同一组行为契约。
 
 ---
 

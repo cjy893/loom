@@ -25,6 +25,11 @@ void clear_inputs(Vlsu_ordering_test_top* dut) {
     dut->st_dgen_valid = 0;
     dut->st_dgen_idx = 0;
     dut->st_dgen_data = 0;
+    dut->st_commit_valid = 0;
+    dut->st_commit_idx = 0;
+    dut->store_req_ready = 0;
+    dut->store_ack_valid = 0;
+    dut->store_ack_idx = 0;
     dut->ld_agen_valid = 0;
     dut->ld_agen_idx = 0;
     dut->ld_agen_addr = 0;
@@ -32,6 +37,7 @@ void clear_inputs(Vlsu_ordering_test_top* dut) {
     dut->load_resp_valid = 0;
     dut->load_resp_idx = 0;
     dut->load_resp_data = 0;
+    dut->rob_head_idx = 0;
     dut->flush_pipeline = 0;
 }
 
@@ -99,6 +105,56 @@ void present_load_address(Vlsu_ordering_test_top* dut, unsigned tag,
     dut->ld_agen_addr = addr;
     eval_cycle(dut);
     dut->ld_agen_valid = 0;
+    dut->eval();
+}
+
+void commit_store(Vlsu_ordering_test_top* dut, unsigned tag) {
+    dut->st_commit_valid = 1;
+    dut->st_commit_idx = tag;
+    eval_cycle(dut);
+    dut->st_commit_valid = 0;
+    dut->eval();
+}
+
+void wait_for_store_request(Vlsu_ordering_test_top* dut, unsigned tag,
+                            unsigned rob, uint32_t addr, uint32_t data,
+                            unsigned mask) {
+    for(int cycle = 0; cycle < kWaitCycles; ++cycle) {
+        dut->eval();
+        if(dut->store_req_valid) {
+            expect_eq("store request tag", dut->store_req_idx, tag);
+            expect_eq("store request ROB", dut->store_req_rob_idx, rob);
+            expect_eq("store request address", dut->store_req_addr, addr);
+            expect_eq("store request data", dut->store_req_data, data);
+            expect_eq("store request mask", dut->store_req_mask, mask);
+            return;
+        }
+        eval_cycle(dut);
+    }
+    expect_true("committed store request becomes valid", false);
+}
+
+void accept_store_request(Vlsu_ordering_test_top* dut) {
+    dut->store_req_ready = 1;
+    eval_cycle(dut);
+    dut->store_req_ready = 0;
+    dut->eval();
+    expect_eq("accepted store request leaves output",
+              dut->store_req_valid, 0);
+}
+
+void acknowledge_store(Vlsu_ordering_test_top* dut, unsigned tag) {
+    dut->store_ack_valid = 1;
+    dut->store_ack_idx = tag;
+    eval_cycle(dut);
+    dut->store_ack_valid = 0;
+    dut->eval();
+}
+
+void pulse_flush(Vlsu_ordering_test_top* dut) {
+    dut->flush_pipeline = 1;
+    eval_cycle(dut);
+    dut->flush_pipeline = 0;
     dut->eval();
 }
 
@@ -201,6 +257,9 @@ void test_matching_store_forwards(Vlsu_ordering_test_top* dut) {
     present_store_address(dut, store_tag, 0x5000);
     present_store_data(dut, store_tag, 0x89abcdef);
 
+    // Keep slot 0 occupied by an address-less byte load. The forwarded word
+    // load then uses a nonzero slot, catching response-slot/forward-slot mixups.
+    enqueue_load(dut, 39, store_tag + 1, 0, false);
     const unsigned load_tag = enqueue_load(dut, 41, store_tag + 1);
     present_load_address(dut, load_tag, 0x5000);
     wait_for_forward(dut, load_tag, 41, 0x89abcdef);
@@ -224,6 +283,149 @@ void test_matching_store_waits_for_data(
     wait_for_forward(dut, load_tag, 51, 0x76543210);
 }
 
+void test_store_commit_and_backpressure(Vlsu_ordering_test_top* dut) {
+    reset_case(dut);
+    const unsigned store_tag = enqueue_store(dut, 5);
+    present_store_address(dut, store_tag, 0x7000);
+    present_store_data(dut, store_tag, 0x11223344);
+
+    expect_eq("completed store clears ROB busy",
+              dut->st_clr_bsy_valid, 1);
+    expect_eq("store busy clear keeps ROB identity",
+              dut->st_clr_bsy_rob_idx, 5);
+    for(int cycle = 0; cycle < 3; ++cycle) {
+        expect_eq("uncommitted store cannot access memory",
+                  dut->store_req_valid, 0);
+        eval_cycle(dut);
+    }
+
+    commit_store(dut, store_tag);
+    wait_for_store_request(
+        dut, store_tag, 5, 0x7000, 0x11223344, 0xf);
+
+    const uint32_t held_addr = dut->store_req_addr;
+    const uint32_t held_data = dut->store_req_data;
+    const unsigned held_mask = dut->store_req_mask;
+    for(int cycle = 0; cycle < 3; ++cycle) {
+        expect_eq("stalled store request remains valid",
+                  dut->store_req_valid, 1);
+        expect_eq("stalled store address remains stable",
+                  dut->store_req_addr, held_addr);
+        expect_eq("stalled store data remains stable",
+                  dut->store_req_data, held_data);
+        expect_eq("stalled store mask remains stable",
+                  dut->store_req_mask, held_mask);
+        eval_cycle(dut);
+    }
+
+    pulse_flush(dut);
+    expect_eq("flush preserves committed store request",
+              dut->store_req_valid, 1);
+    expect_eq("committed store keeps STQ nonempty", dut->stq_empty, 0);
+
+    accept_store_request(dut);
+    acknowledge_store(dut, store_tag);
+    expect_eq("acknowledged store drains STQ", dut->stq_empty, 1);
+}
+
+void test_rob_wrap_ordering(Vlsu_ordering_test_top* dut) {
+    reset_case(dut);
+    dut->rob_head_idx = 60;
+
+    const unsigned older_store = enqueue_store(dut, 62);
+    present_store_address(dut, older_store, 0x7400);
+    present_store_data(dut, older_store, 0xa1b2c3d4);
+    const unsigned wrapped_load =
+        enqueue_load(dut, 1, older_store + 1);
+    present_load_address(dut, wrapped_load, 0x7400);
+    wait_for_forward(dut, wrapped_load, 1, 0xa1b2c3d4);
+
+    reset_case(dut);
+    dut->rob_head_idx = 60;
+    enqueue_store(dut, 1);
+    const unsigned older_load = enqueue_load(dut, 62, 0);
+    present_load_address(dut, older_load, 0x7500);
+    accept_and_respond(
+        dut, older_load, 0x7500, 0x2468ace0, 0x2468ace0, 62);
+}
+
+void test_concurrent_queue_requests(Vlsu_ordering_test_top* dut) {
+    reset_case(dut);
+    const unsigned store_tag = enqueue_store(dut, 10);
+    present_store_address(dut, store_tag, 0x8000);
+    present_store_data(dut, store_tag, 0x55667788);
+    expect_eq("concurrent store completes before commit",
+              dut->st_clr_bsy_valid, 1);
+    eval_cycle(dut);
+    commit_store(dut, store_tag);
+    wait_for_store_request(
+        dut, store_tag, 10, 0x8000, 0x55667788, 0xf);
+
+    const unsigned load_tag = enqueue_load(dut, 11, store_tag + 1);
+    present_load_address(dut, load_tag, 0x9000);
+    wait_for_load_request(dut, load_tag, 0x9000);
+
+    for(int cycle = 0; cycle < 3; ++cycle) {
+        expect_eq("load waits independently under memory backpressure",
+                  dut->load_req_valid, 1);
+        expect_eq("store waits independently under memory backpressure",
+                  dut->store_req_valid, 1);
+        expect_eq("concurrent load address remains stable",
+                  dut->load_req_addr, 0x9000);
+        expect_eq("concurrent store address remains stable",
+                  dut->store_req_addr, 0x8000);
+        eval_cycle(dut);
+    }
+
+    dut->load_req_ready = 1;
+    eval_cycle(dut);
+    dut->load_req_ready = 0;
+    dut->eval();
+    expect_eq("accepting load does not consume store",
+              dut->store_req_valid, 1);
+
+    dut->load_resp_valid = 1;
+    dut->load_resp_idx = load_tag;
+    dut->load_resp_data = 0x13579bdf;
+    dut->eval();
+    expect_eq("concurrent load response writes back",
+              dut->load_wb_valid, 1);
+    expect_eq("concurrent load response data",
+              dut->load_wb_data, 0x13579bdf);
+    eval_cycle(dut);
+    dut->load_resp_valid = 0;
+    dut->eval();
+
+    accept_store_request(dut);
+    acknowledge_store(dut, store_tag);
+    expect_eq("concurrent store eventually drains", dut->stq_empty, 1);
+}
+
+void test_flush_rejects_late_load_response(
+    Vlsu_ordering_test_top* dut) {
+    reset_case(dut);
+    const unsigned load_tag = enqueue_load(dut, 20, 0);
+    present_load_address(dut, load_tag, 0xa000);
+    wait_for_load_request(dut, load_tag, 0xa000);
+    dut->load_req_ready = 1;
+    eval_cycle(dut);
+    dut->load_req_ready = 0;
+    dut->eval();
+
+    pulse_flush(dut);
+    expect_eq("flush empties LDQ", dut->ldq_empty, 1);
+
+    dut->load_resp_valid = 1;
+    dut->load_resp_idx = load_tag;
+    dut->load_resp_data = 0xdeadbeef;
+    dut->eval();
+    expect_eq("late flushed load response cannot write back",
+              dut->load_wb_valid, 0);
+    eval_cycle(dut);
+    dut->load_resp_valid = 0;
+    dut->eval();
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -232,7 +434,8 @@ int main(int argc, char** argv) {
 
     if(argc != 2) {
         std::fprintf(stderr,
-                     "usage: %s unknown|non_alias|non_overlap|forward|data_wait\n",
+                     "usage: %s unknown|non_alias|non_overlap|forward|data_wait"
+                     "|store_commit|rob_wrap|concurrent|flush_late\n",
                      argv[0]);
         delete dut;
         return 2;
@@ -248,6 +451,14 @@ int main(int argc, char** argv) {
         test_matching_store_forwards(dut);
     else if(std::strcmp(argv[1], "data_wait") == 0)
         test_matching_store_waits_for_data(dut);
+    else if(std::strcmp(argv[1], "store_commit") == 0)
+        test_store_commit_and_backpressure(dut);
+    else if(std::strcmp(argv[1], "rob_wrap") == 0)
+        test_rob_wrap_ordering(dut);
+    else if(std::strcmp(argv[1], "concurrent") == 0)
+        test_concurrent_queue_requests(dut);
+    else if(std::strcmp(argv[1], "flush_late") == 0)
+        test_flush_rejects_late_load_response(dut);
     else {
         std::fprintf(stderr, "unknown test group: %s\n", argv[1]);
         delete dut;
