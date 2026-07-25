@@ -196,6 +196,18 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 |------|---------|------|
 | LSU 晚到响应 | 临时 LSU 响应路径没有验证请求仍有效；错误路径 pdst 被回收复用后，旧响应仍会写回和唤醒 | 新指令被错误数据提前唤醒并产生错误结果 |
 
+## LSU load/store 顺序
+
+| 项目 | 当前问题 | 影响 |
+|------|---------|------|
+| 未解析旧 store | LDQ 与 STQ 尚未连接，旧 store 地址未知时年轻 load 仍会访问内存 | 可能读到被旧 store 覆盖前的数据 |
+| store-to-load forwarding | STQ 的地址、byte mask 和数据没有送入 load 冲突检查与写回路径 | 同地址 load 无法从旧 store 取得最新数据 |
+| store data 晚到 | 同地址 load 没有等待和重试状态 | store 地址已命中但数据未就绪时无法正确完成 load |
+
+对应定向测试位于 `test/lsu/test_lsu_ordering.cpp`。当前 `unknown`、
+`forward` 和 `data_wait` 三组预期失败，`non_alias` 与 `non_overlap`
+用于保护正常放行路径。
+
 ---
 
 ## 待写模块（按依赖顺序）

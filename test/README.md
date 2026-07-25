@@ -53,11 +53,12 @@ Current coverage:
 - `unq`: CSR request/response, all seven LA32 multiply/divide variants,
   signed overflow, deterministic divide-by-zero results, uop identity, branch
   recovery, and kill.
-- `lsu`: the load-queue contract for allocation, request backpressure, normal
-  response writeback, branch recovery, resolved branch-tag reuse, and stale
-  response rejection after a physical slot is reused. This suite intentionally
-  fails at `rtl_present` until a real `module lsu` replaces the current
-  placeholder.
+- `lsu`: scalar and two-wide load-queue contracts plus store-queue allocation,
+  split address/data arrival, ROB busy clearing, pre-commit write suppression,
+  SB/SH/SW formatting, commit-order draining, backpressure, recovery, stale
+  generation rejection, and initial load/store ordering contracts. The
+  ordering groups cover unresolved older stores, non-alias and byte-mask
+  non-overlap, exact-match forwarding, and waiting for late store data.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -79,7 +80,10 @@ results from later modules. It returns a nonzero status if any suite fails.
 
 Current status:
 
-- All directed module tests pass.
+- Existing LDQ and STQ directed tests pass.
+- LSU ordering groups `unknown`, `forward`, and `data_wait` intentionally fail
+  until the queues are connected by ordering and forwarding logic.
+- LSU ordering groups `non_alias` and `non_overlap` pass.
 - `dispatch` now packs each IQ independently and preserves program order.
 - `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.

@@ -96,6 +96,8 @@ module lsu_test_top (
         ldq_enq_uop.dst_rtype = RT_FIX;
         ldq_enq_uop.uses_ldq = 1'b1;
         ldq_enq_uop.mem_cmd = 5'd0;
+        ldq_enq_uop.mem_size = 2'd2;
+        ldq_enq_uop.mem_signed = 1'b1;
         ldq_enq_uop.br_mask = ldq_enq_br_mask;
 
         brupdate = '0;
