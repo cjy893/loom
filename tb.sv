@@ -47,13 +47,15 @@ module tb;
     // ================================================================
     boom_core dut (
         .clk(clk), .rst_n(rst_n),
-        .fe_valid, .fe_insts, .fe_ready,
+        .fe_valid, .fe_insts, .fe_pcs('0), .fe_ready,
+        .fe_redirect_valid(), .fe_redirect_pc(),
         .dmem_req_valid, .dmem_req_ready, .dmem_req_is_store,
         .dmem_req_addr, .dmem_req_data, .dmem_req_mask,
         .dmem_req_size, .dmem_req_idx, .dmem_req_uop,
         .dmem_resp_valid, .dmem_resp_is_store,
         .dmem_resp_data, .dmem_resp_idx,
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_rdata,
+        .csr_xcpt_target('0), .csr_ertn_target('0),
         .commit,
         .rob_empty, .debug_pc
     );

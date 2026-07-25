@@ -50,7 +50,10 @@ module core_program_test_top (
         .rst_n,
         .fe_valid,
         .fe_insts,
+        .fe_pcs('0),
         .fe_ready,
+        .fe_redirect_valid(br_mispredict),
+        .fe_redirect_pc(),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
@@ -70,6 +73,8 @@ module core_program_test_top (
         .csr_wdata(),
         .csr_wmask(),
         .csr_rdata('0),
+        .csr_xcpt_target('0),
+        .csr_ertn_target('0),
         .commit(core_commit),
         .rob_empty,
         .debug_pc,
@@ -96,7 +101,6 @@ module core_program_test_top (
 
     assign ldq_empty = core.lsu_ldq_empty;
     assign stq_empty = core.lsu_stq_empty;
-    assign br_mispredict = core.brupdate_w.b2.mispredict;
     assign commit_valids = core_commit.arch_valids;
 
     for (genvar w = 0; w < 2; w++) begin : gen_commit_debug

@@ -15,6 +15,11 @@ suites=(
   mem
   unq
   lsu
+  fetch_buffer
+  ifu
+  ifu_fetch_buffer
+  core_fetch_buffer
+  core_ifu
   core_lsu
   core_program
   branch_recovery

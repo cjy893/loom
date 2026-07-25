@@ -65,6 +65,8 @@ int main(int argc, char** argv) {
     top->dmem_resp_data = 0;
     top->dmem_resp_idx = 0;
     top->csr_rdata = 0x12345678;
+    top->csr_xcpt_target = 0;
+    top->csr_ertn_target = 0;
 
     // reset
     for (int i = 0; i < 10; i++) tick();
@@ -91,20 +93,29 @@ int main(int argc, char** argv) {
     int commit_count = 0;
     int unique_dispatch_count = 0;
     int csr_request_count = 0;
+    int redirect_count = 0;
     uint32_t arch_regs[32] = {};
     bool passed = false;
     bool saw_dual_dispatch = false;
     bool saw_dual_commit = false;
     bool saw_program_end = false;
     bool unique_violation = false;
+    bool redirect_violation = false;
+    bool packet_active = false;
+    uint32_t packet_pc = 0;
+    int packet_first = -1;
     for (int cycle = 0; cycle < 50000; cycle++) {
-        bool input_accept = false;
-        int input_first = -1;
-        uint32_t input_pc = top->debug_pc;
-        if (top->fe_ready) {
-            input_first = load_packet(input_pc);
-            input_accept = top->fe_valid != 0;
+        uint32_t requested_pc = top->debug_pc;
+        if (!packet_active || requested_pc != packet_pc) {
+            packet_pc = requested_pc;
+            packet_first = load_packet(packet_pc);
+            packet_active = top->fe_valid != 0;
         }
+        top->eval();
+
+        unsigned input_valid = top->fe_valid;
+        bool input_accept = packet_active && top->fe_ready;
+        int input_first = packet_first;
 
         if (top->dis_fire_dbg == 0x3)
             saw_dual_dispatch = true;
@@ -118,12 +129,29 @@ int main(int argc, char** argv) {
                        cycle, top->dis_fire_dbg, top->rob_empty);
             }
         }
+        if (top->fe_redirect_valid) {
+            static constexpr uint32_t EXPECTED_REDIRECTS[] = {
+                RESET_PC + 3U * 4U,
+                RESET_PC + 7U * 4U,
+            };
+            uint32_t target = top->fe_redirect_pc;
+            if (redirect_count >= 2 ||
+                target != EXPECTED_REDIRECTS[redirect_count]) {
+                redirect_violation = true;
+                printf("[%5d] ERROR: redirect[%d] pc=0x%08x\n",
+                       cycle, redirect_count, target);
+            } else {
+                printf("[%5d] REDIRECT[%d]: pc=0x%08x\n",
+                       cycle, redirect_count, target);
+            }
+            redirect_count++;
+        }
 
         tick();
 
         if (input_accept) {
             for (int lane = 0; lane < CORE_WIDTH; lane++) {
-                if (top->fe_valid & (1U << lane)) {
+                if (input_valid & (1U << lane)) {
                     printf("[%5d] Feed lane%d inst[%d] = 0x%08x\n",
                            cycle, lane, input_first + lane,
                            prog_mem[input_first + lane]);
@@ -132,6 +160,8 @@ int main(int argc, char** argv) {
             if (input_first + CORE_WIDTH >= PROG_SIZE)
                 saw_program_end = true;
             last_good = cycle;
+            packet_active = false;
+            top->fe_valid = 0;
         }
 
         // The current integration program has no memory operations. Keep the
@@ -187,7 +217,9 @@ int main(int argc, char** argv) {
                      saw_dual_commit &&
                      unique_dispatch_count == 9 &&
                      csr_request_count == 2 &&
+                     redirect_count == 2 &&
                      !unique_violation &&
+                     !redirect_violation &&
                      arch_regs[13] == 2 &&
                      arch_regs[25] == 0 &&
                      arch_regs[12] == 1 &&
@@ -201,9 +233,10 @@ int main(int argc, char** argv) {
                      arch_regs[19] == 0x40000000 &&
                      arch_regs[20] == 0;
             printf("[%5d] ROB empty: commits=%d dual_dis=%d dual_com=%d "
-                   "unique=%d csr=%d r13=%u r25=%u r12=%u — %s\n",
+                   "unique=%d csr=%d redirects=%d "
+                   "r13=%u r25=%u r12=%u — %s\n",
                    cycle, commit_count, saw_dual_dispatch, saw_dual_commit,
-                   unique_dispatch_count, csr_request_count,
+                   unique_dispatch_count, csr_request_count, redirect_count,
                    arch_regs[13], arch_regs[25],
                    arch_regs[12], passed ? "PASS" : "FAIL");
             for (int k = 0; k < 10; k++) tick();

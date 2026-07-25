@@ -4,6 +4,7 @@ import loom_types::*;
 
 module boom_core #(
     parameter logic [31:0] RESET_PC = 32'h1c00_0000,
+    parameter bit USE_EXTERNAL_FE_PCS = 1'b0,
     parameter int CORE_WIDTH     = 2,
     parameter int FETCH_WIDTH    = 4,
     parameter int ALU_WIDTH      = 3,
@@ -24,7 +25,10 @@ module boom_core #(
     // ── 前端接口（raw 32 位指令） ──
     input  logic [FETCH_WIDTH-1:0]       fe_valid,
     input  logic [FETCH_WIDTH-1:0][31:0] fe_insts,
+    input  logic [FETCH_WIDTH-1:0][31:0] fe_pcs,
     output logic                         fe_ready,
+    output logic                         fe_redirect_valid,
+    output logic [31:0]                  fe_redirect_pc,
 
     // ── 测试存储器接口 ──
     output logic                         dmem_req_valid,
@@ -48,6 +52,8 @@ module boom_core #(
     output logic [31:0]                  csr_wdata,
     output logic [31:0]                  csr_wmask,
     input  logic [31:0]                  csr_rdata,
+    input  logic [31:0]                  csr_xcpt_target,
+    input  logic [31:0]                  csr_ertn_target,
 
     // ── 提交输出 ──
     output commit_signal_t               commit,
@@ -89,12 +95,16 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        pre_dispatch_ready;
+    logic                        unique_dispatch_ready;
     logic                        branch_alloc_ready;
-    logic [CORE_WIDTH-1:0]       fe_buf_valid;
-    logic [CORE_WIDTH-1:0][31:0] fe_buf_insts;
-    logic [CORE_WIDTH-1:0][31:0] fe_buf_pcs;
-    logic [CORE_WIDTH-1:0][31:0] incoming_pcs;
-    logic [$clog2(CORE_WIDTH+1)-1:0] incoming_count;
+    localparam int FE_IDX_WIDTH =
+        (FETCH_WIDTH > 1) ? $clog2(FETCH_WIDTH) : 1;
+    logic [CORE_WIDTH-1:0][31:0] dec_insts;
+    logic [CORE_WIDTH-1:0][FE_IDX_WIDTH-1:0] dec_fe_idx;
+    logic [FETCH_WIDTH-1:0]       fe_finished_q;
+    logic [FETCH_WIDTH-1:0]       fe_completed;
+    logic [$clog2(FETCH_WIDTH+1)-1:0] fe_count;
+    logic                        fe_packet_done;
     logic                        fe_accept;
 
     logic [CORE_WIDTH-1:0] iq_mem_dis_valid;
@@ -114,75 +124,85 @@ module boom_core #(
     logic [CORE_WIDTH-1:0]       dis_fire;
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
+    logic [CORE_WIDTH-1:0]       rn2_unique_q;
 
+    // The frontend owns the packet until every valid lane has entered Decode.
+    // Only a completion mask is retained here; instruction data stays at the
+    // ready/valid boundary and can therefore flow through without an extra
+    // buffering cycle.
     always_comb begin
-        logic [$clog2(CORE_WIDTH+1)-1:0] slot_offset;
+        int dec_slot;
+        int valid_offset;
 
-        incoming_count = '0;
-        incoming_pcs = '0;
-        slot_offset = '0;
-        for (int w = 0; w < CORE_WIDTH; w++) begin
-            incoming_pcs[w] = fetch_pc + (32'(slot_offset) << 2);
+        dec_valids = '0;
+        dec_insts = '0;
+        dec_pcs = '0;
+        dec_fe_idx = '0;
+        fe_count = '0;
+        dec_slot = 0;
+        valid_offset = 0;
+
+        for (int w = 0; w < FETCH_WIDTH; w++) begin
             if (fe_valid[w]) begin
-                slot_offset += 1'b1;
-                incoming_count += 1'b1;
+                fe_count += 1'b1;
+                if (!fe_finished_q[w] && dec_slot < CORE_WIDTH) begin
+                    dec_valids[dec_slot] = 1'b1;
+                    dec_insts[dec_slot] = fe_insts[w];
+                    dec_fe_idx[dec_slot] = FE_IDX_WIDTH'(w);
+                    if (USE_EXTERNAL_FE_PCS)
+                        dec_pcs[dec_slot] = fe_pcs[w];
+                    else
+                        dec_pcs[dec_slot] =
+                            fetch_pc + (32'(valid_offset) << 2);
+                    dec_slot++;
+                end
+                valid_offset++;
             end
         end
     end
 
-    assign fe_ready = (fe_buf_valid == '0) &&
-                      rob_ready_w && !rob_flush_frontend_w &&
+    always_comb begin
+        fe_completed = '0;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_fire[w])
+                fe_completed[dec_fe_idx[w]] = 1'b1;
+        end
+    end
+
+    assign fe_packet_done =
+        &(~fe_valid | fe_finished_q | fe_completed);
+    assign fe_ready = fe_packet_done &&
+                      !rob_flush_frontend_w &&
                       !brupdate_w.b2.mispredict;
-    assign fe_accept = fe_ready && (|fe_valid[CORE_WIDTH-1:0]);
+    assign fe_accept = fe_ready && (|fe_valid);
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             fetch_pc <= RESET_PC;
-            fe_buf_valid <= '0;
-            fe_buf_insts <= '0;
-            fe_buf_pcs <= '0;
-        end else if (rob_flush_w.valid) begin
-            fe_buf_valid <= '0;
-            if (rob_flush_w.flush_typ == FT_REFETCH)
-                fetch_pc <= rob_flush_w.pc + 32'd4;
-        end else if (brupdate_w.b2.mispredict) begin
-            fe_buf_valid <= '0;
-            unique case (brupdate_w.b2.pc_sel)
-                PC_PLUS4:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
-                PC_BRJMP:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] +
-                                brupdate_w.b2.target_offset[31:0];
-                PC_JALR:
-                    fetch_pc <= brupdate_w.b2.jalr_target[31:0];
-                default:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
-            endcase
+            fe_finished_q <= '0;
+        end else if (fe_redirect_valid) begin
+            fe_finished_q <= '0;
+            fetch_pc <= fe_redirect_pc;
         end else begin
-            fe_buf_valid <= fe_buf_valid & ~dec_fire;
+            if (fe_ready)
+                fe_finished_q <= '0;
+            else
+                fe_finished_q <= fe_finished_q | fe_completed;
+
             if (fe_accept) begin
-                fe_buf_valid <= fe_valid[CORE_WIDTH-1:0];
-                for (int w = 0; w < CORE_WIDTH; w++) begin
-                    fe_buf_insts[w] <= fe_insts[w];
-                    fe_buf_pcs[w] <= incoming_pcs[w];
-                end
-                fetch_pc <= fetch_pc + (32'(incoming_count) << 2);
+                fetch_pc <= fetch_pc + (32'(fe_count) << 2);
             end
         end
     end
 
-    // The input packet is buffered so a serializing instruction can consume
-    // one lane while the remaining lane stays pending.
+    // Decode the oldest unfinished lanes from the current frontend packet.
     for (genvar w = 0; w < CORE_WIDTH; w++) begin : gen_decode
         decode decode_inst (
-            .inst       (fe_buf_insts[w]),
-            .pc         (fe_buf_pcs[w]),
+            .inst       (dec_insts[w]),
+            .pc         (dec_pcs[w]),
             .status_prv (2'b00),
             .uop        (dec_uops_raw[w])
         );
-
-        assign dec_valids[w] = fe_buf_valid[w];
-        assign dec_pcs[w] = fe_buf_pcs[w];
     end
 
     // A unique uop waits for an empty ROB and cannot share a dispatch cycle
@@ -252,10 +272,14 @@ module boom_core #(
         int alu_count;
         int mem_count;
         int unq_count;
+        int valid_count;
+        logic has_unique;
 
         alu_count = 0;
         mem_count = 0;
         unq_count = 0;
+        valid_count = 0;
+        has_unique = 1'b0;
         pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w &&
                              !(|rn_stalls) &&
                              !(|brupdate_w.b1.mispredict_mask) &&
@@ -263,6 +287,8 @@ module boom_core #(
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (rn2_mask[w]) begin
+                valid_count++;
+                has_unique |= rn2_unique_q[w];
                 if (!rn2_exception_q[w]) begin
                     unique case (rn2_iq_type_q[w])
                         IQ_ALU: begin
@@ -288,6 +314,12 @@ module boom_core #(
                 end
             end
         end
+
+        // Decode isolates a unique uop into its own Rename2 packet. Recheck
+        // ROB emptiness here because an older Rename2 packet may have entered
+        // the ROB after the unique uop passed the Decode-stage check.
+        unique_dispatch_ready =
+            !has_unique || (rob_empty && (valid_count == 1));
     end
 
     // ── 灌入 dec_uops ──
@@ -311,16 +343,19 @@ module boom_core #(
         if (!rst_n || bm_flush || rob_rollback_w) begin
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
+            rn2_unique_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
+                rn2_unique_q[w] <= dec_uops[w].is_unique;
             end
         end else begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 if (dis_fire[w]) begin
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
+                    rn2_unique_q[w] <= 1'b0;
                 end
             end
         end
@@ -374,7 +409,8 @@ module boom_core #(
         end
     end
 
-    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready;
+    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready &&
+                         unique_dispatch_ready;
     assign dis_fire = rn2_mask & {CORE_WIDTH{dis_ready_w}};
 
     // Pack each IQ independently. Exceptions bypass all issue queues but still
@@ -836,6 +872,40 @@ module boom_core #(
                 brupdate_w.b2 = alu_brinfo[i];
                 found_mispredict = 1'b1;
             end
+        end
+    end
+
+    // ROB redirects are older than execute-stage branch redirects and
+    // therefore take priority when both are visible in the same cycle.
+    always_comb begin
+        fe_redirect_valid = 1'b0;
+        fe_redirect_pc = '0;
+
+        if (rob_flush_w.valid) begin
+            fe_redirect_valid = 1'b1;
+            unique case (rob_flush_w.flush_typ)
+                FT_XCPT:    fe_redirect_pc = csr_xcpt_target;
+                FT_ERET:    fe_redirect_pc = csr_ertn_target;
+                FT_REFETCH: fe_redirect_pc = rob_flush_w.pc + 32'd4;
+                default:    fe_redirect_pc = rob_flush_w.pc + 32'd4;
+            endcase
+        end else if (brupdate_w.b2.mispredict) begin
+            fe_redirect_valid = 1'b1;
+            unique case (brupdate_w.b2.pc_sel)
+                PC_PLUS4:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] + 32'd4;
+                PC_BRJMP:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] +
+                        brupdate_w.b2.target_offset[31:0];
+                PC_JALR:
+                    fe_redirect_pc =
+                        brupdate_w.b2.jalr_target[31:0];
+                default:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] + 32'd4;
+            endcase
         end
     end
 

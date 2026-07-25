@@ -24,6 +24,11 @@ Run one suite:
 ./test/mem/run.sh
 ./test/unq/run.sh
 ./test/lsu/run.sh
+./test/fetch_buffer/run.sh
+./test/ifu/run.sh
+./test/ifu_fetch_buffer/run.sh
+./test/core_fetch_buffer/run.sh
+./test/core_ifu/run.sh
 ./test/core_lsu/run.sh
 ./test/core_program/run.sh
 ./test/branch_recovery/run.sh
@@ -65,6 +70,27 @@ Current coverage:
   non-overlap, exact-match forwarding, waiting for late store data, store
   commit/drain behavior, ROB-index wraparound, simultaneous LDQ/STQ requests,
   and rejection of load responses arriving after a flush.
+- `ifu`: reset and sequential bundle fetch, instruction-memory and backend
+  backpressure stability, bundle compaction for unaligned redirect targets,
+  latest-redirect priority, buffered wrong-path invalidation, and rejection of
+  responses from stale requests.
+- `fetch_buffer`: four-wide enqueue to two-wide dequeue conversion, sparse-lane
+  compaction, partial output, backpressure stability, full-capacity handling,
+  simultaneous dequeue/enqueue, circular wraparound, flush priority, and a
+  deterministic software queue comparison.
+- `ifu_fetch_buffer`: production IFU and Fetch Buffer integration, covering
+  four-to-two draining, full-buffer backpressure, stalled output stability,
+  unaligned redirects, stale instruction-memory responses, and clearing both
+  buffered and IFU-held wrong-path packets.
+- `core_fetch_buffer`: IFU, Fetch Buffer, and temporary-core integration,
+  covering continuous two-wide acceptance, core backpressure stability,
+  unique packet ownership, exclusive unique dispatch, commit ordering, and
+  buffered wrong-path branch recovery. The core-facing packet remains owned by
+  the Fetch Buffer until all valid lanes have entered Decode.
+- `core_ifu`: production IFU connected to the temporary core, covering complete
+  four-lane packet acceptance and redirect recovery with a delayed stale
+  instruction-memory response. IFU redirect wiring uses the core's public
+  redirect valid/PC interface.
 - `core_lsu`: real LA32 load/store instructions through Decode, Rename, Issue,
   MEM, the production LSU, DMem, writeback, and ROB commit. It checks word-load
   dependencies, SB/SH/SW requests, commit-gated stores, signed and unsigned
