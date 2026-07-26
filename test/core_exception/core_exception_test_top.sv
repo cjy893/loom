@@ -38,7 +38,7 @@ module core_exception_test_top (
 
     commit_signal_t core_commit;
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(RESET_PC)
     ) core (
         .clk,

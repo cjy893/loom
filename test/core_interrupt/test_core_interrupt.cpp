@@ -463,7 +463,7 @@ static bool test_precise_interrupt_and_ertn(
         std::fprintf(
             stderr,
             "INT diagnostic: CSR interrupt_pending asserted, but "
-            "boom_core produced no EENTRY redirect\n");
+            "loom_core produced no EENTRY redirect\n");
         return false;
     }
 

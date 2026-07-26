@@ -27,6 +27,7 @@ suites=(
   core_exception
   core_interrupt
   core_interrupt_lsu
+  core_top
   branch_recovery
   integration
 )

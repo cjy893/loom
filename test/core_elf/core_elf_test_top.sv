@@ -172,7 +172,7 @@ module core_elf_test_top (
         .deq_ready(buffer_deq_ready)
     );
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(RESET_PC),
         .USE_EXTERNAL_FE_PCS(1'b1),
         .FETCH_WIDTH(2),

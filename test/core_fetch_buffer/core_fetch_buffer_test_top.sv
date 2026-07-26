@@ -118,7 +118,7 @@ module core_fetch_buffer_test_top (
         .deq_ready(buffer_deq_ready)
     );
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(PROGRAM_BASE),
         .USE_EXTERNAL_FE_PCS(1'b1),
         .FETCH_WIDTH(2),

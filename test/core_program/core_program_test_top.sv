@@ -43,7 +43,7 @@ module core_program_test_top (
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(PROGRAM_BASE)
     ) core (
         .clk,

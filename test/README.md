@@ -35,6 +35,7 @@ Run one suite:
 ./test/core_exception/run.sh
 ./test/core_interrupt/run.sh
 ./test/core_interrupt_lsu/run.sh
+./test/core_top/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -62,6 +63,9 @@ suite and is included in `run_all.sh`.
 
 `test/core_interrupt_lsu/run.sh` covers interrupt recovery boundaries shared
 with the LSU and branch unit and is included in `run_all.sh`.
+
+`test/core_top/run.sh` defines the black-box port contract for the future
+production `cpu_core` top and is included in `run_all.sh` in reference mode.
 
 `test/core_lsu_exception/run.sh` covers precise misaligned load/store `ALE`
 exceptions and is included in `run_all.sh`.
@@ -145,6 +149,11 @@ Current coverage:
   covering uncommitted-store suppression, committed-store draining, rejection
   of delayed pre-interrupt load responses, and branch-mispredict priority over
   a simultaneously pending IRQ.
+- `core_top`: black-box instruction/data-memory handshakes, request stability
+  under deterministic backpressure, architectural commit traces, branch
+  recovery, precise synchronous exception reporting, and hardware-interrupt
+  handler entry. The default reference mode composes IFU, Fetch Buffer, and
+  the temporary backend without exposing their internal hierarchy.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -171,7 +180,7 @@ Current status:
   in a low physical slot cannot starve an older runnable load in a higher slot.
   The LDQ request query uses a rotating cursor, including after blocked
   store-ordering queries.
-- The temporary `boom_core.sv` now uses the production LSU request/response
+- The production `loom_core.sv` uses the production LSU request/response
   path. The branch recovery suite verifies that an old wrong-path memory
   response cannot write back, wake a consumer, or complete a reused ROB entry.
 - The `core_lsu` suite passes word loads, all byte/half/word load extensions,

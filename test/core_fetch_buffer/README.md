@@ -1,7 +1,7 @@
 # Core Fetch Buffer integration tests
 
 This suite connects the production IFU and Fetch Buffer to the temporary
-`boom_core` through a two-wide frontend boundary.
+`loom_core` through a two-wide frontend boundary.
 
 Coverage:
 
@@ -17,7 +17,7 @@ Coverage:
 - A taken branch clears prefetched wrong-path packets and re-fetches the target
   bundle without committing wrong-path instructions.
 
-`boom_core` now consumes this two-wide interface directly and retains only a
+`loom_core` consumes this two-wide interface directly and retains only a
 per-lane completion mask while a packet is partially accepted. Consecutive
 acceptance and unique-packet ownership are therefore required passing checks.
 

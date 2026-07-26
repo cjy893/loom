@@ -57,7 +57,7 @@ module core_interrupt_lsu_test_top (
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(RESET_PC)
     ) core (
         .clk,

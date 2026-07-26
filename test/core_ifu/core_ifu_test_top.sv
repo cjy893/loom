@@ -75,7 +75,7 @@ module core_ifu_test_top (
         .fetch_ready(core_fe_ready)
     );
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(PROGRAM_BASE),
         .USE_EXTERNAL_FE_PCS(1'b1)
     ) core (

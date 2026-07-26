@@ -50,7 +50,7 @@ module core_lsu_test_top (
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
 
-    boom_core core (
+    loom_core core (
         .clk,
         .rst_n,
         .fe_valid,

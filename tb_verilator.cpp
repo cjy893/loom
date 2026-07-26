@@ -1,4 +1,4 @@
-#include "Vboom_core.h"
+#include "Vloom_core.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 #include <cstdio>
@@ -7,7 +7,7 @@
 static constexpr int CORE_WIDTH = 2;
 static constexpr uint32_t RESET_PC = 0x1c000000;
 
-static Vboom_core* top;
+static Vloom_core* top;
 static VerilatedVcdC* tfp;
 static vluint64_t sim_time = 0;
 
@@ -49,7 +49,7 @@ void tick() {
 
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
-    top = new Vboom_core;
+    top = new Vloom_core;
 
     Verilated::traceEverOn(true);
     tfp = new VerilatedVcdC;
