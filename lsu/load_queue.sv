@@ -66,6 +66,7 @@ module load_queue #(
     ldq_entry_t [NUM_ENTRIES-1:0] entries;
     logic [NUM_ENTRIES-1:0] [GEN_BITS-1:0] next_gen;
     logic [SLOT_WIDTH-1:0] alloc_hint;
+    logic [SLOT_WIDTH-1:0] query_cursor;
 
     ldq_entry_t [ENQ_WIDTH-1:0] enq_entries;
     logic [ENQ_WIDTH-1:0] [SLOT_WIDTH-1:0] enq_slot;
@@ -190,12 +191,15 @@ module load_queue #(
         req_candidate_slot = '0;
         req_candidate_uop = '0;
 
-        for(int i = 0; i < NUM_ENTRIES; i++) begin
-            if(!req_candidate_valid && entries[i].valid && entries[i].addr_valid &&
-               !entries[i].requested && !entries[i].forward_pending && !entries[i].completed && !entry_killed[i]) begin
+        for(int offset = 0; offset < NUM_ENTRIES; offset++) begin
+            int unsigned scan_slot;
+            scan_slot = (query_cursor + offset) % NUM_ENTRIES;
+
+            if(!req_candidate_valid && entries[scan_slot].valid && entries[scan_slot].addr_valid &&
+               !entries[scan_slot].requested && !entries[scan_slot].forward_pending && !entries[scan_slot].completed && !entry_killed[scan_slot]) begin
                 req_candidate_valid = 1'b1;
-                req_candidate_slot = i[SLOT_WIDTH-1:0];
-                req_candidate_uop = entries[i].uop;
+                req_candidate_slot = scan_slot[SLOT_WIDTH-1:0];
+                req_candidate_uop = entries[scan_slot].uop;
             end
         end
 
@@ -233,10 +237,12 @@ module load_queue #(
             fwd_hold_valid <= 1'b0;
             fwd_hold_idx <= '0;
             fwd_hold_data <= '0;
+            query_cursor <= '0;
         end else if(flush_pipeline) begin
             entries <= '0;
             req_hold_valid <= 1'b0;
             fwd_hold_valid <= 1'b0;
+            query_cursor <= '0;
         end else begin
             for(int i = 0; i < NUM_ENTRIES; i++) begin
                 if(entries[i].valid) begin
@@ -270,6 +276,11 @@ module load_queue #(
             end
 
             if(|enq_write) alloc_hint <= alloc_hint_next;
+
+            if(ld_query_valid) begin
+                if(req_candidate_slot == NUM_ENTRIES-1) query_cursor <= '0;
+                else query_cursor <= req_candidate_slot + 1'b1;
+            end
 
             if(req_hold_valid) begin
                 if(req_hold_killed || !req_hold_live || dmem_req_fire) req_hold_valid <= 1'b0;

@@ -39,6 +39,18 @@ Run one suite:
 ./test/integration/run.sh
 ```
 
+Run the real NSCSCC ELF milestone separately:
+
+```bash
+./test/core_elf/run.sh
+```
+
+`test/core_elf/run.sh` parses the ELF32 program headers, loads every `PT_LOAD`
+segment into a shared instruction/data memory model, starts execution at
+`0x1c000000`, and uses `test.s` to annotate failure traces. It is not included
+in `run_all.sh` because the default ELF is stored outside this RTL directory.
+See `test/core_elf/README.md` for milestone and diagnostic options.
+
 `test/csr/run.sh` is the standalone contract suite for the CSR file and is
 included in `run_all.sh`.
 
@@ -141,8 +153,8 @@ Current coverage:
   serializing CSR instructions, commit-time refetch, and end-to-end result
   checks for all seven multiply/divide variants.
 
-These are directed module tests. The passing regression includes dynamic LSU
-alignment exceptions, but does not yet include dynamic IFU exceptions,
+These are directed module tests. The passing portions include dynamic LSU
+alignment exceptions, but do not yet include dynamic IFU exceptions,
 full-width dispatch, or memory partial issue.
 
 The runner continues after a failed suite so one RTL failure does not hide
@@ -155,6 +167,10 @@ Current status:
   instantiates both queues, locks stalled shared-port requests, rotates
   load/store preference after each handshake, and passes its directed
   integration test.
+- The `lsu_ordering/slot_fair` regression verifies that a younger blocked load
+  in a low physical slot cannot starve an older runnable load in a higher slot.
+  The LDQ request query uses a rotating cursor, including after blocked
+  store-ordering queries.
 - The temporary `boom_core.sv` now uses the production LSU request/response
   path. The branch recovery suite verifies that an old wrong-path memory
   response cannot write back, wake a consumer, or complete a reused ROB entry.

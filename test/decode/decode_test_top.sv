@@ -4,6 +4,7 @@ import loom_types::*;
 
 module decode_test_top (
     input  logic [31:0] inst,
+    input  logic [31:0] pc,
     input  logic [1:0]  status_prv,
 
     output logic [3:0]  iq_type,
@@ -33,13 +34,14 @@ module decode_test_top (
     output logic        flush_on_commit,
     output logic [2:0]  csr_cmd,
     output logic        exception,
-    output logic [31:0] exc_cause
+    output logic [31:0] exc_cause,
+    output logic        xcpt_ae_if
 );
     uop_t uop;
 
     decode dut (
         .inst,
-        .pc(32'b0),
+        .pc,
         .status_prv,
         .uop
     );
@@ -72,4 +74,5 @@ module decode_test_top (
     assign csr_cmd = uop.csr_cmd;
     assign exception = uop.exception;
     assign exc_cause = uop.exc_cause;
+    assign xcpt_ae_if = uop.xcpt_ae_if;
 endmodule

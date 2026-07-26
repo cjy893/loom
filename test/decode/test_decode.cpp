@@ -35,6 +35,7 @@ enum {
 static void decode_at_plv(Vdecode_test_top* dut, uint32_t inst,
                           unsigned status_prv) {
     dut->inst = inst;
+    dut->pc = 0;
     dut->status_prv = status_prv;
     dut->eval();
 }
@@ -288,6 +289,19 @@ int main(int argc, char** argv) {
     decode(dut, 0xffffffff);
     expect_eq("illegal instruction exception", dut->exception, 1);
     expect_eq("illegal instruction cause", dut->exc_cause, 13);
+
+    // ADEF has priority over the instruction's decoded semantics.
+    dut->inst = 0x0400180c;
+    dut->pc = 0x227f9789U;
+    dut->status_prv = 0;
+    dut->eval();
+    expect_eq("misaligned fetch raises exception", dut->exception, 1);
+    expect_eq("misaligned fetch ADEF cause", dut->exc_cause, 8);
+    expect_eq("misaligned fetch marker", dut->xcpt_ae_if, 1);
+    expect_eq("ADEF has no issue queue", dut->iq_type, 0);
+    expect_eq("ADEF has no functional unit", dut->fu_code, 0);
+    expect_eq("ADEF has no destination", dut->ldst, 0);
+    expect_eq("ADEF is not serialized CSR", dut->flush_on_commit, 0);
 
     if (failures != 0) {
         std::fprintf(stderr, "FAIL: decode: %u checks failed\n", failures);

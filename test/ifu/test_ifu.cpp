@@ -331,6 +331,57 @@ static bool run_redirect_flushes_fetch_buffer(Vifu_test_top* dut) {
     return passed;
 }
 
+static bool run_adef_fault_hold(Vifu_test_top* dut) {
+    static constexpr uint32_t ADEF_PC = 0x227f9789U;
+    static constexpr uint32_t HANDLER_PC = 0x1c008000U;
+    static constexpr Bundle WRONG_PATH = {
+        0x02800401U, 0x02800802U, 0x00100823U, 0x03400000U
+    };
+
+    reset(dut);
+    bool passed = true;
+    passed &= accept_request(dut, RESET_PC);
+    passed &= send_response(dut, WRONG_PATH);
+
+    pulse_redirect(dut, ADEF_PC);
+    passed &= check("ADEF does not issue an instruction-memory request",
+                    !dut->imem_req_valid);
+
+    tick(dut);
+    dut->eval();
+    passed &= check("ADEF produces one synthetic fetch lane",
+                    dut->fetch_valid == 0x1U);
+    passed &= check("ADEF preserves the exact misaligned PC",
+                    dut->fetch_pc[0] == ADEF_PC);
+    passed &= check("ADEF synthetic instruction is zero",
+                    dut->fetch_insts[0] == 0);
+
+    const FetchSnapshot stalled = snapshot_fetch(dut);
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        tick(dut);
+        passed &= check("ADEF packet is stable under backpressure",
+                        same_fetch(stalled, snapshot_fetch(dut)));
+        passed &= check("ADEF still suppresses memory requests",
+                        !dut->imem_req_valid);
+    }
+
+    accept_fetch(dut);
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        tick(dut);
+        passed &= check("accepted ADEF is not emitted twice",
+                        dut->fetch_valid == 0);
+        passed &= check("IFU holds requests until exception redirect",
+                        !dut->imem_req_valid);
+    }
+
+    pulse_redirect(dut, HANDLER_PC);
+    passed &= expect_request(dut, HANDLER_PC);
+
+    if (passed)
+        std::printf("PASS: IFU ADEF synthesis and fault hold\n");
+    return passed;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     auto* dut = new Vifu_test_top;
@@ -340,6 +391,7 @@ int main(int argc, char** argv) {
     passed &= run_redirect_while_request_stalled(dut);
     passed &= run_redirect_with_pending_response(dut);
     passed &= run_redirect_flushes_fetch_buffer(dut);
+    passed &= run_adef_fault_hold(dut);
 
     dut->final();
     delete dut;

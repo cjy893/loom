@@ -32,7 +32,8 @@ module ifu #(
     typedef enum logic [1:0] {
         S_REQUEST,
         S_RESPONSE,
-        S_FETCH
+        S_FETCH,
+        S_FAULT
     } state_t;
 
     state_t state_q;
@@ -43,6 +44,7 @@ module ifu #(
     logic [FETCH_WIDTH-1:0][31:0] fetch_pc_q;
     logic [FETCH_WIDTH-1:0][31:0] fetch_insts_q;
     logic [FETCH_LANE_BITS-1:0] request_lane;
+    logic request_adef;
 
     function automatic logic [31:0] align_bundle(input logic [31:0] pc);
         align_bundle = (pc >> FETCH_ALIGN_BITS) << FETCH_ALIGN_BITS;
@@ -51,7 +53,7 @@ module ifu #(
     always_comb begin
         request_lane = FETCH_LANE_BITS'(request_pc_q >> 2);
 
-        imem_req_valid = state_q == S_REQUEST;
+        imem_req_valid = (state_q == S_REQUEST) && !request_adef;
         imem_req_addr = align_bundle(request_pc_q);
         imem_resp_ready = state_q == S_RESPONSE;
 
@@ -60,6 +62,8 @@ module ifu #(
         fetch_insts = fetch_insts_q;
         if (state_q == S_FETCH && !redirect_valid) fetch_valid = fetch_valid_q;
     end
+
+    assign request_adef = |request_pc_q[1:0];
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -73,10 +77,25 @@ module ifu #(
         end else begin
             case (state_q)
                 S_REQUEST: begin
-                    if (redirect_valid) begin
-                        request_stale_q <= 1'b1;
-                        redirect_pc_q <= redirect_pc;
-                    end
+                    if(request_adef) begin
+                        if(redirect_valid) begin
+                            request_pc_q <= redirect_pc;
+                            request_stale_q <= 1'b0;
+                            fetch_valid_q <= '0;
+                        end else begin
+                            state_q <= S_FETCH;
+                            request_stale_q <= 1'b0;
+
+                            for(int lane = 0; lane < FETCH_WIDTH; lane++) begin
+                                fetch_valid_q[lane] <= lane == 0;
+                                fetch_pc_q[lane] <= lane == 0 ? request_pc_q : '0;
+                                fetch_insts_q[lane] <= '0;
+                            end
+                        end
+                    end else if (redirect_valid) begin
+                            request_stale_q <= 1'b1;
+                            redirect_pc_q <= redirect_pc;
+                        end
 
                     if (imem_req_valid && imem_req_ready)
                         state_q <= S_RESPONSE;
@@ -117,8 +136,22 @@ module ifu #(
                         request_stale_q <= 1'b0;
                         fetch_valid_q <= '0;
                     end else if (fetch_ready && |fetch_valid_q) begin
+                        fetch_valid_q <= '0;
+
+                        if(request_adef) begin
+                            state_q <= S_FAULT;
+                        end else begin
+                            state_q <= S_REQUEST;
+                            request_pc_q <= align_bundle(request_pc_q) + FETCH_BYTES;
+                            request_stale_q <= 1'b0;
+                        end
+                    end
+                end
+
+                S_FAULT: begin
+                    if (redirect_valid) begin
                         state_q <= S_REQUEST;
-                        request_pc_q <= align_bundle(request_pc_q) + FETCH_BYTES;
+                        request_pc_q <= redirect_pc;
                         request_stale_q <= 1'b0;
                         fetch_valid_q <= '0;
                     end

@@ -654,6 +654,17 @@ module decode(
             uop.starts_bsy = 1'b0;
             uop.starts_unsafe = 1'b0;
         end
+
+        if(pc[1:0] != 2'b00) begin
+            uop = '0;
+            uop.inst = inst;
+            uop.debug_inst = inst;
+            uop.pc = pc;
+
+            uop.exception = 1'b1;
+            uop.exc_cause = ECODE_ADE;
+            uop.xcpt_ae_if = 1'b1;
+        end
     end
 
 endmodule
