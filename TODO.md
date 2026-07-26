@@ -185,7 +185,8 @@
 - [ ] 完成 LSU 的 load/store 执行、访存响应和异常返回。
 - [x] 增加 LDQ/STQ 顺序、非重叠访问和 store-to-load forwarding 定向测试。
 - [x] 连接 LDQ/STQ，处理未解析旧 store、同地址等待和数据转发。
-- [ ] 完成 CSR 执行、CSR replay、ERTN 和特权级检查。
+- [x] 完成 CSR 执行、ERTN 和 CSR/ERTN 特权级检查。
+- [ ] 完成 CSR replay，并接入 ROB 的 mini-exception/refetch 路径。
 - [ ] 完成寄存器文件旁路和多写端口冲突规则。
 - [x] 完成 UNQ 的全部 LA32 乘除法操作。
 - [ ] 将组合除法器替换为可暂停、可 kill 的迭代除法器。

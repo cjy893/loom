@@ -85,11 +85,11 @@
 | DBAR | `inst[31:15]==17'b00111000011100100` | `is_fence=1`, 数据屏障 |
 | IBAR | `inst[31:15]==17'b00111000011100101` | `is_fencei=1`, 指令屏障 |
 
-### 2. 特权级检查未实现
+### 2. 特权级检查
 
-- 当前 `status_prv` 输入声明了但未使用
-- CSR 指令在非内核态（prv!=0）时应标记 `exception`
-- CACHE/TLB 特权指令同上
+- CSR 和 ERTN 已检查 `status_prv`，非 PLV0 执行时产生 `ECODE_IPE`
+- 尚未实现的 CACHE/TLB 特权指令当前按 `ECODE_INE` 处理
+- 实现 CACHE/TLB/IDLE 时仍需按各指令权限补充 `ECODE_IPE` 检查
 
 ---
 

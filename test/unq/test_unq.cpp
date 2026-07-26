@@ -3,7 +3,13 @@
 #include "../common/verilator_test.h"
 #include <cstdint>
 
-enum { OP_CSR = 0, OP_MUL = 1, OP_DIV = 2, OP_CNT = 3 };
+enum {
+    OP_CSR = 0,
+    OP_MUL = 1,
+    OP_DIV = 2,
+    OP_CNT = 3,
+    OP_ERTN = 4,
+};
 enum {
     MULDIV_MUL_W = 0,
     MULDIV_MULH_W = 1,
@@ -110,6 +116,20 @@ int main(int argc, char** argv) {
               dut->res_valid, 1);
     expect_eq("counter ID value", dut->res_data, 0xaabbccdd);
     expect_eq("counter ID identity", dut->res_rob_idx, 20);
+    finish_result(dut);
+
+    dut->op_class = OP_ERTN;
+    dut->rob_idx = 21;
+    dut->iss_valid = 1;
+    dut->eval();
+    expect_eq("ERTN does not create a CSR request", dut->csr_req_valid, 0);
+    eval_cycle(dut);
+    dut->iss_valid = 0;
+    dut->eval();
+    expect_eq("ERTN completion is available after issue", dut->res_valid, 1);
+    expect_eq("ERTN completion identity", dut->res_rob_idx, 21);
+    expect_eq("ERTN marker survives UNQ", dut->res_is_eret, 1);
+    expect_eq("ERTN has no result data", dut->res_data, 0);
     finish_result(dut);
 
     start_op(dut, OP_MUL, MULDIV_MUL_W, 4, uint32_t(-7), 9);

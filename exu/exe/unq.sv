@@ -35,7 +35,8 @@ module unq(
         S_CSR,
         S_MUL,
         S_DIV,
-        S_CNT
+        S_CNT,
+        S_ERTN
     } state_t;
 
     state_t state, next_state;
@@ -75,12 +76,14 @@ module unq(
                     else if(iss_uop.fu_code[FC_MUL]) next_state = S_MUL;
                     else if(iss_uop.fu_code[FC_DIV]) next_state = S_DIV;
                     else if(iss_uop.is_rdcnt) next_state = S_CNT;
+                    else if(iss_uop.is_eret) next_state = S_ERTN;
                 end
             end
             S_CSR: next_state = S_IDLE;
             S_MUL: if(busy_done) next_state = S_IDLE;
             S_DIV: if(busy_done) next_state = S_IDLE;
             S_CNT: next_state = S_IDLE;
+            S_ERTN: next_state = S_IDLE;
             default: next_state = S_IDLE;
         endcase
     end
@@ -175,7 +178,8 @@ module unq(
         endcase
     end
 
-    assign res_valid = !kill && !pipe_br_killed && ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) || (state == S_CNT));
+    assign res_valid = !kill && !pipe_br_killed &&
+                        ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) || (state == S_CNT) || (state == S_ERTN));
     assign res.valid = res_valid;
     assign res.uop = pipe_uop;
     assign res.predicated = 1'b0;

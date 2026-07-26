@@ -16,6 +16,7 @@ Run one suite:
 ./test/rename/run.sh
 ./test/issue/run.sh
 ./test/rob/run.sh
+./test/csr/run.sh
 ./test/alu/run.sh
 ./test/decode/run.sh
 ./test/dispatch/run.sh
@@ -31,12 +32,20 @@ Run one suite:
 ./test/core_ifu/run.sh
 ./test/core_lsu/run.sh
 ./test/core_program/run.sh
+./test/core_exception/run.sh
+./test/core_interrupt/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
 
 `test/csr/run.sh` is the standalone contract suite for the CSR file and is
 included in `run_all.sh`.
+
+`test/core_exception/run.sh` is the precise exception and ERTN integration
+suite and is included in `run_all.sh`.
+
+`test/core_interrupt/run.sh` is a red-phase precise interrupt integration
+suite. It remains outside `run_all.sh` until the enabled-interrupt case passes.
 
 Current coverage:
 
@@ -49,8 +58,8 @@ Current coverage:
 - `alu`: integer arithmetic, comparisons, logic, shifts, immediate selection,
   ROB identity propagation, early wakeup, and branch resolution.
 - `decode`: real LA32 encodings from `test.s` for integer ALU, immediate,
-  load/store, branch, all seven multiply/divide variants, CSR, syscall, and
-  illegal instructions.
+  load/store, branch, all seven multiply/divide variants, CSR, syscall,
+  CSR/ERTN privilege checks, and illegal instructions.
 - `dispatch`: IQ routing, program-order backpressure, inactive lanes, uop
   identity, and same-IQ dual-dispatch loss detection.
 - `br_mask`: nested allocation, resolution, exhaustion, pipeline flush, and
@@ -60,9 +69,9 @@ Current coverage:
 - `mem`: address generation, store-data generation, pipeline latency, uop
   identity, XLEN wraparound, kill, single-port MEM IQ contention, conservative
   store operand waiting, and same-cycle issue/wakeup/refill behavior.
-- `unq`: CSR request/response, all seven LA32 multiply/divide variants,
-  signed overflow, deterministic divide-by-zero results, uop identity, branch
-  recovery, and kill.
+- `unq`: CSR request/response, ERTN completion without a CSR request, all seven
+  LA32 multiply/divide variants, signed overflow, deterministic divide-by-zero
+  results, uop identity, branch recovery, and kill.
 - `lsu`: scalar and two-wide load-queue contracts plus store-queue allocation,
   split address/data arrival, ROB busy clearing, pre-commit write suppression,
   SB/SH/SW formatting, commit-order draining, backpressure, recovery, stale
@@ -104,6 +113,13 @@ Current coverage:
   core, including an ALU block copied from `test.s`, conditional branches,
   direct `b`/`bl` redirects, `jirl`, link-register writeback, frontend
   backpressure stability, and suppression of wrong-path stores.
+- `core_exception`: precise `syscall`, `break`, and illegal-instruction
+  exceptions through Decode, ROB, CSR state update, and EENTRY redirection. It
+  also covers older commit ordering, younger commit suppression, wrong-path
+  exception cancellation, handler CSR reads, and an ERTN return contract.
+- `core_interrupt`: global and per-source interrupt masking, CSR pending
+  propagation, precise interrupt boundaries, EENTRY/ERA/CRMD/PRMD state, source
+  deassertion, ERTN return, and exact-once resumed commits.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -112,8 +128,8 @@ Current coverage:
   serializing CSR instructions, commit-time refetch, and end-to-end result
   checks for all seven multiply/divide variants.
 
-These are directed module tests. They do not yet cover full-width dispatch,
-memory partial issue, exceptions, or CSR behavior.
+These are directed module tests. They do not yet cover interrupts, dynamic
+LSU/IFU exceptions, full-width dispatch, or memory partial issue.
 
 The runner continues after a failed suite so one RTL failure does not hide
 results from later modules. It returns a nonzero status if any suite fails.
@@ -134,3 +150,9 @@ Current status:
 - `dispatch` now packs each IQ independently and preserves program order.
 - `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.
+- `core_exception` passes precise synchronous exception handling, wrong-path
+  cancellation, CSR state updates, and the complete exception/ERTN round trip.
+- `core_interrupt` passes both masking cases and reaches CSR
+  `interrupt_pending`; its enabled-interrupt case remains red because
+  `boom_core` does not yet convert the pending request into a precise EENTRY
+  redirect.

@@ -32,14 +32,55 @@ enum {
     CNT_LOW = 0, CNT_HIGH = 1, CNT_ID = 2,
 };
 
-static void decode(Vdecode_test_top* dut, uint32_t inst) {
+static void decode_at_plv(Vdecode_test_top* dut, uint32_t inst,
+                          unsigned status_prv) {
     dut->inst = inst;
-    dut->status_prv = 0;
+    dut->status_prv = status_prv;
     dut->eval();
+}
+
+static void decode(Vdecode_test_top* dut, uint32_t inst) {
+    decode_at_plv(dut, inst, 0);
 }
 
 static void expect_fu(const char* name, Vdecode_test_top* dut, unsigned bit) {
     expect_true(name, (dut->fu_code & (1U << bit)) != 0);
+}
+
+static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
+                                       const char* instruction_name) {
+    decode_at_plv(dut, inst, 3);
+
+    const bool is_clean_ipe =
+        dut->exception == 1 &&
+        dut->exc_cause == 14 &&
+        dut->iq_type == 0 &&
+        dut->fu_code == 0 &&
+        dut->ldst == 0 &&
+        dut->lrs1 == 0 &&
+        dut->lrs2 == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->is_unique == 0 &&
+        dut->flush_on_commit == 0;
+
+    if (!is_clean_ipe) {
+        std::fprintf(
+            stderr,
+            "FAIL: %s in PLV3: exception=%u cause=%u iq=%u fu=0x%x "
+            "ldst=%u lrs1=%u lrs2=%u dst_rtype=%u unique=%u flush=%u\n",
+            instruction_name,
+            dut->exception,
+            dut->exc_cause,
+            dut->iq_type,
+            dut->fu_code,
+            dut->ldst,
+            dut->lrs1,
+            dut->lrs2,
+            dut->dst_rtype,
+            dut->is_unique,
+            dut->flush_on_commit);
+        ++failures;
+    }
 }
 
 static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
@@ -166,6 +207,50 @@ int main(int argc, char** argv) {
     expect_eq("csrrd address kind", dut->imm_sel, IS_F3);
     expect_eq("csrrd address", dut->imm_packed, 6);
     expect_eq("csrrd serializes", dut->flush_on_commit, 1);
+
+    // Real CSRWR/CSRXCHG encodings from nscscc_func/obj/test.s.
+    decode(dut, 0x0401102d);
+    expect_eq("csrwr queue", dut->iq_type, IQ_UNQ);
+    expect_fu("csrwr CSR FU", dut, FC_CSR);
+    expect_eq("csrwr source", dut->lrs1, 13);
+    expect_eq("csrwr destination", dut->ldst, 13);
+    expect_eq("csrwr command", dut->csr_cmd, 1);
+    expect_eq("csrwr address", dut->imm_packed, 0x44);
+    expect_eq("csrwr no exception in PLV0", dut->exception, 0);
+
+    decode(dut, 0x0400158d);
+    expect_eq("csrxchg queue", dut->iq_type, IQ_UNQ);
+    expect_fu("csrxchg CSR FU", dut, FC_CSR);
+    expect_eq("csrxchg value source", dut->lrs1, 13);
+    expect_eq("csrxchg mask source", dut->lrs2, 12);
+    expect_eq("csrxchg destination", dut->ldst, 13);
+    expect_eq("csrxchg command", dut->csr_cmd, 2);
+    expect_eq("csrxchg address", dut->imm_packed, 5);
+    expect_eq("csrxchg no exception in PLV0", dut->exception, 0);
+
+    // Every CSR instruction is privileged. A faulting CSR uop must enter only
+    // the precise exception path and must not retain issue/serialization state.
+    expect_csr_privilege_fault(dut, 0x0400180c, "csrrd");
+    expect_csr_privilege_fault(dut, 0x0401102d, "csrwr");
+    expect_csr_privilege_fault(dut, 0x0400158d, "csrxchg");
+
+    // ERTN is a serialized UNQ operation in PLV0. Its redirect is performed
+    // only when the uop commits from the ROB.
+    decode(dut, 0x06483800);
+    expect_eq("ERTN queue", dut->iq_type, IQ_UNQ);
+    expect_eq("ERTN marker", dut->is_eret, 1);
+    expect_eq("ERTN is unique", dut->is_unique, 1);
+    expect_eq("ERTN serializes", dut->flush_on_commit, 1);
+    expect_eq("ERTN has no functional-unit request", dut->fu_code, 0);
+    expect_eq("ERTN is not a JIRL", dut->is_jalr, 0);
+    expect_eq("ERTN has no exception in PLV0", dut->exception, 0);
+
+    dut->status_prv = 3;
+    dut->eval();
+    expect_eq("ERTN raises IPE outside PLV0", dut->exception, 1);
+    expect_eq("ERTN privilege exception cause", dut->exc_cause, 14);
+    expect_eq("faulting ERTN is not issued", dut->iq_type, 0);
+    expect_eq("faulting ERTN has no marker", dut->is_eret, 0);
 
     // Real RDCNT encodings from nscscc_func/obj/test.s.
     decode(dut, 0x0000600d);

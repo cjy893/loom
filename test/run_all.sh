@@ -23,6 +23,7 @@ suites=(
   core_ifu
   core_lsu
   core_program
+  core_exception
   branch_recovery
   integration
 )

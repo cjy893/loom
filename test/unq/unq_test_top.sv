@@ -6,7 +6,7 @@ module unq_test_top (
     input  logic        clk,
     input  logic        rst_n,
     input  logic        iss_valid,
-    input  logic [1:0]  op_class,
+    input  logic [2:0]  op_class,
     input  logic [3:0]  fcn_op,
     input  logic [5:0]  rob_idx,
     input  logic [13:0] csr_addr_in,
@@ -29,7 +29,8 @@ module unq_test_top (
     output logic [31:0] csr_wdata,
     output logic        res_valid,
     output logic [31:0] res_data,
-    output logic [5:0]  res_rob_idx
+    output logic [5:0]  res_rob_idx,
+    output logic        res_is_eret
 );
     uop_t iss_uop;
     exe_unit_resp_t res;
@@ -44,10 +45,11 @@ module unq_test_top (
         iss_uop.csr_cmd = csr_cmd_in;
         iss_uop.br_mask = uop_br_mask;
         case (op_class)
-            2'd0: iss_uop.fu_code[FC_CSR] = 1'b1;
-            2'd1: iss_uop.fu_code[FC_MUL] = 1'b1;
-            2'd2: iss_uop.fu_code[FC_DIV] = 1'b1;
-            2'd3: iss_uop.is_rdcnt = 1'b1;
+            3'd0: iss_uop.fu_code[FC_CSR] = 1'b1;
+            3'd1: iss_uop.fu_code[FC_MUL] = 1'b1;
+            3'd2: iss_uop.fu_code[FC_DIV] = 1'b1;
+            3'd3: iss_uop.is_rdcnt = 1'b1;
+            3'd4: iss_uop.is_eret = 1'b1;
             default: begin end
         endcase
         brupdate = '0;
@@ -80,4 +82,5 @@ module unq_test_top (
 
     assign res_data = res.data;
     assign res_rob_idx = res.uop.rob_idx;
+    assign res_is_eret = res.uop.is_eret;
 endmodule
