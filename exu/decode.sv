@@ -57,7 +57,7 @@ module decode(
             32'b00111000011100100_???????????????: instr_type = INSTR_CACHE;
             32'b00111000011100101_???????????????: instr_type = INSTR_CACHE;
             // RDCNT                      : 000000_000000_00000110_xxxxxxxxxx
-            32'b00000000000000000110_???????????: instr_type = INSTR_RDCNT;
+            32'b000000000000000001100_???????????: instr_type = INSTR_RDCNT;
             default:                              instr_type = INSTR_ILLEGAL;
         endcase
     end
@@ -582,19 +582,30 @@ module decode(
             // RDCNT : inst[31:20] == 00000000000000000110
             // ============================================================
             INSTR_RDCNT: begin
-                uop.iq_type         = IQ_UNQ;
-                uop.is_unique       = 1'b1;
+                if(inst[10] && rj != 5'd0) begin
+                    uop.exception = 1'b1;
+                    uop.exc_cause = ECODE_INE;
+                end else begin
+                    uop.iq_type         = IQ_UNQ;
+                    uop.is_unique       = 1'b1;
+                    uop.is_rdcnt = 1'b1;
 
-                uop.op1_sel  = OP1_ZERO;
-                uop.op2_sel  = OP2_ZERO;
-                uop.dst_rtype = RT_FIX;
+                    uop.op1_sel  = OP1_ZERO;
+                    uop.op2_sel  = OP2_ZERO;
+                    uop.dst_rtype = RT_FIX;
 
-                // inst[10]=0: rdcntvl.w (低32位), inst[10]=1: rdcntvh.w (高32位)
-                uop.imm_sel  = IS_F3;
-                uop.imm_packed = {25'b0, inst[10]};
+                    // inst[10]=0: rdcntvl.w (低32位), inst[10]=1: rdcntvh.w (高32位)
+                    uop.imm_sel  = IS_F3;
+                    uop.imm_packed = {25'b0, inst[10]};
 
-                // 写 rj 还是 rd（rj!=0 时写 rj）
-                uop.ldst = (rj != 5'b0) ? rj : rd;
+                    if(rj != 5'd0) begin
+                        uop.fcn_op = CNT_ID;
+                        uop.ldst = rj;
+                    end else begin
+                        uop.fcn_op = inst[10] ? CNT_HIGH : CNT_LOW;
+                        uop.ldst = rd;
+                    end
+                end
             end
 
             // ============================================================

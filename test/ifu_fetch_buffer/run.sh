@@ -9,6 +9,9 @@ verilator --cc --build -j 1 --output-split 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module ifu_fetch_buffer_test_top \
   --exe "$TEST_DIR/test_ifu_fetch_buffer.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
   "$ROOT/ifu/ifu.sv" \
   "$ROOT/ifu/fetcher_buffer.sv" \
   "$TEST_DIR/ifu_fetch_buffer_test_top.sv"

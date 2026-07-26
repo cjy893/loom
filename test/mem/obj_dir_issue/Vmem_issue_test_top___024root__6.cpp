@@ -55,5 +55,5 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__7(Vmem_issue_test_top___024r
                                             | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U] 
                                                >> 0x0000001dU)));
     vlSelfRef.iss_use_agen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x0000000bU));
+                                    >> 0x0000000cU));
 }

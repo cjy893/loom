@@ -14,6 +14,8 @@ module unq_test_top (
     input  logic [31:0] rs1_data,
     input  logic [31:0] rs2_data,
     input  logic [31:0] csr_rdata,
+    input  logic [63:0] counter_value,
+    input  logic [31:0] counter_id_value,
     input  logic [3:0]  uop_br_mask,
     input  logic [3:0]  resolve_mask,
     input  logic [3:0]  mispredict_mask,
@@ -45,6 +47,7 @@ module unq_test_top (
             2'd0: iss_uop.fu_code[FC_CSR] = 1'b1;
             2'd1: iss_uop.fu_code[FC_MUL] = 1'b1;
             2'd2: iss_uop.fu_code[FC_DIV] = 1'b1;
+            2'd3: iss_uop.is_rdcnt = 1'b1;
             default: begin end
         endcase
         brupdate = '0;
@@ -67,6 +70,8 @@ module unq_test_top (
         .csr_wdata,
         .csr_wmask(csr_wmask_unused),
         .csr_rdata,
+        .counter_value,
+        .counter_id_value,
         .res_valid,
         .res,
         .brupdate,

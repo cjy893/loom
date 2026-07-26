@@ -35,6 +35,9 @@ Run one suite:
 ./test/integration/run.sh
 ```
 
+`test/csr/run.sh` is the standalone contract suite for the CSR file and is
+included in `run_all.sh`.
+
 Current coverage:
 
 - `rename`: initial allocation, read-after-write dependency, same-bundle map

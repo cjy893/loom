@@ -52,9 +52,9 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__7(Vmem_issue_test_top___0
         = ((IData)(vlSelfRef.br_mispredict) & (0U != 
                                                ((IData)(vlSelfRef.mispredict_mask) 
                                                 & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                                    << 8U) 
+                                                    << 7U) 
                                                    | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                                      >> 0x00000018U)))));
+                                                      >> 0x00000019U)))));
     vlSelfRef.iss_valid = vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec;
     vlSelfRef.dis_ready = vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec;
 }

@@ -44,16 +44,16 @@ bool Vmem_issue_test_top___024root___eval_phase__nba(Vmem_issue_test_top___024ro
                                                    >> 0x0000001dU)));
                     vlSelfRef.iss_use_agen = (1U & 
                                               (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                               >> 0x0000000bU));
+                                               >> 0x0000000cU));
                     vlSelfRef.iss_use_dgen = (1U & 
                                               (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                               >> 0x0000000cU));
+                                               >> 0x0000000dU));
                     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
                         = ((IData)(vlSelfRef.br_mispredict) 
                            & (0U != ((IData)(vlSelfRef.mispredict_mask) 
                                      & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                         << 8U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                                   >> 0x00000018U)))));
+                                         << 7U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                                   >> 0x00000019U)))));
                 }
             }
         }

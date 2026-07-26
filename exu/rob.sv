@@ -172,6 +172,7 @@ module rob #(
         com_xcpt.cause = xcpt_uop.exc_cause;
         com_xcpt.badvaddr = '0;
         com_xcpt.flush_typ = exception_throw ? FT_XCPT : '0;
+        com_xcpt.inst = xcpt_uop.inst;
     end
 
     logic [CORE_WIDTH-1:0] flush_commit_mask;
@@ -194,6 +195,7 @@ module rob #(
         flush.edge_inst = flush_uop.edge_inst;
         flush.is_16bit = 1'b0;
         flush.pc_lob = flush_uop.pc_lob;
+        flush.inst = flush_uop.inst;
 
         if(exception_throw) begin
             flush.cause = com_xcpt.cause;

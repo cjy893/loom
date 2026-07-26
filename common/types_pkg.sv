@@ -49,6 +49,7 @@ package loom_types;
         logic is_br;
         logic is_jal;
         logic is_jalr;
+        logic is_rdcnt;
 
         logic [FTQ_ADDR_SZ-1:0] ftq_idx;
         logic edge_inst;
@@ -197,6 +198,7 @@ package loom_types;
     typedef struct packed {
         logic valid;
         logic [XLEN-1:0] pc;
+        logic [XLEN-1:0] inst;
 
         logic [FTQ_ADDR_SZ-1:0] ftq_idx;
         logic edge_inst;

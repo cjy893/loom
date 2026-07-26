@@ -17,6 +17,8 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->enq_exc_cause_1 = 0;
     dut->enq_pc_0 = 0;
     dut->enq_pc_1 = 0;
+    dut->enq_inst_0 = 0;
+    dut->enq_inst_1 = 0;
     dut->wb_valid = 0;
     dut->wb_rob_idx_0 = 0;
     dut->wb_rob_idx_1 = 0;
@@ -154,6 +156,8 @@ int main(int argc, char** argv) {
     dut->enq_exc_cause_1 = 13;
     dut->enq_pc_0 = 0x1c000100;
     dut->enq_pc_1 = 0x1c000104;
+    dut->enq_inst_0 = 0x0010800c;
+    dut->enq_inst_1 = 0xffffffff;
     eval_cycle(dut);
     clear_inputs(dut);
     dut->eval();
@@ -164,6 +168,7 @@ int main(int argc, char** argv) {
     expect_eq("exception does not commit", dut->commit_valid, 0);
     expect_eq("exception notification", dut->com_xcpt_valid, 1);
     expect_eq("exception PC", dut->com_xcpt_pc, 0x1c000104);
+    expect_eq("exception instruction", dut->com_xcpt_inst, 0xffffffff);
     expect_eq("exception cause", dut->com_xcpt_cause, 13);
     expect_eq("exception flush", dut->flush_valid, 1);
     expect_eq("exception flush type", dut->flush_typ, 1);

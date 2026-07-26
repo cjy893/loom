@@ -1,3 +1,7 @@
+import loom_params::*;
+import loom_consts::*;
+import loom_types::*;
+
 module fetcher_buffer #(
     parameter int FETCH_WIDTH = 4,
     parameter int CORE_WIDTH = 2,

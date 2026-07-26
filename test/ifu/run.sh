@@ -15,6 +15,9 @@ verilator --cc --build -j 1 --output-split 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module ifu_test_top \
   --exe "$TEST_DIR/test_ifu.cpp" \
+  "$ROOT/common/params_pkg.sv" \
+  "$ROOT/common/consts_pkg.sv" \
+  "$ROOT/common/types_pkg.sv" \
   "$IFU_SOURCE" \
   "$TEST_DIR/ifu_test_top.sv"
 

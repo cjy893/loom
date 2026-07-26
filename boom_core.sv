@@ -17,7 +17,8 @@ module boom_core #(
     parameter int UNQ_IQ_ENTRIES = 12,
     parameter int NUM_WAKEUPS    = 6,   // ALU(3)+LSU(1)+UNQ(1)+FP(0)+extra(1)=6
     parameter int NUM_REGF_READS = ALU_WIDTH * 2 + MEM_WIDTH * 2 + 2,
-    parameter int NUM_REGF_WRITES= 5    // ALU(3)+LSU(1)+UNQ(1)=5
+    parameter int NUM_REGF_WRITES= 5,   // ALU(3)+LSU(1)+UNQ(1)=5
+    parameter logic [31:0] CORE_ID = 32'd0
 )(
     input  logic clk,
     input  logic rst_n,
@@ -45,15 +46,16 @@ module boom_core #(
     input  logic [31:0]                  dmem_resp_data,
     input  logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx,
 
-    // ── CSR 接口（stub） ──
+    // ── 中断输入 ──
+    input  logic [7:0]                   hw_irq,
+    input  logic                         ipi_irq,
+
+    // ── CSR 请求调试输出 ──
     output logic                         csr_req_valid,
     output logic [13:0]                  csr_addr,
     output logic [1:0]                   csr_cmd,
     output logic [31:0]                  csr_wdata,
     output logic [31:0]                  csr_wmask,
-    input  logic [31:0]                  csr_rdata,
-    input  logic [31:0]                  csr_xcpt_target,
-    input  logic [31:0]                  csr_ertn_target,
 
     // ── 提交输出 ──
     output commit_signal_t               commit,
@@ -125,6 +127,22 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
     logic [CORE_WIDTH-1:0]       rn2_unique_q;
+
+    logic                        csr_req_ready_w;
+    logic                        csr_resp_valid_w;
+    logic [ROB_ADDR_SZ-1:0]      csr_resp_rob_idx_w;
+    logic [31:0]                 csr_rdata_w;
+    logic                        csr_commit_valid_w;
+    logic [ROB_ADDR_SZ-1:0]      csr_commit_rob_idx_w;
+    logic                        csr_ertn_valid_w;
+    logic                        csr_interrupt_pending_w;
+    logic [12:0]                 csr_interrupt_pending_bits_w;
+    logic [1:0]                  csr_current_plv_w;
+    logic                        csr_current_ie_w;
+    logic [31:0]                 csr_xcpt_target_w;
+    logic [31:0]                 csr_ertn_target_w;
+    logic [63:0]                 csr_counter_value_w;
+    logic [31:0]                 csr_tid_value_w;
 
     // The frontend owns the packet until every valid lane has entered Decode.
     // Only a completion mask is retained here; instruction data stays at the
@@ -200,7 +218,7 @@ module boom_core #(
         decode decode_inst (
             .inst       (dec_insts[w]),
             .pc         (dec_pcs[w]),
-            .status_prv (2'b00),
+            .status_prv (csr_current_plv_w),
             .uop        (dec_uops_raw[w])
         );
     end
@@ -689,7 +707,10 @@ module boom_core #(
         .iss_ready(unq_exec_ready),
         .rs1_data(bypass_mux(unq_iss_uop.prs1, rf_read_data[UNQ_RF_BASE])),
         .rs2_data(bypass_mux(unq_iss_uop.prs2, rf_read_data[UNQ_RF_BASE + 1])),
-        .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask, .csr_rdata,
+        .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
+        .csr_rdata(csr_rdata_w),
+        .counter_value(csr_counter_value_w),
+        .counter_id_value(csr_tid_value_w),
         .res_valid(unq_res_valid), .res(unq_res),
         .brupdate(brupdate_w), .kill(bm_flush));
 
@@ -826,6 +847,75 @@ module boom_core #(
     assign bm_flush = rob_rollback_w || rob_flush_w.valid;
 
     // ================================================================
+    // CSR file
+    // ================================================================
+    always_comb begin
+        csr_commit_valid_w = 1'b0;
+        csr_commit_rob_idx_w = '0;
+        csr_ertn_valid_w = 1'b0;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (!csr_commit_valid_w &&
+                commit.valids[w] &&
+                commit.uops[w].fu_code[FC_CSR]) begin
+                csr_commit_valid_w = 1'b1;
+                csr_commit_rob_idx_w = commit.uops[w].rob_idx;
+            end
+
+            csr_ertn_valid_w |=
+                commit.valids[w] && commit.uops[w].is_eret;
+        end
+    end
+
+    csr_file #(
+        .CSR_ADDR_WIDTH(14),
+        .ROB_IDX_WIDTH(ROB_ADDR_SZ),
+        .NUM_HW_IRQS(8),
+        .CORE_ID(CORE_ID)
+    ) csr_file_inst (
+        .clk,
+        .rst_n,
+        .csr_req_valid,
+        .csr_req_ready(csr_req_ready_w),
+        .csr_req_rob_idx(unq_iss_uop.rob_idx),
+        .csr_req_addr(csr_addr),
+        .csr_cmd,
+        .csr_wdata,
+        .csr_wmask,
+        .csr_resp_valid(csr_resp_valid_w),
+        .csr_resp_ready(1'b1),
+        .csr_resp_rob_idx(csr_resp_rob_idx_w),
+        .csr_rdata(csr_rdata_w),
+        .csr_commit_valid(csr_commit_valid_w),
+        .csr_commit_rob_idx(csr_commit_rob_idx_w),
+        .csr_flush_pending(bm_flush),
+        .xcpt_valid(rob_com_xcpt_w.valid),
+        .xcpt_inst(rob_com_xcpt_w.inst),
+        .xcpt_pc(rob_com_xcpt_w.pc),
+        .xcpt_code(rob_com_xcpt_w.cause[5:0]),
+        .xcpt_esubcode('0),
+        .xcpt_badvaddr(rob_com_xcpt_w.badvaddr),
+        .ertn_valid(csr_ertn_valid_w),
+        .hw_irq,
+        .ipi_irq,
+        .interrupt_pending(csr_interrupt_pending_w),
+        .interrupt_pending_bits(csr_interrupt_pending_bits_w),
+        .current_plv(csr_current_plv_w),
+        .current_ie(csr_current_ie_w),
+        .xcpt_target(csr_xcpt_target_w),
+        .ertn_target(csr_ertn_target_w),
+        .crmd_value(),
+        .asid_value(),
+        .dmw0_value(),
+        .dmw1_value(),
+        .era_value(),
+        .eentry_value(),
+        .tlbrentry_value(),
+        .counter_value(csr_counter_value_w),
+        .tid_value(csr_tid_value_w)
+    );
+
+    // ================================================================
     // 分支更新
     // ================================================================
     br_update_info_t brupdate_w;
@@ -884,8 +974,8 @@ module boom_core #(
         if (rob_flush_w.valid) begin
             fe_redirect_valid = 1'b1;
             unique case (rob_flush_w.flush_typ)
-                FT_XCPT:    fe_redirect_pc = csr_xcpt_target;
-                FT_ERET:    fe_redirect_pc = csr_ertn_target;
+                FT_XCPT:    fe_redirect_pc = csr_xcpt_target_w;
+                FT_ERET:    fe_redirect_pc = csr_ertn_target_w;
                 FT_REFETCH: fe_redirect_pc = rob_flush_w.pc + 32'd4;
                 default:    fe_redirect_pc = rob_flush_w.pc + 32'd4;
             endcase

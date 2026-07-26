@@ -28,6 +28,7 @@ module decode_test_top (
     output logic [1:0]  mem_size,
     output logic        mem_signed,
     output logic        is_unique,
+    output logic        is_rdcnt,
     output logic        flush_on_commit,
     output logic [2:0]  csr_cmd,
     output logic        exception,
@@ -64,6 +65,7 @@ module decode_test_top (
     assign mem_size = uop.mem_size;
     assign mem_signed = uop.mem_signed;
     assign is_unique = uop.is_unique;
+    assign is_rdcnt = uop.is_rdcnt;
     assign flush_on_commit = uop.flush_on_commit;
     assign csr_cmd = uop.csr_cmd;
     assign exception = uop.exception;

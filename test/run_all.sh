@@ -7,6 +7,7 @@ suites=(
   rename
   issue
   rob
+  csr
   alu
   decode
   dispatch

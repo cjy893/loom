@@ -34,6 +34,9 @@ static uint32_t prog_mem[] = {
     0x001c0832,  // mul.w   r18, r1, r2
     0x002118b3,  // div.wu  r19, r5, r6
     0x002198b4,  // mod.wu  r20, r5, r6
+    0x00006015,  // rdcntvl.w r21
+    0x00006416,  // rdcntvh.w r22
+    0x000062e0,  // rdcntid.w r23
 };
 static const int PROG_SIZE = sizeof(prog_mem) / sizeof(prog_mem[0]);
 
@@ -64,9 +67,8 @@ int main(int argc, char** argv) {
     top->dmem_resp_is_store = 0;
     top->dmem_resp_data = 0;
     top->dmem_resp_idx = 0;
-    top->csr_rdata = 0x12345678;
-    top->csr_xcpt_target = 0;
-    top->csr_ertn_target = 0;
+    top->hw_irq = 0;
+    top->ipi_irq = 0;
 
     // reset
     for (int i = 0; i < 10; i++) tick();
@@ -215,7 +217,7 @@ int main(int argc, char** argv) {
             passed = commit_count == PROG_SIZE &&
                      saw_dual_dispatch &&
                      saw_dual_commit &&
-                     unique_dispatch_count == 9 &&
+                     unique_dispatch_count == 12 &&
                      csr_request_count == 2 &&
                      redirect_count == 2 &&
                      !unique_violation &&
@@ -223,15 +225,18 @@ int main(int argc, char** argv) {
                      arch_regs[13] == 2 &&
                      arch_regs[25] == 0 &&
                      arch_regs[12] == 1 &&
-                     arch_regs[10] == 0x12345678 &&
-                     arch_regs[11] == 0x12345678 &&
+                     arch_regs[10] == 0 &&
+                     arch_regs[11] == 0 &&
                      arch_regs[14] == 0xfffffff2 &&
                      arch_regs[15] == 0xfffffffe &&
                      arch_regs[16] == 0xffffffff &&
                      arch_regs[17] == 1 &&
                      arch_regs[18] == 0xfffffd44 &&
                      arch_regs[19] == 0x40000000 &&
-                     arch_regs[20] == 0;
+                     arch_regs[20] == 0 &&
+                     arch_regs[21] != 0 &&
+                     arch_regs[22] == 0 &&
+                     arch_regs[23] == 0;
             printf("[%5d] ROB empty: commits=%d dual_dis=%d dual_com=%d "
                    "unique=%d csr=%d redirects=%d "
                    "r13=%u r25=%u r12=%u — %s\n",

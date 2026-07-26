@@ -20,6 +20,8 @@ module rob_test_top (
     input  logic [31:0] enq_exc_cause_1,
     input  logic [31:0] enq_pc_0,
     input  logic [31:0] enq_pc_1,
+    input  logic [31:0] enq_inst_0,
+    input  logic [31:0] enq_inst_1,
 
     input  logic [1:0] wb_valid,
     input  logic [5:0] wb_rob_idx_0,
@@ -38,6 +40,7 @@ module rob_test_top (
     output logic [4:0] commit_ldst_1,
     output logic       com_xcpt_valid,
     output logic [31:0] com_xcpt_pc,
+    output logic [31:0] com_xcpt_inst,
     output logic [31:0] com_xcpt_cause,
     output logic       flush_valid,
     output logic [2:0] flush_typ,
@@ -62,6 +65,7 @@ module rob_test_top (
         enq_uops[0].is_eret = enq_is_eret[0];
         enq_uops[0].exc_cause = enq_exc_cause_0;
         enq_uops[0].pc = enq_pc_0;
+        enq_uops[0].inst = enq_inst_0;
         enq_uops[0].dst_rtype = RT_FIX;
         enq_uops[1].rob_idx = enq_rob_idx_1;
         enq_uops[1].ldst = enq_ldst_1;
@@ -71,6 +75,7 @@ module rob_test_top (
         enq_uops[1].is_eret = enq_is_eret[1];
         enq_uops[1].exc_cause = enq_exc_cause_1;
         enq_uops[1].pc = enq_pc_1;
+        enq_uops[1].inst = enq_inst_1;
         enq_uops[1].dst_rtype = RT_FIX;
 
         wb_resps = '0;
@@ -119,6 +124,7 @@ module rob_test_top (
     assign commit_ldst_1 = commit.uops[1].ldst;
     assign com_xcpt_valid = com_xcpt.valid;
     assign com_xcpt_pc = com_xcpt.pc;
+    assign com_xcpt_inst = com_xcpt.inst;
     assign com_xcpt_cause = com_xcpt.cause;
     assign flush_valid = flush.valid;
     assign flush_typ = flush.flush_typ;

@@ -1,3 +1,7 @@
+import loom_params::*;
+import loom_consts::*;
+import loom_types::*;
+
 module ifu #(
     parameter int FETCH_WIDTH = 4,
     parameter logic [31:0] RESET_PC = 32'h1c00_0000

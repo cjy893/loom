@@ -29,6 +29,7 @@ enum {
     MULDIV_MUL_W = 0, MULDIV_MULH_W = 1, MULDIV_MULH_WU = 2,
     MULDIV_DIV_W = 3, MULDIV_DIV_WU = 4,
     MULDIV_MOD_W = 5, MULDIV_MOD_WU = 6,
+    CNT_LOW = 0, CNT_HIGH = 1, CNT_ID = 2,
 };
 
 static void decode(Vdecode_test_top* dut, uint32_t inst) {
@@ -165,6 +166,32 @@ int main(int argc, char** argv) {
     expect_eq("csrrd address kind", dut->imm_sel, IS_F3);
     expect_eq("csrrd address", dut->imm_packed, 6);
     expect_eq("csrrd serializes", dut->flush_on_commit, 1);
+
+    // Real RDCNT encodings from nscscc_func/obj/test.s.
+    decode(dut, 0x0000600d);
+    expect_eq("rdcntvl queue", dut->iq_type, IQ_UNQ);
+    expect_eq("rdcntvl marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntvl destination", dut->ldst, 13);
+    expect_eq("rdcntvl operation", dut->fcn_op, CNT_LOW);
+    expect_eq("rdcntvl no exception", dut->exception, 0);
+
+    decode(dut, 0x0000640e);
+    expect_eq("rdcntvh marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntvh destination", dut->ldst, 14);
+    expect_eq("rdcntvh operation", dut->fcn_op, CNT_HIGH);
+    expect_eq("rdcntvh no exception", dut->exception, 0);
+
+    decode(dut, 0x00006180);
+    expect_eq("rdcntid marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntid writes rj", dut->ldst, 12);
+    expect_eq("rdcntid operation", dut->fcn_op, CNT_ID);
+    expect_eq("rdcntid no exception", dut->exception, 0);
+
+    // inst[10]=1 selects RDCNTVH and requires rj=0.
+    decode(dut, 0x00006420);
+    expect_eq("rdcntvh with nonzero rj is illegal",
+              dut->exception, 1);
+    expect_eq("illegal rdcntvh cause", dut->exc_cause, 13);
 
     // 1c000230: syscall 0x11. LA32 syscall has exception cause 11.
     decode(dut, 0x002b0011);

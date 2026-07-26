@@ -20,6 +20,9 @@ module unq(
     output logic [31:0] csr_wmask,
     input logic [31:0] csr_rdata,
 
+    input logic [63:0] counter_value,
+    input logic [31:0] counter_id_value,
+
     output logic res_valid,
     output exe_unit_resp_t res,
 
@@ -27,11 +30,12 @@ module unq(
     input logic kill
 );
 
-    typedef enum logic [1:0] { 
+    typedef enum logic [2:0] { 
         S_IDLE,
         S_CSR,
         S_MUL,
-        S_DIV
+        S_DIV,
+        S_CNT
     } state_t;
 
     state_t state, next_state;
@@ -54,7 +58,7 @@ module unq(
         iss_uop_updated.br_mask = iss_uop.br_mask & ~brupdate.b1.resolve_mask;
     end
 
-    assign issue_fire = (state == S_IDLE) && iss_valid && !iss_br_killed && !kill;
+    assign issue_fire = iss_ready && iss_valid && !iss_br_killed;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) state <= S_IDLE;
@@ -70,11 +74,14 @@ module unq(
                     if(iss_uop.fu_code[FC_CSR]) next_state = S_CSR;
                     else if(iss_uop.fu_code[FC_MUL]) next_state = S_MUL;
                     else if(iss_uop.fu_code[FC_DIV]) next_state = S_DIV;
+                    else if(iss_uop.is_rdcnt) next_state = S_CNT;
                 end
             end
             S_CSR: next_state = S_IDLE;
             S_MUL: if(busy_done) next_state = S_IDLE;
             S_DIV: if(busy_done) next_state = S_IDLE;
+            S_CNT: next_state = S_IDLE;
+            default: next_state = S_IDLE;
         endcase
     end
 
@@ -168,7 +175,7 @@ module unq(
         endcase
     end
 
-    assign res_valid = !kill && !pipe_br_killed && ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done));
+    assign res_valid = !kill && !pipe_br_killed && ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) || (state == S_CNT));
     assign res.valid = res_valid;
     assign res.uop = pipe_uop;
     assign res.predicated = 1'b0;
@@ -181,6 +188,14 @@ module unq(
             S_CSR: res.data = csr_rdata;
             S_MUL: res.data = mul_result;
             S_DIV: res.data = div_result;
+            S_CNT: begin
+                case(pipe_uop.fcn_op)
+                    CNT_LOW: res.data = counter_value[31:0];
+                    CNT_HIGH: res.data = counter_value[63:32];
+                    CNT_ID: res.data = counter_id_value;
+                    default: res.data = 32'b0;
+                endcase
+            end
             default: res.data = '0;
         endcase
     end

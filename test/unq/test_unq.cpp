@@ -3,7 +3,7 @@
 #include "../common/verilator_test.h"
 #include <cstdint>
 
-enum { OP_CSR = 0, OP_MUL = 1, OP_DIV = 2 };
+enum { OP_CSR = 0, OP_MUL = 1, OP_DIV = 2, OP_CNT = 3 };
 enum {
     MULDIV_MUL_W = 0,
     MULDIV_MULH_W = 1,
@@ -13,6 +13,7 @@ enum {
     MULDIV_MOD_W = 5,
     MULDIV_MOD_WU = 6,
 };
+enum { CNT_LOW = 0, CNT_HIGH = 1, CNT_ID = 2 };
 
 static void clear_inputs(Vunq_test_top* dut) {
     dut->iss_valid = 0;
@@ -24,6 +25,8 @@ static void clear_inputs(Vunq_test_top* dut) {
     dut->rs1_data = 0;
     dut->rs2_data = 0;
     dut->csr_rdata = 0;
+    dut->counter_value = 0;
+    dut->counter_id_value = 0;
     dut->uop_br_mask = 0;
     dut->resolve_mask = 0;
     dut->mispredict_mask = 0;
@@ -84,6 +87,29 @@ int main(int argc, char** argv) {
     expect_eq("CSR response valid", dut->res_valid, 1);
     expect_eq("CSR response data", dut->res_data, 0xabcdef01);
     expect_eq("CSR response identity", dut->res_rob_idx, 3);
+    finish_result(dut);
+
+    dut->counter_value = 0x1122334455667788ULL;
+    dut->counter_id_value = 0xaabbccdd;
+    start_op(dut, OP_CNT, CNT_LOW, 18, 0, 0);
+    expect_eq("counter low result is available after issue",
+              dut->res_valid, 1);
+    expect_eq("counter low word", dut->res_data, 0x55667788);
+    expect_eq("counter low identity", dut->res_rob_idx, 18);
+    finish_result(dut);
+
+    start_op(dut, OP_CNT, CNT_HIGH, 19, 0, 0);
+    expect_eq("counter high result is available after issue",
+              dut->res_valid, 1);
+    expect_eq("counter high word", dut->res_data, 0x11223344);
+    expect_eq("counter high identity", dut->res_rob_idx, 19);
+    finish_result(dut);
+
+    start_op(dut, OP_CNT, CNT_ID, 20, 0, 0);
+    expect_eq("counter ID result is available after issue",
+              dut->res_valid, 1);
+    expect_eq("counter ID value", dut->res_data, 0xaabbccdd);
+    expect_eq("counter ID identity", dut->res_rob_idx, 20);
     finish_result(dut);
 
     start_op(dut, OP_MUL, MULDIV_MUL_W, 4, uint32_t(-7), 9);

@@ -107,4 +107,8 @@ package loom_consts;
     localparam logic [1:0] CSR_READ = 2'd0;
     localparam logic [1:0] CSR_WRITE = 2'd1;
     localparam logic [1:0] CSR_XCHG = 2'd2;
+
+    localparam logic [3:0] CNT_LOW = 4'd0;
+    localparam logic [3:0] CNT_HIGH = 4'd1;
+    localparam logic [3:0] CNT_ID = 4'd2;
 endpackage
