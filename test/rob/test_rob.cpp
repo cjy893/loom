@@ -25,6 +25,13 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->lsu_clr_bsy_valid = 0;
     dut->lsu_clr_bsy_addr_0 = 0;
     dut->lsu_clr_bsy_addr_1 = 0;
+    dut->interrupt_pending = 0;
+    dut->interrupt_next_pc = 0;
+    dut->br_mispredict = 0;
+    dut->lxcpt_valid = 0;
+    dut->lxcpt_rob_idx = 0;
+    dut->lxcpt_cause = 0;
+    dut->lxcpt_badvaddr = 0;
 }
 
 int main(int argc, char** argv) {
@@ -217,6 +224,118 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     expect_eq("ERTN flush is one cycle", dut->flush_valid, 0);
     expect_eq("ROB empty after commit flush tests", dut->empty, 1);
+
+    // An interrupt is a boundary event before the oldest uncommitted uop.
+    // It suppresses all commits, reports the head PC as ERA, and rolls every
+    // speculative entry back.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_0 = 26;
+    dut->enq_ldst_1 = 27;
+    dut->enq_pc_0 = 0x1c000300;
+    dut->enq_pc_1 = 0x1c000304;
+    eval_cycle(dut);
+    clear_inputs(dut);
+
+    dut->interrupt_pending = 1;
+    dut->interrupt_next_pc = 0x1c00f000;
+    dut->eval();
+    expect_eq("nonempty interrupt is taken", dut->interrupt_taken, 1);
+    expect_eq("interrupt suppresses commit", dut->commit_valid, 0);
+    expect_eq("interrupt exception notification", dut->com_xcpt_valid, 1);
+    expect_eq("interrupt ERA uses ROB head", dut->com_xcpt_pc, 0x1c000300);
+    expect_eq("interrupt instruction is zero", dut->com_xcpt_inst, 0);
+    expect_eq("interrupt ECODE is zero", dut->com_xcpt_cause, 0);
+    expect_eq("interrupt flush", dut->flush_valid, 1);
+    expect_eq("interrupt flush type", dut->flush_typ, 1);
+
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("interrupt enters rollback", dut->rollback, 1);
+    expect_eq("interrupt notification is one cycle", dut->com_xcpt_valid, 0);
+    eval_cycle(dut);
+    expect_eq("interrupt rollback clears ROB", dut->empty, 1);
+    expect_eq("interrupt leaves rollback", dut->rollback, 0);
+
+    // With no ROB entry, the frontend-provided architectural next PC is ERA.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->interrupt_pending = 1;
+    dut->interrupt_next_pc = 0x1c000400;
+    dut->eval();
+    expect_eq("empty ROB interrupt is taken", dut->interrupt_taken, 1);
+    expect_eq("empty ROB interrupt ERA", dut->com_xcpt_pc, 0x1c000400);
+    expect_eq("empty ROB interrupt has no commit", dut->commit_valid, 0);
+    eval_cycle(dut);
+    clear_inputs(dut);
+    eval_cycle(dut);
+    expect_eq("empty ROB interrupt recovery completes", dut->empty, 1);
+
+    // A synchronous exception at the oldest entry wins over an interrupt.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 1;
+    dut->enq_exception = 1;
+    dut->enq_exc_cause_0 = 13;
+    dut->enq_pc_0 = 0x1c000500;
+    dut->enq_inst_0 = 0xffffffff;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->interrupt_pending = 1;
+    dut->eval();
+    expect_eq("oldest exception blocks interrupt", dut->interrupt_taken, 0);
+    expect_eq("oldest exception remains visible", dut->com_xcpt_valid, 1);
+    expect_eq("oldest exception cause wins", dut->com_xcpt_cause, 13);
+    expect_eq("oldest exception PC wins", dut->com_xcpt_pc, 0x1c000500);
+
+    // A dynamic exception is registered at the clock edge. An interrupt in
+    // that same cycle must wait so it cannot bypass the synchronous fault.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 1;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_busy_0 = 1;
+    dut->enq_pc_0 = 0x1c000700;
+    dut->enq_inst_0 = 0x28800401;
+    eval_cycle(dut);
+    clear_inputs(dut);
+
+    dut->interrupt_pending = 1;
+    dut->lxcpt_valid = 1;
+    dut->lxcpt_rob_idx = 0;
+    dut->lxcpt_cause = 9;
+    dut->lxcpt_badvaddr = 0x102;
+    dut->eval();
+    expect_eq("live dynamic exception blocks interrupt",
+              dut->interrupt_taken, 0);
+    expect_eq("dynamic exception waits for ROB registration",
+              dut->com_xcpt_valid, 0);
+
+    eval_cycle(dut);
+    expect_eq("registered dynamic exception still blocks interrupt",
+              dut->interrupt_taken, 0);
+    expect_eq("dynamic exception becomes visible", dut->com_xcpt_valid, 1);
+    expect_eq("dynamic exception cause wins", dut->com_xcpt_cause, 9);
+    expect_eq("dynamic exception PC wins", dut->com_xcpt_pc, 0x1c000700);
+    expect_eq("dynamic exception BADV", dut->com_xcpt_badvaddr, 0x102);
+
+    // Resolve a branch redirect first, then accept the still-pending interrupt.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->interrupt_pending = 1;
+    dut->interrupt_next_pc = 0x1c000600;
+    dut->br_mispredict = 1;
+    dut->eval();
+    expect_eq("mispredict blocks interrupt", dut->interrupt_taken, 0);
+    dut->br_mispredict = 0;
+    dut->eval();
+    expect_eq("pending interrupt follows mispredict", dut->interrupt_taken, 1);
+    expect_eq("post-mispredict interrupt ERA",
+              dut->com_xcpt_pc, 0x1c000600);
 
     pass("rob");
     delete dut;

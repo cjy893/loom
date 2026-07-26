@@ -94,6 +94,8 @@ module boom_core #(
     logic                        dec_ready;
     logic [CORE_WIDTH-1:0]       dec_xcpts;
     logic [31:0]                 fetch_pc;
+    logic [31:0]                 next_decode_pc_q;
+    logic [31:0]                 next_decode_pc_d;
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        pre_dispatch_ready;
@@ -127,6 +129,7 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
     logic [CORE_WIDTH-1:0]       rn2_unique_q;
+    logic [CORE_WIDTH-1:0][31:0] rn2_pc_q;
 
     logic                        csr_req_ready_w;
     logic                        csr_resp_valid_w;
@@ -211,6 +214,23 @@ module boom_core #(
                 fetch_pc <= fetch_pc + (32'(fe_count) << 2);
             end
         end
+    end
+
+    always_comb begin
+        next_decode_pc_d = next_decode_pc_q;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_fire[w])
+                next_decode_pc_d = dec_pcs[w] + 32'd4;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            next_decode_pc_q <= RESET_PC;
+        else if (fe_redirect_valid)
+            next_decode_pc_q <= fe_redirect_pc;
+        else
+            next_decode_pc_q <= next_decode_pc_d;
     end
 
     // Decode the oldest unfinished lanes from the current frontend packet.
@@ -362,11 +382,13 @@ module boom_core #(
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
             rn2_unique_q <= '0;
+            rn2_pc_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
                 rn2_unique_q[w] <= dec_uops[w].is_unique;
+                rn2_pc_q[w] <= dec_uops[w].pc[31:0];
             end
         end else begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
@@ -374,6 +396,7 @@ module boom_core #(
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
                     rn2_unique_q[w] <= 1'b0;
+                    rn2_pc_q[w] <= '0;
                 end
             end
         end
@@ -608,6 +631,7 @@ module boom_core #(
     logic [MEM_WIDTH-1:0]   mem_dgen_valid;
     logic [MEM_WIDTH-1:0][31:0] mem_dgen_data;
     uop_t [MEM_WIDTH-1:0]   mem_dgen_uop;
+    exception_t [MEM_WIDTH-1:0] mem_xcpt;
 
     for (genvar i = 0; i < MEM_WIDTH; i++) begin : gen_mem
         logic [31:0] mem_rs1_data;
@@ -633,6 +657,7 @@ module boom_core #(
             .imm_data(mem_imm_data),
             .agen_valid(mem_agen_valid[i]), .agen_addr(mem_agen_addr[i]), .agen_uop(mem_agen_uop[i]),
             .dgen_valid(mem_dgen_valid[i]), .dgen_data(mem_dgen_data[i]), .dgen_uop(mem_dgen_uop[i]),
+            .xcpt(mem_xcpt[i]),
             .brupdate(brupdate_w), .kill(bm_flush));
     end
 
@@ -807,9 +832,27 @@ module boom_core #(
     logic                               rob_rollback_w;
     logic                               rob_flush_frontend_w;
     logic                               rob_ready_w;
+    logic [31:0]                        rob_interrupt_next_pc_w;
 
     assign rob_enq_valids = dis_fire;
     assign rob_enq_uops = dis_uops_w;
+
+    // If the ROB is empty, the interrupt boundary may still precede a packet
+    // held in Rename2 or Decode. Preserve that oldest uncommitted PC as ERA.
+    always_comb begin
+        logic found_rn2;
+
+        rob_interrupt_next_pc_w = next_decode_pc_q;
+        found_rn2 = 1'b0;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (!found_rn2 && rn2_mask[w]) begin
+                rob_interrupt_next_pc_w = rn2_pc_q[w];
+                found_rn2 = 1'b1;
+            end
+        end
+
+    end
 
     for (genvar i = 0; i < ALU_WIDTH; i++)
         assign rob_wb_resps[i] = alu_res[i];
@@ -830,7 +873,10 @@ module boom_core #(
         .lsu_clr_bsy_valid(lsu_clr_bsy_valid),
         .lsu_clr_bsy_addr(lsu_clr_bsy_rob_idx),
         .brupdate   (brupdate_w),
-        .lxcpt      ('0),
+        .interrupt_pending(csr_interrupt_pending_w),
+        .interrupt_next_pc(rob_interrupt_next_pc_w),
+        .interrupt_taken(),
+        .lxcpt      (mem_xcpt[0]),
         .csr_replay ('0),
         .csr_stall  (1'b0),
         .commit     (commit),

@@ -31,6 +31,14 @@ module rob_test_top (
     input  logic [2:0] lsu_clr_bsy_addr_0,
     input  logic [2:0] lsu_clr_bsy_addr_1,
 
+    input  logic        interrupt_pending,
+    input  logic [31:0] interrupt_next_pc,
+    input  logic        br_mispredict,
+    input  logic        lxcpt_valid,
+    input  logic [5:0]  lxcpt_rob_idx,
+    input  logic [5:0]  lxcpt_cause,
+    input  logic [31:0] lxcpt_badvaddr,
+
     output logic [5:0] tail_idx,
     output logic [5:0] head_idx,
     output logic       ready,
@@ -42,10 +50,12 @@ module rob_test_top (
     output logic [31:0] com_xcpt_pc,
     output logic [31:0] com_xcpt_inst,
     output logic [31:0] com_xcpt_cause,
+    output logic [31:0] com_xcpt_badvaddr,
     output logic       flush_valid,
     output logic [2:0] flush_typ,
     output logic       flush_frontend,
-    output logic       rollback
+    output logic       rollback,
+    output logic       interrupt_taken
 );
     uop_t [1:0] enq_uops;
     exe_unit_resp_t [1:0] wb_resps;
@@ -54,6 +64,7 @@ module rob_test_top (
     commit_exception_signals_t com_xcpt;
     commit_exception_signals_t flush;
     br_update_info_t brupdate;
+    exception_t lxcpt;
 
     always_comb begin
         enq_uops = '0;
@@ -86,6 +97,12 @@ module rob_test_top (
         lsu_clr_bsy_addr[0] = lsu_clr_bsy_addr_0;
         lsu_clr_bsy_addr[1] = lsu_clr_bsy_addr_1;
         brupdate = '0;
+        brupdate.b2.mispredict = br_mispredict;
+        lxcpt = '0;
+        lxcpt.valid = lxcpt_valid;
+        lxcpt.uop.rob_idx = lxcpt_rob_idx;
+        lxcpt.cause = lxcpt_cause;
+        lxcpt.badvaddr = lxcpt_badvaddr;
     end
 
     rob #(
@@ -105,7 +122,10 @@ module rob_test_top (
         .lsu_clr_bsy_valid,
         .lsu_clr_bsy_addr,
         .brupdate,
-        .lxcpt('0),
+        .interrupt_pending,
+        .interrupt_next_pc,
+        .interrupt_taken,
+        .lxcpt,
         .csr_replay('0),
         .csr_stall(1'b0),
         .commit,
@@ -126,6 +146,7 @@ module rob_test_top (
     assign com_xcpt_pc = com_xcpt.pc;
     assign com_xcpt_inst = com_xcpt.inst;
     assign com_xcpt_cause = com_xcpt.cause;
+    assign com_xcpt_badvaddr = com_xcpt.badvaddr;
     assign flush_valid = flush.valid;
     assign flush_typ = flush.flush_typ;
 endmodule

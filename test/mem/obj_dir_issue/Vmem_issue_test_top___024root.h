@@ -51,12 +51,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         CData/*0:0*/ mem_issue_test_top__DOT__mem_dut__DOT__rrd_valid;
         CData/*0:0*/ mem_issue_test_top__DOT__mem_dut__DOT__rrd_br_killed;
         CData/*0:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_valid;
+        CData/*0:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_valid;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_killed;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_ready;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_grant;
         CData/*1:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_slot;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available;
         CData/*0:0*/ mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used;
+        CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_1;
+        CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_2;
         CData/*0:0*/ __VstlFirstIteration;
         CData/*0:0*/ __VstlPhaseResult;
         CData/*0:0*/ __Vtrigprevexpr___TOP__clk__0;
@@ -76,12 +80,12 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         CData/*3:0*/ __Vtrigprevexpr___TOP__resolve_mask__0;
         CData/*3:0*/ __Vtrigprevexpr___TOP__mispredict_mask__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__br_mispredict__0;
+    };
+    struct {
         CData/*0:0*/ __Vtrigprevexpr___TOP__flush_pipeline__0;
         CData/*0:0*/ __VicoDidInit;
         CData/*0:0*/ __VicoPhaseResult;
         CData/*0:0*/ __Vtrigprevexpr___TOP__clk__1;
-    };
-    struct {
         CData/*0:0*/ __Vtrigprevexpr___TOP__rst_n__1;
         CData/*0:0*/ __VactPhaseResult;
         CData/*0:0*/ __VnbaPhaseResult;

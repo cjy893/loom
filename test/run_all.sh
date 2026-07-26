@@ -22,8 +22,11 @@ suites=(
   core_fetch_buffer
   core_ifu
   core_lsu
+  core_lsu_exception
   core_program
   core_exception
+  core_interrupt
+  core_interrupt_lsu
   branch_recovery
   integration
 )

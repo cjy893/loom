@@ -106,6 +106,7 @@ struct RedirectRecord {
 
 struct RunResult {
     bool finished = false;
+    bool stopped_after_handler_entries = false;
     bool pending_seen = false;
     unsigned pending_bits = 0;
     bool irq_asserted = false;
@@ -114,6 +115,7 @@ struct RunResult {
     unsigned irq_assert_rob_occupancy = 0;
     unsigned committed_before_irq = 0;
     int handler_cycle = -1;
+    unsigned handler_entries = 0;
     std::vector<CommitRecord> commits;
     std::vector<CommitRecord> commits_before_handler;
     std::vector<RedirectRecord> redirects;
@@ -133,6 +135,7 @@ struct IrqControl {
     uint32_t trigger_begin_pc = 0;
     uint32_t trigger_end_pc = 0;
     unsigned trigger_after_commits = 0;
+    unsigned stop_after_handler_entries = 0;
 };
 
 static void tick(Vcore_interrupt_test_top* dut) {
@@ -191,6 +194,7 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
     RunResult result;
     int last_activity = 0;
     bool clear_irq_after_tick = false;
+    bool stop_after_tick = false;
     unsigned completed_trigger_commits = 0;
 
     for (int cycle = 0; cycle < 2000; ++cycle) {
@@ -236,6 +240,10 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
             result.irq_asserted_with_younger_uops = true;
             dut->hw_irq = 1;
             dut->eval();
+            if (dut->interrupt_pending) {
+                result.pending_seen = true;
+                result.pending_bits |= dut->interrupt_pending_bits;
+            }
             last_activity = cycle;
         }
 
@@ -259,11 +267,17 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
                 dut->redirect_pc,
                 dut->redirect_flush_typ,
             });
-            if (dut->redirect_pc == HANDLER_PC &&
-                result.handler_cycle < 0) {
-                result.handler_cycle = cycle;
+            if (dut->redirect_pc == HANDLER_PC) {
+                ++result.handler_entries;
+                if (result.handler_cycle < 0)
+                    result.handler_cycle = cycle;
                 if (irq.clear_at_handler)
                     clear_irq_after_tick = true;
+                if (irq.stop_after_handler_entries != 0 &&
+                    result.handler_entries >=
+                        irq.stop_after_handler_entries) {
+                    stop_after_tick = true;
+                }
             }
             last_activity = cycle;
         }
@@ -274,6 +288,10 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
             dut->hw_irq = 0;
             dut->eval();
             clear_irq_after_tick = false;
+        }
+        if (stop_after_tick) {
+            result.stopped_after_handler_entries = true;
+            break;
         }
 
         bool source_finished =
@@ -496,6 +514,108 @@ static bool test_precise_interrupt_and_ertn(
     return passed;
 }
 
+static bool test_empty_rob_interrupt_boundary(
+    Vcore_interrupt_test_top* dut) {
+    Program program;
+    add_eentry_setup(&program);
+    program[RESET_PC + 12] = addi_w(11, 0, HW_IRQ0_LIE);
+    program[RESET_PC + 16] = csrwr(11, CSR_ECFG);
+    program[RESET_PC + 20] =
+        addi_w(12, 0, CRMD_DA | CRMD_IE);
+    program[RESET_PC + 24] = csrwr(12, CSR_CRMD);
+
+    const uint32_t body_start = RESET_PC + 28;
+    program[body_start + 0] = addi_w(1, 0, 9);
+    program[body_start + 4] = addi_w(2, 1, 1);
+    program[body_start + 8] = NOP;
+
+    program[HANDLER_PC + 0] = csrrd(20, CSR_ERA);
+    program[HANDLER_PC + 4] = ERTN;
+
+    RunResult result = run_program(
+        dut, program,
+        {
+            .initial_hw_irq = 1,
+            .clear_at_handler = true,
+        });
+    bool passed = true;
+    passed &= check("empty ROB IRQ reaches CSR pending",
+                    result.pending_seen);
+    passed &= check("empty ROB IRQ redirects once to EENTRY",
+                    redirect_count(result, HANDLER_PC) == 1);
+
+    if (result.handler_cycle < 0) {
+        std::fprintf(stderr,
+                     "INT diagnostic: empty ROB IRQ produced no handler\n");
+        return false;
+    }
+
+    passed &= check_eq("empty ROB IRQ ERA is next Decode PC",
+                       result.last_write[20], body_start);
+    passed &= check("empty ROB body waits for ERTN",
+                    commit_count(result.commits_before_handler,
+                                 body_start) == 0);
+    passed &= check("empty ROB first body instruction commits once",
+                    commit_count(result.commits, body_start) == 1);
+    passed &= check("empty ROB second body instruction commits once",
+                    commit_count(result.commits, body_start + 4) == 1);
+    passed &= check("empty ROB ERTN returns to ERA",
+                    has_redirect_after(result, body_start,
+                                       result.handler_cycle));
+    passed &= check("empty ROB interrupt run reaches quiescence",
+                    result.finished);
+
+    if (passed)
+        std::printf("PASS: empty ROB interrupt boundary\n");
+    return passed;
+}
+
+static bool test_held_high_interrupt_retriggers(
+    Vcore_interrupt_test_top* dut) {
+    Program program;
+    add_eentry_setup(&program);
+    program[RESET_PC + 12] = addi_w(11, 0, HW_IRQ0_LIE);
+    program[RESET_PC + 16] = csrwr(11, CSR_ECFG);
+    program[RESET_PC + 20] =
+        addi_w(12, 0, CRMD_DA | CRMD_IE);
+    program[RESET_PC + 24] = csrwr(12, CSR_CRMD);
+
+    const uint32_t body_start = RESET_PC + 28;
+    program[body_start] = addi_w(1, 0, 9);
+    program[body_start + 4] = NOP;
+
+    program[HANDLER_PC + 0] = csrrd(20, CSR_ERA);
+    program[HANDLER_PC + 4] = ERTN;
+
+    RunResult result = run_program(
+        dut, program,
+        {
+            .initial_hw_irq = 1,
+            .clear_at_handler = false,
+            .stop_after_handler_entries = 2,
+        });
+
+    bool passed = true;
+    passed &= check("held IRQ remains pending",
+                    result.pending_seen);
+    passed &= check("held IRQ reaches EENTRY twice",
+                    result.handler_entries == 2 &&
+                    redirect_count(result, HANDLER_PC) == 2);
+    passed &= check("held IRQ test stops at second handler entry",
+                    result.stopped_after_handler_entries);
+    passed &= check("first handler executes ERTN once",
+                    commit_count(result.commits,
+                                 HANDLER_PC + 4) == 1);
+    passed &= check_eq("held IRQ preserves the restart boundary",
+                       result.last_write[20], body_start);
+    passed &= check("held IRQ retriggers before body can commit",
+                    commit_count(result.commits, body_start) == 0);
+
+    if (passed)
+        std::printf("PASS: held interrupt retriggers after ERTN\n");
+    return passed;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     auto* dut = new Vcore_interrupt_test_top;
@@ -503,7 +623,9 @@ int main(int argc, char** argv) {
     bool passed = true;
     passed &= test_global_interrupt_mask(dut);
     passed &= test_local_interrupt_mask(dut);
+    passed &= test_empty_rob_interrupt_boundary(dut);
     passed &= test_precise_interrupt_and_ertn(dut);
+    passed &= test_held_high_interrupt_retriggers(dut);
 
     dut->final();
     delete dut;

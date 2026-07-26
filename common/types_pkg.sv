@@ -210,6 +210,7 @@ package loom_types;
     } commit_exception_signals_t;
 
     typedef struct packed {
+        logic valid;
         uop_t uop;
         logic [$clog2(64)-1:0] cause;
         logic [VADDR_BITS:0] badvaddr;

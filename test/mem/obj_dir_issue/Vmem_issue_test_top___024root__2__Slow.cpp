@@ -4,72 +4,91 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__stl(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
-#endif  // VL_DEBUG
-VL_ATTR_COLD bool Vmem_issue_test_top___024root___trigger_anySet__stl(const VlUnpacked<QData/*63:0*/, 1> &in);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__5(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__7(Vmem_issue_test_top___024root* vlSelf);
+extern const VlWide<13>/*415:0*/ Vmem_issue_test_top__ConstPool__CONST_h9a1659ba_0;
 
-VL_ATTR_COLD bool Vmem_issue_test_top___024root___eval_phase__stl(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_phase__stl\n"); );
+VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__1(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___stl_sequent__TOP__1\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    CData/*0:0*/ __VstlExecute;
     // Body
-    {
-        // Inlined CFunc: _eval_triggers_vec__stl
-        vlSelfRef.__VstlTriggered[0U] = ((0xfffffffffffffffeULL 
-                                          & vlSelfRef.__VstlTriggered[0U]) 
-                                         | (IData)((IData)(vlSelfRef.__VstlFirstIteration)));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 0U;
+    VL_ASSIGN_W(411, vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop, Vmem_issue_test_top__ConstPool__CONST_h9a1659ba_0);
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | (0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                      << 7U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                                >> 0x00000019U)) 
+                                    & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                        << 0x0000001cU) 
+                                       | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                          >> 4U))))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
+           | (((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+               & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed))) 
+              & (0U == (0x00070000U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[3U]))));
+    if ((1U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready))) {
+        vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 1U;
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[0U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[0U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[1U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[1U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[2U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[2U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[3U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[3U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[4U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[5U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[6U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[6U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[9U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[9U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[10U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[10U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U] 
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[11U];
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U] 
+            = (0x07ffffffU & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[12U]);
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+            = ((0xe1ffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
+               | (0x1e000000U & ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                    << 7U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                              >> 0x00000019U)) 
+                                  & (~ ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         << 0x00000018U) 
+                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                           >> 8U)))) 
+                                 << 0x00000019U)));
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant 
+            = (1U | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant));
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 1U;
     }
-#ifdef VL_DEBUG
-    if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
-        Vmem_issue_test_top___024root___dump_triggers__stl(vlSelfRef.__VstlTriggered, "stl"s);
-    }
-#endif
-    __VstlExecute = Vmem_issue_test_top___024root___trigger_anySet__stl(vlSelfRef.__VstlTriggered);
-    if (__VstlExecute) {
-        {
-            // Inlined CFunc: _eval_stl
-            if ((1ULL & vlSelfRef.__VstlTriggered[0U])) {
-                Vmem_issue_test_top___024root___stl_sequent__TOP__0(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__4(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__5(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__6(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__7(vlSelf);
-                {
-                    // Inlined CFunc: _ico_comb__TOP__8
-                    vlSelfRef.iss_use_dgen = (1U & 
-                                              (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                               >> 0x0000000dU));
-                    vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
-                        = ((IData)(vlSelfRef.br_mispredict) 
-                           & (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                                     & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                         << 7U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                                   >> 0x00000019U)))));
-                }
-            }
-        }
-    }
-    return (__VstlExecute);
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
+                                       << 0x0000000cU) 
+                                      | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
+                                         >> 0x00000014U)) 
+                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         << 0x0000001cU) 
+                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                           >> 4U))))) 
+              << 1U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
+           | ((IData)(((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                         >> 1U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
+                                      >> 1U))) & (0U 
+                                                  == 
+                                                  (0x00003800U 
+                                                   & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[16U])))) 
+              << 1U));
 }
-
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__1(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__2(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico\n"); );
-    // Body
-    Vmem_issue_test_top___024root___dump_triggers__ico__0(triggers, tag);
-    Vmem_issue_test_top___024root___dump_triggers__ico__1(triggers, tag);
-    Vmem_issue_test_top___024root___dump_triggers__ico__2(triggers, tag);
-}
-#endif  // VL_DEBUG

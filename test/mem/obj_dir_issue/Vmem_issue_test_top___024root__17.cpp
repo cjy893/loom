@@ -4,65 +4,63 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
+void Vmem_issue_test_top___024root___trigger_orInto__act_vec_vec(VlUnpacked<QData/*63:0*/, 1> &out, const VlUnpacked<QData/*63:0*/, 1> &in) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___trigger_orInto__act_vec_vec\n"); );
+    // Locals
+    IData/*31:0*/ n;
+    // Body
+    n = 0U;
+    do {
+        out[n] = (out[n] | in[n]);
+        n = ((IData)(1U) + n);
+    } while ((0U >= n));
+}
+
 #ifdef VL_DEBUG
-void Vmem_issue_test_top___024root___eval_debug_assertions(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_debug_assertions\n"); );
+VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__act(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
+#endif  // VL_DEBUG
+
+bool Vmem_issue_test_top___024root___eval_phase__act(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_phase__act\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if (VL_UNLIKELY(((vlSelfRef.clk & 0xfeU)))) {
-        Verilated::overWidthError("clk");
+    {
+        // Inlined CFunc: _eval_triggers_vec__act
+        {
+            // Inlined CFunc: _eval_triggers_vec__act__0
+            vlSelfRef.__VactTriggered[0U] = (QData)((IData)(
+                                                            ((((~ (IData)(vlSelfRef.rst_n)) 
+                                                               & (IData)(vlSelfRef.__Vtrigprevexpr___TOP__rst_n__1)) 
+                                                              << 1U) 
+                                                             | ((IData)(vlSelfRef.clk) 
+                                                                & (~ (IData)(vlSelfRef.__Vtrigprevexpr___TOP__clk__1))))));
+        }
+        {
+            // Inlined CFunc: _eval_triggers_vec__act__1
+            vlSelfRef.__Vtrigprevexpr___TOP__clk__1 
+                = vlSelfRef.clk;
+            vlSelfRef.__Vtrigprevexpr___TOP__rst_n__1 
+                = vlSelfRef.rst_n;
+        }
     }
-    if (VL_UNLIKELY(((vlSelfRef.rst_n & 0xfeU)))) {
-        Verilated::overWidthError("rst_n");
+#ifdef VL_DEBUG
+    if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
+        Vmem_issue_test_top___024root___dump_triggers__act(vlSelfRef.__VactTriggered, "act"s);
     }
-    if (VL_UNLIKELY(((vlSelfRef.dis_valid & 0xfeU)))) {
-        Verilated::overWidthError("dis_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_rob_idx & 0xc0U)))) {
-        Verilated::overWidthError("dis_rob_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs1 & 0xc0U)))) {
-        Verilated::overWidthError("dis_prs1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs2 & 0xc0U)))) {
-        Verilated::overWidthError("dis_prs2");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs1_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_prs1_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs2_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_prs2_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_agen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_agen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_dgen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_dgen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_0 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_0 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_1 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_1 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.resolve_mask & 0xf0U)))) {
-        Verilated::overWidthError("resolve_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.mispredict_mask & 0xf0U)))) {
-        Verilated::overWidthError("mispredict_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.br_mispredict & 0xfeU)))) {
-        Verilated::overWidthError("br_mispredict");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.flush_pipeline & 0xfeU)))) {
-        Verilated::overWidthError("flush_pipeline");
-    }
+#endif
+    Vmem_issue_test_top___024root___trigger_orInto__act_vec_vec(vlSelfRef.__VnbaTriggered, vlSelfRef.__VactTriggered);
+    return (0U);
 }
-#endif  // VL_DEBUG
+
+void Vmem_issue_test_top___024root___trigger_clear__act(VlUnpacked<QData/*63:0*/, 1> &out) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___trigger_clear__act\n"); );
+    // Locals
+    IData/*31:0*/ n;
+    // Body
+    n = 0U;
+    do {
+        out[n] = 0ULL;
+        n = ((IData)(1U) + n);
+    } while ((1U > n));
+}

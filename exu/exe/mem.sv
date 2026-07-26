@@ -24,6 +24,8 @@ module mem #(
     output logic [31:0] dgen_data,
     output uop_t dgen_uop,
 
+    output exception_t xcpt,
+
     input br_update_info_t brupdate,
     input kill
 );
@@ -81,7 +83,7 @@ module mem #(
     assign eff_addr = exe_rs1 + exe_imm;
 
     if(HAS_AGEN) begin: gen_agen
-        assign agen_valid = exe_valid && !exe_br_killed && exe_uop.fu_code[FC_AGEN];
+        assign agen_valid = exe_agen_valid && !xcpt.valid;
         assign agen_addr = eff_addr;
         assign agen_uop = exe_uop;
     end else begin
@@ -91,12 +93,37 @@ module mem #(
     end
 
     if(HAS_DGEN) begin: gen_dgen
-        assign dgen_valid = exe_valid && !exe_br_killed && exe_uop.fu_code[FC_DGEN];
+        assign dgen_valid = exe_valid && !exe_br_killed && exe_uop.fu_code[FC_DGEN] && !xcpt.valid;
         assign dgen_data = exe_rs2;
         assign dgen_uop = exe_uop;
     end else begin
         assign dgen_valid = 1'b0;
         assign dgen_data = '0;
         assign dgen_uop = '0;
+    end
+
+    logic exe_agen_valid;
+    logic addr_misaligned;
+
+    assign exe_agen_valid = exe_valid && !exe_br_killed && exe_uop.fu_code[FC_AGEN];
+
+    always_comb begin
+        unique case(exe_uop.mem_size)
+            2'd1: addr_misaligned = eff_addr[0];
+            2'd2: addr_misaligned = |eff_addr[1:0];
+            default: addr_misaligned = 1'b0;
+        endcase
+    end
+
+    always_comb begin
+        xcpt = '0;
+
+        if(HAS_AGEN && exe_agen_valid && addr_misaligned) begin
+            xcpt.valid = 1'b1;
+            xcpt.uop = exe_uop;
+            xcpt.uop.br_mask = exe_uop.br_mask & ~brupdate.b1.resolve_mask;
+            xcpt.cause = ECODE_ALE;
+            xcpt.badvaddr = eff_addr;
+        end
     end
 endmodule

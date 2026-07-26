@@ -34,6 +34,7 @@ Run one suite:
 ./test/core_program/run.sh
 ./test/core_exception/run.sh
 ./test/core_interrupt/run.sh
+./test/core_interrupt_lsu/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -44,8 +45,14 @@ included in `run_all.sh`.
 `test/core_exception/run.sh` is the precise exception and ERTN integration
 suite and is included in `run_all.sh`.
 
-`test/core_interrupt/run.sh` is a red-phase precise interrupt integration
-suite. It remains outside `run_all.sh` until the enabled-interrupt case passes.
+`test/core_interrupt/run.sh` is the precise interrupt and ERTN integration
+suite and is included in `run_all.sh`.
+
+`test/core_interrupt_lsu/run.sh` covers interrupt recovery boundaries shared
+with the LSU and branch unit and is included in `run_all.sh`.
+
+`test/core_lsu_exception/run.sh` covers precise misaligned load/store `ALE`
+exceptions and is included in `run_all.sh`.
 
 Current coverage:
 
@@ -54,7 +61,8 @@ Current coverage:
 - `issue`: dispatch, ready issue, wakeup, full-queue backpressure, flush,
   misprediction kill, grant squash/retry, and resolved branch-tag reuse.
 - `rob`: two-bank enqueue, out-of-order completion with in-order commit,
-  pointer wrap, precise static exceptions, rollback, refetch, and ERTN flush.
+  pointer wrap, precise static and dynamic exceptions, synchronous-exception
+  priority over interrupts, rollback, refetch, and ERTN flush.
 - `alu`: integer arithmetic, comparisons, logic, shifts, immediate selection,
   ROB identity propagation, early wakeup, and branch resolution.
 - `decode`: real LA32 encodings from `test.s` for integer ALU, immediate,
@@ -119,7 +127,12 @@ Current coverage:
   exception cancellation, handler CSR reads, and an ERTN return contract.
 - `core_interrupt`: global and per-source interrupt masking, CSR pending
   propagation, precise interrupt boundaries, EENTRY/ERA/CRMD/PRMD state, source
-  deassertion, ERTN return, and exact-once resumed commits.
+  deassertion, ERTN return, exact-once resumed commits, and level-sensitive
+  retriggering when the source remains asserted.
+- `core_interrupt_lsu`: interrupt recovery with outstanding memory operations,
+  covering uncommitted-store suppression, committed-store draining, rejection
+  of delayed pre-interrupt load responses, and branch-mispredict priority over
+  a simultaneously pending IRQ.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -128,8 +141,9 @@ Current coverage:
   serializing CSR instructions, commit-time refetch, and end-to-end result
   checks for all seven multiply/divide variants.
 
-These are directed module tests. They do not yet cover interrupts, dynamic
-LSU/IFU exceptions, full-width dispatch, or memory partial issue.
+These are directed module tests. The passing regression includes dynamic LSU
+alignment exceptions, but does not yet include dynamic IFU exceptions,
+full-width dispatch, or memory partial issue.
 
 The runner continues after a failed suite so one RTL failure does not hide
 results from later modules. It returns a nonzero status if any suite fails.
@@ -152,7 +166,8 @@ Current status:
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.
 - `core_exception` passes precise synchronous exception handling, wrong-path
   cancellation, CSR state updates, and the complete exception/ERTN round trip.
-- `core_interrupt` passes both masking cases and reaches CSR
-  `interrupt_pending`; its enabled-interrupt case remains red because
-  `boom_core` does not yet convert the pending request into a precise EENTRY
-  redirect.
+- `core_interrupt` passes masking, delayed hardware interrupt delivery, precise
+  ROB-boundary rollback, CSR state updates, and the complete interrupt/ERTN
+  round trip. Held-high interrupt input also retriggers after ERTN.
+- `core_interrupt_lsu` passes the interrupt boundaries for killed and committed
+  LSU entries, delayed responses, and simultaneous branch recovery.
