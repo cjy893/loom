@@ -29,16 +29,59 @@ enum {
     MULDIV_MUL_W = 0, MULDIV_MULH_W = 1, MULDIV_MULH_WU = 2,
     MULDIV_DIV_W = 3, MULDIV_DIV_WU = 4,
     MULDIV_MOD_W = 5, MULDIV_MOD_WU = 6,
+    CNT_LOW = 0, CNT_HIGH = 1, CNT_ID = 2,
 };
 
-static void decode(Vdecode_test_top* dut, uint32_t inst) {
+static void decode_at_plv(Vdecode_test_top* dut, uint32_t inst,
+                          unsigned status_prv) {
     dut->inst = inst;
-    dut->status_prv = 0;
+    dut->pc = 0;
+    dut->status_prv = status_prv;
     dut->eval();
+}
+
+static void decode(Vdecode_test_top* dut, uint32_t inst) {
+    decode_at_plv(dut, inst, 0);
 }
 
 static void expect_fu(const char* name, Vdecode_test_top* dut, unsigned bit) {
     expect_true(name, (dut->fu_code & (1U << bit)) != 0);
+}
+
+static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
+                                       const char* instruction_name) {
+    decode_at_plv(dut, inst, 3);
+
+    const bool is_clean_ipe =
+        dut->exception == 1 &&
+        dut->exc_cause == 14 &&
+        dut->iq_type == 0 &&
+        dut->fu_code == 0 &&
+        dut->ldst == 0 &&
+        dut->lrs1 == 0 &&
+        dut->lrs2 == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->is_unique == 0 &&
+        dut->flush_on_commit == 0;
+
+    if (!is_clean_ipe) {
+        std::fprintf(
+            stderr,
+            "FAIL: %s in PLV3: exception=%u cause=%u iq=%u fu=0x%x "
+            "ldst=%u lrs1=%u lrs2=%u dst_rtype=%u unique=%u flush=%u\n",
+            instruction_name,
+            dut->exception,
+            dut->exc_cause,
+            dut->iq_type,
+            dut->fu_code,
+            dut->ldst,
+            dut->lrs1,
+            dut->lrs2,
+            dut->dst_rtype,
+            dut->is_unique,
+            dut->flush_on_commit);
+        ++failures;
+    }
 }
 
 static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
@@ -166,6 +209,76 @@ int main(int argc, char** argv) {
     expect_eq("csrrd address", dut->imm_packed, 6);
     expect_eq("csrrd serializes", dut->flush_on_commit, 1);
 
+    // Real CSRWR/CSRXCHG encodings from nscscc_func/obj/test.s.
+    decode(dut, 0x0401102d);
+    expect_eq("csrwr queue", dut->iq_type, IQ_UNQ);
+    expect_fu("csrwr CSR FU", dut, FC_CSR);
+    expect_eq("csrwr source", dut->lrs1, 13);
+    expect_eq("csrwr destination", dut->ldst, 13);
+    expect_eq("csrwr command", dut->csr_cmd, 1);
+    expect_eq("csrwr address", dut->imm_packed, 0x44);
+    expect_eq("csrwr no exception in PLV0", dut->exception, 0);
+
+    decode(dut, 0x0400158d);
+    expect_eq("csrxchg queue", dut->iq_type, IQ_UNQ);
+    expect_fu("csrxchg CSR FU", dut, FC_CSR);
+    expect_eq("csrxchg value source", dut->lrs1, 13);
+    expect_eq("csrxchg mask source", dut->lrs2, 12);
+    expect_eq("csrxchg destination", dut->ldst, 13);
+    expect_eq("csrxchg command", dut->csr_cmd, 2);
+    expect_eq("csrxchg address", dut->imm_packed, 5);
+    expect_eq("csrxchg no exception in PLV0", dut->exception, 0);
+
+    // Every CSR instruction is privileged. A faulting CSR uop must enter only
+    // the precise exception path and must not retain issue/serialization state.
+    expect_csr_privilege_fault(dut, 0x0400180c, "csrrd");
+    expect_csr_privilege_fault(dut, 0x0401102d, "csrwr");
+    expect_csr_privilege_fault(dut, 0x0400158d, "csrxchg");
+
+    // ERTN is a serialized UNQ operation in PLV0. Its redirect is performed
+    // only when the uop commits from the ROB.
+    decode(dut, 0x06483800);
+    expect_eq("ERTN queue", dut->iq_type, IQ_UNQ);
+    expect_eq("ERTN marker", dut->is_eret, 1);
+    expect_eq("ERTN is unique", dut->is_unique, 1);
+    expect_eq("ERTN serializes", dut->flush_on_commit, 1);
+    expect_eq("ERTN has no functional-unit request", dut->fu_code, 0);
+    expect_eq("ERTN is not a JIRL", dut->is_jalr, 0);
+    expect_eq("ERTN has no exception in PLV0", dut->exception, 0);
+
+    dut->status_prv = 3;
+    dut->eval();
+    expect_eq("ERTN raises IPE outside PLV0", dut->exception, 1);
+    expect_eq("ERTN privilege exception cause", dut->exc_cause, 14);
+    expect_eq("faulting ERTN is not issued", dut->iq_type, 0);
+    expect_eq("faulting ERTN has no marker", dut->is_eret, 0);
+
+    // Real RDCNT encodings from nscscc_func/obj/test.s.
+    decode(dut, 0x0000600d);
+    expect_eq("rdcntvl queue", dut->iq_type, IQ_UNQ);
+    expect_eq("rdcntvl marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntvl destination", dut->ldst, 13);
+    expect_eq("rdcntvl operation", dut->fcn_op, CNT_LOW);
+    expect_eq("rdcntvl no exception", dut->exception, 0);
+
+    decode(dut, 0x0000640e);
+    expect_eq("rdcntvh marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntvh destination", dut->ldst, 14);
+    expect_eq("rdcntvh operation", dut->fcn_op, CNT_HIGH);
+    expect_eq("rdcntvh no exception", dut->exception, 0);
+
+    decode(dut, 0x00006180);
+    expect_eq("rdcntid marker", dut->is_rdcnt, 1);
+    expect_eq("rdcntid writes rj", dut->ldst, 12);
+    expect_eq("rdcntid operation", dut->fcn_op, CNT_ID);
+    expect_eq("rdcntid no exception", dut->exception, 0);
+
+    // inst[10]=1 selects RDCNTVH and requires rj=0.
+    decode(dut, 0x00006420);
+    expect_eq("rdcntvh with nonzero rj is illegal",
+              dut->exception, 1);
+    expect_eq("illegal rdcntvh cause", dut->exc_cause, 13);
+
     // 1c000230: syscall 0x11. LA32 syscall has exception cause 11.
     decode(dut, 0x002b0011);
     expect_eq("syscall exception", dut->exception, 1);
@@ -176,6 +289,19 @@ int main(int argc, char** argv) {
     decode(dut, 0xffffffff);
     expect_eq("illegal instruction exception", dut->exception, 1);
     expect_eq("illegal instruction cause", dut->exc_cause, 13);
+
+    // ADEF has priority over the instruction's decoded semantics.
+    dut->inst = 0x0400180c;
+    dut->pc = 0x227f9789U;
+    dut->status_prv = 0;
+    dut->eval();
+    expect_eq("misaligned fetch raises exception", dut->exception, 1);
+    expect_eq("misaligned fetch ADEF cause", dut->exc_cause, 8);
+    expect_eq("misaligned fetch marker", dut->xcpt_ae_if, 1);
+    expect_eq("ADEF has no issue queue", dut->iq_type, 0);
+    expect_eq("ADEF has no functional unit", dut->fu_code, 0);
+    expect_eq("ADEF has no destination", dut->ldst, 0);
+    expect_eq("ADEF is not serialized CSR", dut->flush_on_commit, 0);
 
     if (failures != 0) {
         std::fprintf(stderr, "FAIL: decode: %u checks failed\n", failures);

@@ -33,6 +33,8 @@ void clear_inputs(Vlsu_ordering_test_top* dut) {
     dut->ld_agen_valid = 0;
     dut->ld_agen_idx = 0;
     dut->ld_agen_addr = 0;
+    dut->ld_commit_valid = 0;
+    dut->ld_commit_idx = 0;
     dut->load_req_ready = 0;
     dut->load_resp_valid = 0;
     dut->load_resp_idx = 0;
@@ -105,6 +107,14 @@ void present_load_address(Vlsu_ordering_test_top* dut, unsigned tag,
     dut->ld_agen_addr = addr;
     eval_cycle(dut);
     dut->ld_agen_valid = 0;
+    dut->eval();
+}
+
+void commit_load(Vlsu_ordering_test_top* dut, unsigned tag) {
+    dut->ld_commit_valid = 1;
+    dut->ld_commit_idx = tag;
+    eval_cycle(dut);
+    dut->ld_commit_valid = 0;
     dut->eval();
 }
 
@@ -426,6 +436,52 @@ void test_flush_rejects_late_load_response(
     dut->eval();
 }
 
+void test_blocked_low_slot_does_not_starve_older_load(
+    Vlsu_ordering_test_top* dut) {
+    reset_case(dut);
+
+    const unsigned dummy_load = enqueue_load(dut, 1, 0);
+    const unsigned older_load = enqueue_load(dut, 2, 0);
+    for(unsigned rob = 3; rob <= 16; ++rob)
+        enqueue_load(dut, rob, 0);
+
+    present_load_address(dut, dummy_load, 0xb000);
+    accept_and_respond(
+        dut, dummy_load, 0xb000, 0x11112222, 0x11112222, 1);
+    dut->load_resp_valid = 0;
+    dut->eval();
+    commit_load(dut, dummy_load);
+
+    const unsigned first_store = enqueue_store(dut, 17);
+    present_store_address(dut, first_store, 0xa000);
+    present_store_data(dut, first_store, 0x33334444);
+    const unsigned second_store = enqueue_store(dut, 18);
+    present_store_address(dut, second_store, 0xa000);
+    present_store_data(dut, second_store, 0x55556666);
+
+    const unsigned younger_load = enqueue_load(dut, 19, 0);
+    expect_eq("younger blocked load reuses physical slot zero",
+              younger_load & 0xf, 0);
+    present_load_address(dut, younger_load, 0xa000);
+    present_load_address(dut, older_load, 0xc000);
+
+    bool saw_older_request = false;
+    for(int cycle = 0; cycle < kWaitCycles; ++cycle) {
+        dut->eval();
+        if(dut->load_req_valid) {
+            expect_eq("fair load request tag",
+                      dut->load_req_idx, older_load);
+            expect_eq("fair load request address",
+                      dut->load_req_addr, 0xc000);
+            saw_older_request = true;
+            break;
+        }
+        eval_cycle(dut);
+    }
+    expect_true("blocked low slot does not starve older load",
+                saw_older_request);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -435,7 +491,7 @@ int main(int argc, char** argv) {
     if(argc != 2) {
         std::fprintf(stderr,
                      "usage: %s unknown|non_alias|non_overlap|forward|data_wait"
-                     "|store_commit|rob_wrap|concurrent|flush_late\n",
+                     "|store_commit|rob_wrap|concurrent|flush_late|slot_fair\n",
                      argv[0]);
         delete dut;
         return 2;
@@ -459,6 +515,8 @@ int main(int argc, char** argv) {
         test_concurrent_queue_requests(dut);
     else if(std::strcmp(argv[1], "flush_late") == 0)
         test_flush_rejects_late_load_response(dut);
+    else if(std::strcmp(argv[1], "slot_fair") == 0)
+        test_blocked_low_slot_does_not_starve_older_load(dut);
     else {
         std::fprintf(stderr, "unknown test group: %s\n", argv[1]);
         delete dut;

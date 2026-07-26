@@ -1,0 +1,135 @@
+import loom_params::*;
+import loom_consts::*;
+import loom_types::*;
+
+module core_lsu_exception_test_top (
+    input  logic                         clk,
+    input  logic                         rst_n,
+
+    input  logic [3:0]                   fe_valid,
+    input  logic [3:0][31:0]             fe_insts,
+    output logic                         fe_ready,
+    output logic [31:0]                  debug_pc,
+    output logic                         redirect_valid,
+    output logic [31:0]                  redirect_pc,
+    output logic [2:0]                   redirect_flush_typ,
+
+    output logic                         dmem_req_valid,
+    input  logic                         dmem_req_ready,
+    output logic                         dmem_req_is_store,
+    output logic [31:0]                  dmem_req_addr,
+    output logic [31:0]                  dmem_req_data,
+    output logic [3:0]                   dmem_req_mask,
+    output logic [1:0]                   dmem_req_size,
+    output logic [LSU_ADDR_SZ+1:0]       dmem_req_idx,
+
+    input  logic                         dmem_resp_valid,
+    input  logic                         dmem_resp_is_store,
+    input  logic [31:0]                  dmem_resp_data,
+    input  logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx,
+
+    output logic                         rob_empty,
+    output logic                         ldq_empty,
+    output logic                         stq_empty,
+    output logic [1:0]                   commit_valids,
+    output logic [1:0][31:0]             commit_pcs,
+    output logic [1:0][31:0]             commit_insts,
+
+    output logic [4:0]                   rf_write_valid,
+    output logic [4:0][4:0]              rf_write_ldst,
+    output logic [4:0][31:0]             rf_write_data,
+
+    output logic                         exception_valid,
+    output logic [31:0]                  exception_pc,
+    output logic [31:0]                  exception_inst,
+    output logic [31:0]                  exception_cause,
+    output logic [31:0]                  exception_badvaddr
+);
+    localparam logic [31:0] RESET_PC = 32'h1c00_0000;
+
+    commit_signal_t core_commit;
+
+    boom_core #(
+        .RESET_PC(RESET_PC)
+    ) core (
+        .clk,
+        .rst_n,
+        .fe_valid,
+        .fe_insts,
+        .fe_pcs('0),
+        .fe_ready,
+        .fe_redirect_valid(redirect_valid),
+        .fe_redirect_pc(redirect_pc),
+        .dmem_req_valid,
+        .dmem_req_ready,
+        .dmem_req_is_store,
+        .dmem_req_addr,
+        .dmem_req_data,
+        .dmem_req_mask,
+        .dmem_req_size,
+        .dmem_req_idx,
+        .dmem_req_uop(),
+        .dmem_resp_valid,
+        .dmem_resp_is_store,
+        .dmem_resp_data,
+        .dmem_resp_idx,
+        .hw_irq('0),
+        .ipi_irq(1'b0),
+        .csr_req_valid(),
+        .csr_addr(),
+        .csr_cmd(),
+        .csr_wdata(),
+        .csr_wmask(),
+        .commit(core_commit),
+        .rob_empty,
+        .debug_pc,
+        .commit_valid_dbg(),
+        .commit_valids_dbg(),
+        .commit_ldst_dbg(),
+        .rf_wr_en_dbg(),
+        .rf_wr_pdst_dbg(),
+        .rf_wr_ldst_dbg(),
+        .rf_wr_data_dbg(),
+        .alu_rs1_dbg(),
+        .alu_imm_dbg(),
+        .alu_imm_packed_dbg(),
+        .alu_imm_sel_dbg(),
+        .rob_ready_dbg(),
+        .ren_stalls_dbg(),
+        .rn2_mask_dbg(),
+        .dis_fire_dbg(),
+        .dis_unique_dbg(),
+        .alu_iss_valid_dbg(),
+        .alu_res_valid_dbg(),
+        .rob_wb_valid_dbg()
+    );
+
+    assign ldq_empty = core.lsu_ldq_empty;
+    assign stq_empty = core.lsu_stq_empty;
+
+    assign commit_valids = core_commit.arch_valids;
+    for (genvar w = 0; w < 2; w++) begin : gen_commit_debug
+        assign commit_pcs[w] = core_commit.uops[w].pc[31:0];
+        assign commit_insts[w] = core_commit.uops[w].debug_inst;
+    end
+
+    assign rf_write_valid = core.rf_write_en;
+    assign rf_write_data = core.rf_write_data;
+
+    always_comb begin
+        rf_write_ldst = '0;
+        for (int w = 0; w < 3; w++)
+            rf_write_ldst[w] = core.alu_res[w].uop.ldst;
+        rf_write_ldst[3] = core.lsu_resp_w.uop.ldst;
+        rf_write_ldst[4] = core.unq_res.uop.ldst;
+    end
+
+    assign exception_valid = core.rob_com_xcpt_w.valid;
+    assign exception_pc = core.rob_com_xcpt_w.pc;
+    assign exception_inst = core.rob_com_xcpt_w.inst;
+    assign exception_cause = core.rob_com_xcpt_w.cause;
+    assign exception_badvaddr = core.rob_com_xcpt_w.badvaddr;
+
+    assign redirect_flush_typ =
+        core.rob_flush_w.valid ? core.rob_flush_w.flush_typ : FT_NONE;
+endmodule

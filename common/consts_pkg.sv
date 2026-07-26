@@ -99,6 +99,8 @@ package loom_consts;
     localparam logic [3:0] MULDIV_MOD_W    = 4'd5;
     localparam logic [3:0] MULDIV_MOD_WU   = 4'd6;
 
+    localparam logic [5:0] ECODE_ADE = 6'd8;
+    localparam logic [5:0] ECODE_ALE = 6'd9;
     localparam logic [5:0] ECODE_SYS = 6'd11;
     localparam logic [5:0] ECODE_BRK = 6'd12;
     localparam logic [5:0] ECODE_INE = 6'd13;
@@ -107,4 +109,8 @@ package loom_consts;
     localparam logic [1:0] CSR_READ = 2'd0;
     localparam logic [1:0] CSR_WRITE = 2'd1;
     localparam logic [1:0] CSR_XCHG = 2'd2;
+
+    localparam logic [3:0] CNT_LOW = 4'd0;
+    localparam logic [3:0] CNT_HIGH = 4'd1;
+    localparam logic [3:0] CNT_ID = 4'd2;
 endpackage

@@ -38,9 +38,6 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___stl_sequent__TOP__0\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_1;
-    __VdfgRegularize_h6e95ff9d_0_1 = 0;
     // Body
     vlSelfRef.dgen_data = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs2;
     vlSelfRef.mem_issue_test_top__DOT__wakeup_valid 
@@ -49,15 +46,13 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     vlSelfRef.mem_issue_test_top__DOT__wakeup_pdst 
         = (((IData)(vlSelfRef.wakeup_pdst_1) << 6U) 
            | (IData)(vlSelfRef.wakeup_pdst_0));
-    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs1 
-                           + vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_imm);
     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_br_killed 
         = ((IData)(vlSelfRef.br_mispredict) & (0U != 
                                                ((IData)(vlSelfRef.mispredict_mask) 
                                                 & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                                    << 8U) 
+                                                    << 7U) 
                                                    | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                                      >> 0x00000018U)))));
+                                                      >> 0x00000019U)))));
     vlSelfRef.agen_rob_idx = (0x0000003fU & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[5U] 
                                               << 3U) 
                                              | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[4U] 
@@ -113,20 +108,24 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[6U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[7U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[8U] 
-        = (((IData)(vlSelfRef.dis_use_dgen) << 0x0000000cU) 
-           | ((IData)(vlSelfRef.dis_use_agen) << 0x0000000bU));
+        = (((IData)(vlSelfRef.dis_use_dgen) << 0x0000000dU) 
+           | ((IData)(vlSelfRef.dis_use_agen) << 0x0000000cU));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[9U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[10U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[11U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[12U] = 0U;
-    __VdfgRegularize_h6e95ff9d_0_1 = ((~ ((IData)(vlSelfRef.br_mispredict) 
-                                          & (0U != 
-                                             ((IData)(vlSelfRef.mispredict_mask) 
-                                              & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
-                                                  << 8U) 
-                                                 | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
-                                                    >> 0x00000018U)))))) 
-                                      & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_valid));
+    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs1 
+                           + vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_imm);
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_2 = ((~ 
+                                                 ((IData)(vlSelfRef.br_mispredict) 
+                                                  & (0U 
+                                                     != 
+                                                     ((IData)(vlSelfRef.mispredict_mask) 
+                                                      & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
+                                                          << 7U) 
+                                                         | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
+                                                            >> 0x00000019U)))))) 
+                                                & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_valid));
     vlSelfRef.mem_issue_test_top__DOT__brupdate[0U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__brupdate[1U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__brupdate[2U] 
@@ -144,11 +143,12 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     vlSelfRef.mem_issue_test_top__DOT__brupdate[13U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__brupdate[14U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-        = (((IData)(vlSelfRef.resolve_mask) << 7U) 
-           | ((IData)(vlSelfRef.mispredict_mask) << 3U));
+        = (((IData)(vlSelfRef.resolve_mask) << 8U) 
+           | ((IData)(vlSelfRef.mispredict_mask) << 4U));
     vlSelfRef.dgen_rob_idx = vlSelfRef.agen_rob_idx;
-    vlSelfRef.agen_valid = ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
-                             >> 0x0000000bU) & (IData)(__VdfgRegularize_h6e95ff9d_0_1));
-    vlSelfRef.dgen_valid = ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
-                             >> 0x0000000cU) & (IData)(__VdfgRegularize_h6e95ff9d_0_1));
+    vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid 
+        = ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
+            >> 0x0000000cU) & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_2));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready = 0U;
 }

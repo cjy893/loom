@@ -57,7 +57,7 @@ module decode(
             32'b00111000011100100_???????????????: instr_type = INSTR_CACHE;
             32'b00111000011100101_???????????????: instr_type = INSTR_CACHE;
             // RDCNT                      : 000000_000000_00000110_xxxxxxxxxx
-            32'b00000000000000000110_???????????: instr_type = INSTR_RDCNT;
+            32'b000000000000000001100_???????????: instr_type = INSTR_RDCNT;
             default:                              instr_type = INSTR_ILLEGAL;
         endcase
     end
@@ -522,79 +522,104 @@ module decode(
             // CSR : inst[31:24] == 00000100
             // ============================================================
             INSTR_CSR: begin
-                uop.iq_type         = IQ_UNQ;
-                uop.fu_code[FC_CSR] = 1'b1;
-                uop.is_unique       = 1'b1;
-                uop.flush_on_commit = 1'b1;     // CSR 串行化
-                uop.ldst = rd;
-                uop.dst_rtype = RT_FIX;
-                uop.imm_sel = IS_F3;
-                uop.imm_packed = {12'b0, csr_addr};
-
-                if(rj == 0) begin
-                    uop.csr_cmd = CSR_READ;
-                end else if(rj == 1) begin
-                    uop.csr_cmd = CSR_WRITE;
-                    uop.lrs1 = rd;
-                    uop.lrs1_rtype = RT_FIX;
+                if(status_prv != 2'b00) begin
+                    uop.exception = 1'b1;
+                    uop.exc_cause = ECODE_IPE;
                 end else begin
-                    uop.csr_cmd = CSR_XCHG;
-                    uop.lrs1 = rd;
-                    uop.lrs2 = rj;
-                    uop.lrs1_rtype = RT_FIX;
-                    uop.lrs2_rtype = RT_FIX;
+                    uop.iq_type         = IQ_UNQ;
+                    uop.fu_code[FC_CSR] = 1'b1;
+                    uop.is_unique       = 1'b1;
+                    uop.flush_on_commit = 1'b1;     // CSR 串行化
+                    uop.ldst = rd;
+                    uop.dst_rtype = RT_FIX;
+                    uop.imm_sel = IS_F3;
+                    uop.imm_packed = {12'b0, csr_addr};
+
+                    if(rj == 5'd0) begin
+                        uop.csr_cmd = CSR_READ;
+                    end else if(rj == 1) begin
+                        uop.csr_cmd = CSR_WRITE;
+                        uop.lrs1 = rd;
+                        uop.lrs1_rtype = RT_FIX;
+                    end else begin
+                        uop.csr_cmd = CSR_XCHG;
+                        uop.lrs1 = rd;
+                        uop.lrs2 = rj;
+                        uop.lrs1_rtype = RT_FIX;
+                        uop.lrs2_rtype = RT_FIX;
+                    end
                 end
             end
 
             // ============================================================
             // CACHE/TLB/ERTN/DBAR/IBAR
             // ============================================================
-            // INSTR_CACHE: begin
-            //     uop.iq_type         = IQ_UNQ;
-            //     uop.is_unique       = 1'b1;
-            //     uop.flush_on_commit = 1'b1;
+            INSTR_CACHE: begin
+                // 判断具体子指令
+                if(inst == 32'h0648_3800) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.is_eret = 1'b1;
 
-            //     // 判断具体子指令
-            //     if(inst == 32'h0648_3800) begin
-            //         // ERTN
-            //         uop.is_eret = 1'b1;
-            //         uop.br_type = B_JR;
-            //         uop.is_jalr = 1'b1;
-            //     end else if(inst[31:22] == 10'b0000011000) begin
-            //         // CACOP
-            //         uop.fu_code[FC_AGEN] = 1'b1;
-            //         uop.op1_sel = OP1_RS1;
-            //         uop.op2_sel = OP2_IMM;
-            //         uop.imm_sel = IS_I;
-            //         uop.imm_packed = i12;
-            //     end else if(inst[31:15] == 17'b00111000011100100) begin
-            //         // DBAR
-            //     end else if(inst[31:15] == 17'b00111000011100101) begin
-            //         // IBAR
-            //     end else if(inst == 32'h0648_8000) begin
-            //         // IDLE
-            //     end else begin
-            //         // TLBSRCH / TLBRD / TLBWR / TLBFILL / INVTLB
-            //     end
-            // end
+                        uop.dst_rtype = RT_X;
+                        uop.lrs1_rtype = RT_X;
+                        uop.lrs2_rtype = RT_X;
+                    end
+                end else begin
+                    uop.exception = 1'b1;
+                    uop.exc_cause = ECODE_INE;
+                end
+                // end else if(inst[31:22] == 10'b0000011000) begin
+                //     // CACOP
+                //     uop.fu_code[FC_AGEN] = 1'b1;
+                //     uop.op1_sel = OP1_RS1;
+                //     uop.op2_sel = OP2_IMM;
+                //     uop.imm_sel = IS_I;
+                //     uop.imm_packed = i12;
+                // end else if(inst[31:15] == 17'b00111000011100100) begin
+                //     // DBAR
+                // end else if(inst[31:15] == 17'b00111000011100101) begin
+                //     // IBAR
+                // end else if(inst == 32'h0648_8000) begin
+                //     // IDLE
+                // end else begin
+                //     // TLBSRCH / TLBRD / TLBWR / TLBFILL / INVTLB
+                // end
+            end
 
             // ============================================================
             // RDCNT : inst[31:20] == 00000000000000000110
             // ============================================================
             INSTR_RDCNT: begin
-                uop.iq_type         = IQ_UNQ;
-                uop.is_unique       = 1'b1;
+                if(inst[10] && rj != 5'd0) begin
+                    uop.exception = 1'b1;
+                    uop.exc_cause = ECODE_INE;
+                end else begin
+                    uop.iq_type         = IQ_UNQ;
+                    uop.is_unique       = 1'b1;
+                    uop.is_rdcnt = 1'b1;
 
-                uop.op1_sel  = OP1_ZERO;
-                uop.op2_sel  = OP2_ZERO;
-                uop.dst_rtype = RT_FIX;
+                    uop.op1_sel  = OP1_ZERO;
+                    uop.op2_sel  = OP2_ZERO;
+                    uop.dst_rtype = RT_FIX;
 
-                // inst[10]=0: rdcntvl.w (低32位), inst[10]=1: rdcntvh.w (高32位)
-                uop.imm_sel  = IS_F3;
-                uop.imm_packed = {25'b0, inst[10]};
+                    // inst[10]=0: rdcntvl.w (低32位), inst[10]=1: rdcntvh.w (高32位)
+                    uop.imm_sel  = IS_F3;
+                    uop.imm_packed = {25'b0, inst[10]};
 
-                // 写 rj 还是 rd（rj!=0 时写 rj）
-                uop.ldst = (rj != 5'b0) ? rj : rd;
+                    if(rj != 5'd0) begin
+                        uop.fcn_op = CNT_ID;
+                        uop.ldst = rj;
+                    end else begin
+                        uop.fcn_op = inst[10] ? CNT_HIGH : CNT_LOW;
+                        uop.ldst = rd;
+                    end
+                end
             end
 
             // ============================================================
@@ -628,6 +653,17 @@ module decode(
             uop.allocate_brtag = 1'b0;
             uop.starts_bsy = 1'b0;
             uop.starts_unsafe = 1'b0;
+        end
+
+        if(pc[1:0] != 2'b00) begin
+            uop = '0;
+            uop.inst = inst;
+            uop.debug_inst = inst;
+            uop.pc = pc;
+
+            uop.exception = 1'b1;
+            uop.exc_cause = ECODE_ADE;
+            uop.xcpt_ae_if = 1'b1;
         end
     end
 

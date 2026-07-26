@@ -15,6 +15,21 @@
 | Rename Stage | `exu/rename/rename_stage.sv` | 完成 |
 | Dispatch | `exu/dispatch.sv` | 完成（双路独立打包和逐入口反压） |
 | Issue Slot | `exu/issue/issue_slot.sv` | 基本完成，优化项见下 |
+| IFU | `ifu/ifu.sv` | 单 outstanding 基础版本，完整前端功能待补 |
+| Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换完成 |
+| 临时集成顶层 | `boom_core.sv` | Fetch Buffer 直连 Decode 边界已验证，仍非生产顶层 |
+
+---
+
+## 前端缺口
+
+| 项目 | 当前状态 | 剩余工作 |
+|------|---------|---------|
+| 取指并发 | IFU 只允许一个未完成请求 | 接入 I-Cache 后支持所需的并发和 replay |
+| 分支预测 | 当前依靠执行后重定向 | 实现预测器、FTQ 和预测目标校验 |
+| 地址转换 | 当前直接使用物理测试地址 | 实现 ITLB、取指异常和权限检查 |
+| 重定向接口 | `boom_core` 通过公开端口输出分支/ROB 重定向，并接收异常和 ERTN 目标 | 接入正式 CSR 后提供真实异常入口和 ERA 返回地址 |
+| 核心输入 | `boom_core` 保留逐 lane 完成掩码 | 上游必须在 `valid && ready` 前保持包内容稳定 |
 
 ---
 
@@ -70,11 +85,11 @@
 | DBAR | `inst[31:15]==17'b00111000011100100` | `is_fence=1`, 数据屏障 |
 | IBAR | `inst[31:15]==17'b00111000011100101` | `is_fencei=1`, 指令屏障 |
 
-### 2. 特权级检查未实现
+### 2. 特权级检查
 
-- 当前 `status_prv` 输入声明了但未使用
-- CSR 指令在非内核态（prv!=0）时应标记 `exception`
-- CACHE/TLB 特权指令同上
+- CSR 和 ERTN 已检查 `status_prv`，非 PLV0 执行时产生 `ECODE_IPE`
+- 尚未实现的 CACHE/TLB 特权指令当前按 `ECODE_INE` 处理
+- 实现 CACHE/TLB/IDLE 时仍需按各指令权限补充 `ECODE_IPE` 检查
 
 ---
 

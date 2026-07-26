@@ -24,6 +24,10 @@ module rob #(
 
     input br_update_info_t brupdate,
 
+    input logic interrupt_pending,
+    input logic [XLEN-1:0] interrupt_next_pc,
+    output logic interrupt_taken,
+
     input exception_t lxcpt,
     input exception_t csr_replay,
 
@@ -123,6 +127,38 @@ module rob #(
         assign rob_head_exception[w] = rob_exception[w][rob_head];
     end
 
+    logic [NUM_ROWS-1:0] [XLEN-1:0] rob_exc_cause [CORE_WIDTH-1:0];
+    logic [NUM_ROWS-1:0] [XLEN-1:0] rob_exc_badvaddr [CORE_WIDTH-1:0];
+
+    logic lxcpt_live;
+    logic [$clog2(NUM_ROWS)-1:0] lxcpt_row;
+    logic [$clog2(CORE_WIDTH)-1:0] lxcpt_bank;
+    logic lxcpt_br_killed;
+    always_comb begin
+        lxcpt_row = get_row(lxcpt.uop.rob_idx);
+        lxcpt_bank = get_bank(lxcpt.uop.rob_idx);
+        lxcpt_br_killed = brupdate.b2.mispredict && |(lxcpt.uop.br_mask & brupdate.b1.mispredict_mask);
+        lxcpt_live = lxcpt.valid && rob_val[lxcpt_bank][lxcpt_row] && !lxcpt_br_killed &&
+                     rob_state != S_ROLLBACK && rob_uop[lxcpt_bank][lxcpt_row].rob_idx == lxcpt.uop.rob_idx;
+    end
+
+    logic [$clog2(CORE_WIDTH)-1:0] first_head_bank;
+    logic first_head_exception;
+    logic [XLEN-1:0] interrupt_era;
+    always_comb begin
+        first_head_bank = priority_encoder(rob_head_vals);
+        first_head_exception = (|rob_head_vals) && rob_exception[first_head_bank][rob_head];
+
+        if(|rob_head_vals) begin
+            interrupt_era = rob_uop[first_head_bank][rob_head].pc[XLEN-1:0];
+        end else begin
+            interrupt_era = interrupt_next_pc;
+        end
+    end
+
+    assign interrupt_taken = interrupt_pending && (rob_state == S_NORMAL) && !first_head_exception &&
+                             !exception_throw_d1 && !exception_throw_d2 && !brupdate.b2.mispredict && !lxcpt_live;
+
     logic [CORE_WIDTH-1:0] can_commit;
     logic [CORE_WIDTH-1:0] can_throw_exception;
     logic [CORE_WIDTH-1:0] will_commit;
@@ -131,7 +167,7 @@ module rob #(
     logic block_xcpt;
     logic exception_throw;
     always_comb begin
-        block_commit = (rob_state !=S_NORMAL && rob_state != S_WAIT_TILL_EMPTY) || exception_throw_d1 || exception_throw_d2;
+        block_commit = (rob_state !=S_NORMAL && rob_state != S_WAIT_TILL_EMPTY) || exception_throw_d1 || exception_throw_d2 || interrupt_taken;
         block_xcpt = 1'b0;
         exception_throw = 1'b0;
         will_commit = '0;
@@ -163,15 +199,24 @@ module rob #(
     always_comb begin
         com_xcpt = '0;
 
-        com_xcpt.valid = exception_throw;
-        com_xcpt.pc = xcpt_uop.pc[XLEN-1:0];
-        com_xcpt.ftq_idx = xcpt_uop.ftq_idx;
-        com_xcpt.edge_inst = xcpt_uop.edge_inst;
-        com_xcpt.is_16bit = 1'b0;
-        com_xcpt.pc_lob = xcpt_uop.pc_lob;
-        com_xcpt.cause = xcpt_uop.exc_cause;
-        com_xcpt.badvaddr = '0;
-        com_xcpt.flush_typ = exception_throw ? FT_XCPT : '0;
+        if(interrupt_taken) begin
+            com_xcpt.valid = 1'b1;
+            com_xcpt.pc = interrupt_era;
+            com_xcpt.inst = '0;
+            com_xcpt.cause = '0;
+            com_xcpt.badvaddr = '0;
+            com_xcpt.flush_typ = FT_XCPT;
+        end else if(exception_throw) begin
+            com_xcpt.valid = 1'b1;
+            com_xcpt.pc = xcpt_uop.pc[XLEN-1:0];
+            com_xcpt.inst = xcpt_uop.inst;
+            com_xcpt.ftq_idx = xcpt_uop.ftq_idx;
+            com_xcpt.edge_inst = xcpt_uop.edge_inst;
+            com_xcpt.pc_lob = xcpt_uop.pc_lob;
+            com_xcpt.cause = rob_exc_cause[xcpt_bank][rob_head];
+            com_xcpt.badvaddr = rob_exc_badvaddr[xcpt_bank][rob_head];
+            com_xcpt.flush_typ = FT_XCPT;
+        end
     end
 
     logic [CORE_WIDTH-1:0] flush_commit_mask;
@@ -194,13 +239,18 @@ module rob #(
         flush.edge_inst = flush_uop.edge_inst;
         flush.is_16bit = 1'b0;
         flush.pc_lob = flush_uop.pc_lob;
+        flush.inst = flush_uop.inst;
 
-        if(exception_throw) begin
-            flush.cause = com_xcpt.cause;
-            flush.badvaddr = com_xcpt.badvaddr;
-            flush.flush_typ = FT_XCPT;
-        end else if(flush_uop.is_eret) flush.flush_typ = FT_ERET;
-        else if(|flush_commit_mask) flush.flush_typ = FT_REFETCH;
+        if(com_xcpt.valid) begin
+            flush = com_xcpt;
+        end else if(|flush_commit_mask) begin
+            flush.valid = 1'b1;
+            flush.pc = flush_uop.pc[XLEN-1:0];
+            flush.inst = flush_uop.inst;
+
+            if(flush_uop.is_eret) flush.flush_typ = FT_ERET;
+            else if(|flush_commit_mask) flush.flush_typ = FT_REFETCH;
+        end
     end
 
     assign flush_frontend = flush.valid;
@@ -270,6 +320,8 @@ module rob #(
                 rob_unsafe[w] <= '0;
                 rob_exception[w] <= '0;
                 rob_predicated[w] <= '0;
+                rob_exc_cause[w] <= '0;
+                rob_exc_badvaddr[w] <= '0;
             end else begin
                 if(enq_valids[w] && rob_state == S_NORMAL) begin
                     rob_val[w][rob_tail] <= 1'b1;
@@ -278,6 +330,16 @@ module rob #(
                     rob_exception[w][rob_tail] <= enq_uops[w].exception;
                     rob_predicated[w][rob_tail] <= enq_uops[w].predicated;
                     rob_uop[w][rob_tail] <= enq_uops[w];
+                    rob_exc_cause[w][rob_tail] <= enq_uops[w].exc_cause;
+                    rob_exc_badvaddr[w][rob_tail] <= '0;
+                end
+
+                if(lxcpt_live && lxcpt_bank == w) begin
+                    rob_exception[w][lxcpt_row] <= 1'b1;
+                    rob_exc_cause[w][lxcpt_row] <= {{(XLEN-6){1'b0}}, lxcpt.cause};
+                    rob_exc_badvaddr[w][lxcpt_row] <= lxcpt.badvaddr;
+                    rob_bsy[w][lxcpt_row] <= 1'b0;
+                    rob_unsafe[w][lxcpt_row] <= 1'b0;
                 end
 
                 for(int i = 0; i < NUM_WAKEUP_PORTS; i++) begin
@@ -321,7 +383,9 @@ module rob #(
         end else begin
             case(rob_state)
                 S_NORMAL: begin
-                    if(exception_throw_d2) begin
+                    if(interrupt_taken) begin
+                        rob_state <= S_ROLLBACK;
+                    end else if(exception_throw_d2) begin
                         rob_state <= S_ROLLBACK;
                     end else if(|enq_valids && enq_uops[priority_encoder(enq_valids)].is_unique) begin
                         rob_state <= S_WAIT_TILL_EMPTY;
@@ -345,6 +409,6 @@ module rob #(
     end
 
     assign rollback = (rob_state == S_ROLLBACK);
-    assign ready = (rob_state == S_NORMAL) && !full;
+    assign ready = (rob_state == S_NORMAL) && !full && !interrupt_taken;
     assign empty = (rob_head == rob_tail) && (rob_head_vals == '0);
 endmodule

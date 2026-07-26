@@ -4,6 +4,7 @@ import loom_types::*;
 
 module boom_core #(
     parameter logic [31:0] RESET_PC = 32'h1c00_0000,
+    parameter bit USE_EXTERNAL_FE_PCS = 1'b0,
     parameter int CORE_WIDTH     = 2,
     parameter int FETCH_WIDTH    = 4,
     parameter int ALU_WIDTH      = 3,
@@ -16,7 +17,8 @@ module boom_core #(
     parameter int UNQ_IQ_ENTRIES = 12,
     parameter int NUM_WAKEUPS    = 6,   // ALU(3)+LSU(1)+UNQ(1)+FP(0)+extra(1)=6
     parameter int NUM_REGF_READS = ALU_WIDTH * 2 + MEM_WIDTH * 2 + 2,
-    parameter int NUM_REGF_WRITES= 5    // ALU(3)+LSU(1)+UNQ(1)=5
+    parameter int NUM_REGF_WRITES= 5,   // ALU(3)+LSU(1)+UNQ(1)=5
+    parameter logic [31:0] CORE_ID = 32'd0
 )(
     input  logic clk,
     input  logic rst_n,
@@ -24,7 +26,10 @@ module boom_core #(
     // ── 前端接口（raw 32 位指令） ──
     input  logic [FETCH_WIDTH-1:0]       fe_valid,
     input  logic [FETCH_WIDTH-1:0][31:0] fe_insts,
+    input  logic [FETCH_WIDTH-1:0][31:0] fe_pcs,
     output logic                         fe_ready,
+    output logic                         fe_redirect_valid,
+    output logic [31:0]                  fe_redirect_pc,
 
     // ── 测试存储器接口 ──
     output logic                         dmem_req_valid,
@@ -41,13 +46,16 @@ module boom_core #(
     input  logic [31:0]                  dmem_resp_data,
     input  logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx,
 
-    // ── CSR 接口（stub） ──
+    // ── 中断输入 ──
+    input  logic [7:0]                   hw_irq,
+    input  logic                         ipi_irq,
+
+    // ── CSR 请求调试输出 ──
     output logic                         csr_req_valid,
     output logic [13:0]                  csr_addr,
     output logic [1:0]                   csr_cmd,
     output logic [31:0]                  csr_wdata,
     output logic [31:0]                  csr_wmask,
-    input  logic [31:0]                  csr_rdata,
 
     // ── 提交输出 ──
     output commit_signal_t               commit,
@@ -86,15 +94,21 @@ module boom_core #(
     logic                        dec_ready;
     logic [CORE_WIDTH-1:0]       dec_xcpts;
     logic [31:0]                 fetch_pc;
+    logic [31:0]                 next_decode_pc_q;
+    logic [31:0]                 next_decode_pc_d;
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        pre_dispatch_ready;
+    logic                        unique_dispatch_ready;
     logic                        branch_alloc_ready;
-    logic [CORE_WIDTH-1:0]       fe_buf_valid;
-    logic [CORE_WIDTH-1:0][31:0] fe_buf_insts;
-    logic [CORE_WIDTH-1:0][31:0] fe_buf_pcs;
-    logic [CORE_WIDTH-1:0][31:0] incoming_pcs;
-    logic [$clog2(CORE_WIDTH+1)-1:0] incoming_count;
+    localparam int FE_IDX_WIDTH =
+        (FETCH_WIDTH > 1) ? $clog2(FETCH_WIDTH) : 1;
+    logic [CORE_WIDTH-1:0][31:0] dec_insts;
+    logic [CORE_WIDTH-1:0][FE_IDX_WIDTH-1:0] dec_fe_idx;
+    logic [FETCH_WIDTH-1:0]       fe_finished_q;
+    logic [FETCH_WIDTH-1:0]       fe_completed;
+    logic [$clog2(FETCH_WIDTH+1)-1:0] fe_count;
+    logic                        fe_packet_done;
     logic                        fe_accept;
 
     logic [CORE_WIDTH-1:0] iq_mem_dis_valid;
@@ -114,75 +128,119 @@ module boom_core #(
     logic [CORE_WIDTH-1:0]       dis_fire;
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
+    logic [CORE_WIDTH-1:0]       rn2_unique_q;
+    logic [CORE_WIDTH-1:0][31:0] rn2_pc_q;
 
+    logic                        csr_req_ready_w;
+    logic                        csr_resp_valid_w;
+    logic [ROB_ADDR_SZ-1:0]      csr_resp_rob_idx_w;
+    logic [31:0]                 csr_rdata_w;
+    logic                        csr_commit_valid_w;
+    logic [ROB_ADDR_SZ-1:0]      csr_commit_rob_idx_w;
+    logic                        csr_ertn_valid_w;
+    logic                        csr_interrupt_pending_w;
+    logic [12:0]                 csr_interrupt_pending_bits_w;
+    logic [1:0]                  csr_current_plv_w;
+    logic                        csr_current_ie_w;
+    logic [31:0]                 csr_xcpt_target_w;
+    logic [31:0]                 csr_ertn_target_w;
+    logic [63:0]                 csr_counter_value_w;
+    logic [31:0]                 csr_tid_value_w;
+
+    // The frontend owns the packet until every valid lane has entered Decode.
+    // Only a completion mask is retained here; instruction data stays at the
+    // ready/valid boundary and can therefore flow through without an extra
+    // buffering cycle.
     always_comb begin
-        logic [$clog2(CORE_WIDTH+1)-1:0] slot_offset;
+        int dec_slot;
+        int valid_offset;
 
-        incoming_count = '0;
-        incoming_pcs = '0;
-        slot_offset = '0;
-        for (int w = 0; w < CORE_WIDTH; w++) begin
-            incoming_pcs[w] = fetch_pc + (32'(slot_offset) << 2);
+        dec_valids = '0;
+        dec_insts = '0;
+        dec_pcs = '0;
+        dec_fe_idx = '0;
+        fe_count = '0;
+        dec_slot = 0;
+        valid_offset = 0;
+
+        for (int w = 0; w < FETCH_WIDTH; w++) begin
             if (fe_valid[w]) begin
-                slot_offset += 1'b1;
-                incoming_count += 1'b1;
+                fe_count += 1'b1;
+                if (!fe_finished_q[w] && dec_slot < CORE_WIDTH) begin
+                    dec_valids[dec_slot] = 1'b1;
+                    dec_insts[dec_slot] = fe_insts[w];
+                    dec_fe_idx[dec_slot] = FE_IDX_WIDTH'(w);
+                    if (USE_EXTERNAL_FE_PCS)
+                        dec_pcs[dec_slot] = fe_pcs[w];
+                    else
+                        dec_pcs[dec_slot] =
+                            fetch_pc + (32'(valid_offset) << 2);
+                    dec_slot++;
+                end
+                valid_offset++;
             end
         end
     end
 
-    assign fe_ready = (fe_buf_valid == '0) &&
-                      rob_ready_w && !rob_flush_frontend_w &&
+    always_comb begin
+        fe_completed = '0;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_fire[w])
+                fe_completed[dec_fe_idx[w]] = 1'b1;
+        end
+    end
+
+    assign fe_packet_done =
+        &(~fe_valid | fe_finished_q | fe_completed);
+    assign fe_ready = fe_packet_done &&
+                      !rob_flush_frontend_w &&
                       !brupdate_w.b2.mispredict;
-    assign fe_accept = fe_ready && (|fe_valid[CORE_WIDTH-1:0]);
+    assign fe_accept = fe_ready && (|fe_valid);
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             fetch_pc <= RESET_PC;
-            fe_buf_valid <= '0;
-            fe_buf_insts <= '0;
-            fe_buf_pcs <= '0;
-        end else if (rob_flush_w.valid) begin
-            fe_buf_valid <= '0;
-            if (rob_flush_w.flush_typ == FT_REFETCH)
-                fetch_pc <= rob_flush_w.pc + 32'd4;
-        end else if (brupdate_w.b2.mispredict) begin
-            fe_buf_valid <= '0;
-            unique case (brupdate_w.b2.pc_sel)
-                PC_PLUS4:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
-                PC_BRJMP:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] +
-                                brupdate_w.b2.target_offset[31:0];
-                PC_JALR:
-                    fetch_pc <= brupdate_w.b2.jalr_target[31:0];
-                default:
-                    fetch_pc <= brupdate_w.b2.uop.pc[31:0] + 32'd4;
-            endcase
+            fe_finished_q <= '0;
+        end else if (fe_redirect_valid) begin
+            fe_finished_q <= '0;
+            fetch_pc <= fe_redirect_pc;
         end else begin
-            fe_buf_valid <= fe_buf_valid & ~dec_fire;
+            if (fe_ready)
+                fe_finished_q <= '0;
+            else
+                fe_finished_q <= fe_finished_q | fe_completed;
+
             if (fe_accept) begin
-                fe_buf_valid <= fe_valid[CORE_WIDTH-1:0];
-                for (int w = 0; w < CORE_WIDTH; w++) begin
-                    fe_buf_insts[w] <= fe_insts[w];
-                    fe_buf_pcs[w] <= incoming_pcs[w];
-                end
-                fetch_pc <= fetch_pc + (32'(incoming_count) << 2);
+                fetch_pc <= fetch_pc + (32'(fe_count) << 2);
             end
         end
     end
 
-    // The input packet is buffered so a serializing instruction can consume
-    // one lane while the remaining lane stays pending.
+    always_comb begin
+        next_decode_pc_d = next_decode_pc_q;
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_fire[w])
+                next_decode_pc_d = dec_pcs[w] + 32'd4;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            next_decode_pc_q <= RESET_PC;
+        else if (fe_redirect_valid)
+            next_decode_pc_q <= fe_redirect_pc;
+        else
+            next_decode_pc_q <= next_decode_pc_d;
+    end
+
+    // Decode the oldest unfinished lanes from the current frontend packet.
     for (genvar w = 0; w < CORE_WIDTH; w++) begin : gen_decode
         decode decode_inst (
-            .inst       (fe_buf_insts[w]),
-            .pc         (fe_buf_pcs[w]),
-            .status_prv (2'b00),
+            .inst       (dec_insts[w]),
+            .pc         (dec_pcs[w]),
+            .status_prv (csr_current_plv_w),
             .uop        (dec_uops_raw[w])
         );
-
-        assign dec_valids[w] = fe_buf_valid[w];
-        assign dec_pcs[w] = fe_buf_pcs[w];
     end
 
     // A unique uop waits for an empty ROB and cannot share a dispatch cycle
@@ -252,10 +310,14 @@ module boom_core #(
         int alu_count;
         int mem_count;
         int unq_count;
+        int valid_count;
+        logic has_unique;
 
         alu_count = 0;
         mem_count = 0;
         unq_count = 0;
+        valid_count = 0;
+        has_unique = 1'b0;
         pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w &&
                              !(|rn_stalls) &&
                              !(|brupdate_w.b1.mispredict_mask) &&
@@ -263,6 +325,8 @@ module boom_core #(
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (rn2_mask[w]) begin
+                valid_count++;
+                has_unique |= rn2_unique_q[w];
                 if (!rn2_exception_q[w]) begin
                     unique case (rn2_iq_type_q[w])
                         IQ_ALU: begin
@@ -288,6 +352,12 @@ module boom_core #(
                 end
             end
         end
+
+        // Decode isolates a unique uop into its own Rename2 packet. Recheck
+        // ROB emptiness here because an older Rename2 packet may have entered
+        // the ROB after the unique uop passed the Decode-stage check.
+        unique_dispatch_ready =
+            !has_unique || (rob_empty && (valid_count == 1));
     end
 
     // ── 灌入 dec_uops ──
@@ -311,16 +381,22 @@ module boom_core #(
         if (!rst_n || bm_flush || rob_rollback_w) begin
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
+            rn2_unique_q <= '0;
+            rn2_pc_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
+                rn2_unique_q[w] <= dec_uops[w].is_unique;
+                rn2_pc_q[w] <= dec_uops[w].pc[31:0];
             end
         end else begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 if (dis_fire[w]) begin
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
+                    rn2_unique_q[w] <= 1'b0;
+                    rn2_pc_q[w] <= '0;
                 end
             end
         end
@@ -374,7 +450,8 @@ module boom_core #(
         end
     end
 
-    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready;
+    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready &&
+                         unique_dispatch_ready;
     assign dis_fire = rn2_mask & {CORE_WIDTH{dis_ready_w}};
 
     // Pack each IQ independently. Exceptions bypass all issue queues but still
@@ -554,6 +631,7 @@ module boom_core #(
     logic [MEM_WIDTH-1:0]   mem_dgen_valid;
     logic [MEM_WIDTH-1:0][31:0] mem_dgen_data;
     uop_t [MEM_WIDTH-1:0]   mem_dgen_uop;
+    exception_t [MEM_WIDTH-1:0] mem_xcpt;
 
     for (genvar i = 0; i < MEM_WIDTH; i++) begin : gen_mem
         logic [31:0] mem_rs1_data;
@@ -579,6 +657,7 @@ module boom_core #(
             .imm_data(mem_imm_data),
             .agen_valid(mem_agen_valid[i]), .agen_addr(mem_agen_addr[i]), .agen_uop(mem_agen_uop[i]),
             .dgen_valid(mem_dgen_valid[i]), .dgen_data(mem_dgen_data[i]), .dgen_uop(mem_dgen_uop[i]),
+            .xcpt(mem_xcpt[i]),
             .brupdate(brupdate_w), .kill(bm_flush));
     end
 
@@ -653,7 +732,10 @@ module boom_core #(
         .iss_ready(unq_exec_ready),
         .rs1_data(bypass_mux(unq_iss_uop.prs1, rf_read_data[UNQ_RF_BASE])),
         .rs2_data(bypass_mux(unq_iss_uop.prs2, rf_read_data[UNQ_RF_BASE + 1])),
-        .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask, .csr_rdata,
+        .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
+        .csr_rdata(csr_rdata_w),
+        .counter_value(csr_counter_value_w),
+        .counter_id_value(csr_tid_value_w),
         .res_valid(unq_res_valid), .res(unq_res),
         .brupdate(brupdate_w), .kill(bm_flush));
 
@@ -750,9 +832,27 @@ module boom_core #(
     logic                               rob_rollback_w;
     logic                               rob_flush_frontend_w;
     logic                               rob_ready_w;
+    logic [31:0]                        rob_interrupt_next_pc_w;
 
     assign rob_enq_valids = dis_fire;
     assign rob_enq_uops = dis_uops_w;
+
+    // If the ROB is empty, the interrupt boundary may still precede a packet
+    // held in Rename2 or Decode. Preserve that oldest uncommitted PC as ERA.
+    always_comb begin
+        logic found_rn2;
+
+        rob_interrupt_next_pc_w = next_decode_pc_q;
+        found_rn2 = 1'b0;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (!found_rn2 && rn2_mask[w]) begin
+                rob_interrupt_next_pc_w = rn2_pc_q[w];
+                found_rn2 = 1'b1;
+            end
+        end
+
+    end
 
     for (genvar i = 0; i < ALU_WIDTH; i++)
         assign rob_wb_resps[i] = alu_res[i];
@@ -773,7 +873,10 @@ module boom_core #(
         .lsu_clr_bsy_valid(lsu_clr_bsy_valid),
         .lsu_clr_bsy_addr(lsu_clr_bsy_rob_idx),
         .brupdate   (brupdate_w),
-        .lxcpt      ('0),
+        .interrupt_pending(csr_interrupt_pending_w),
+        .interrupt_next_pc(rob_interrupt_next_pc_w),
+        .interrupt_taken(),
+        .lxcpt      (mem_xcpt[0]),
         .csr_replay ('0),
         .csr_stall  (1'b0),
         .commit     (commit),
@@ -788,6 +891,75 @@ module boom_core #(
     );
 
     assign bm_flush = rob_rollback_w || rob_flush_w.valid;
+
+    // ================================================================
+    // CSR file
+    // ================================================================
+    always_comb begin
+        csr_commit_valid_w = 1'b0;
+        csr_commit_rob_idx_w = '0;
+        csr_ertn_valid_w = 1'b0;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (!csr_commit_valid_w &&
+                commit.valids[w] &&
+                commit.uops[w].fu_code[FC_CSR]) begin
+                csr_commit_valid_w = 1'b1;
+                csr_commit_rob_idx_w = commit.uops[w].rob_idx;
+            end
+
+            csr_ertn_valid_w |=
+                commit.valids[w] && commit.uops[w].is_eret;
+        end
+    end
+
+    csr_file #(
+        .CSR_ADDR_WIDTH(14),
+        .ROB_IDX_WIDTH(ROB_ADDR_SZ),
+        .NUM_HW_IRQS(8),
+        .CORE_ID(CORE_ID)
+    ) csr_file_inst (
+        .clk,
+        .rst_n,
+        .csr_req_valid,
+        .csr_req_ready(csr_req_ready_w),
+        .csr_req_rob_idx(unq_iss_uop.rob_idx),
+        .csr_req_addr(csr_addr),
+        .csr_cmd,
+        .csr_wdata,
+        .csr_wmask,
+        .csr_resp_valid(csr_resp_valid_w),
+        .csr_resp_ready(1'b1),
+        .csr_resp_rob_idx(csr_resp_rob_idx_w),
+        .csr_rdata(csr_rdata_w),
+        .csr_commit_valid(csr_commit_valid_w),
+        .csr_commit_rob_idx(csr_commit_rob_idx_w),
+        .csr_flush_pending(bm_flush),
+        .xcpt_valid(rob_com_xcpt_w.valid),
+        .xcpt_inst(rob_com_xcpt_w.inst),
+        .xcpt_pc(rob_com_xcpt_w.pc),
+        .xcpt_code(rob_com_xcpt_w.cause[5:0]),
+        .xcpt_esubcode('0),
+        .xcpt_badvaddr(rob_com_xcpt_w.badvaddr),
+        .ertn_valid(csr_ertn_valid_w),
+        .hw_irq,
+        .ipi_irq,
+        .interrupt_pending(csr_interrupt_pending_w),
+        .interrupt_pending_bits(csr_interrupt_pending_bits_w),
+        .current_plv(csr_current_plv_w),
+        .current_ie(csr_current_ie_w),
+        .xcpt_target(csr_xcpt_target_w),
+        .ertn_target(csr_ertn_target_w),
+        .crmd_value(),
+        .asid_value(),
+        .dmw0_value(),
+        .dmw1_value(),
+        .era_value(),
+        .eentry_value(),
+        .tlbrentry_value(),
+        .counter_value(csr_counter_value_w),
+        .tid_value(csr_tid_value_w)
+    );
 
     // ================================================================
     // 分支更新
@@ -836,6 +1008,40 @@ module boom_core #(
                 brupdate_w.b2 = alu_brinfo[i];
                 found_mispredict = 1'b1;
             end
+        end
+    end
+
+    // ROB redirects are older than execute-stage branch redirects and
+    // therefore take priority when both are visible in the same cycle.
+    always_comb begin
+        fe_redirect_valid = 1'b0;
+        fe_redirect_pc = '0;
+
+        if (rob_flush_w.valid) begin
+            fe_redirect_valid = 1'b1;
+            unique case (rob_flush_w.flush_typ)
+                FT_XCPT:    fe_redirect_pc = csr_xcpt_target_w;
+                FT_ERET:    fe_redirect_pc = csr_ertn_target_w;
+                FT_REFETCH: fe_redirect_pc = rob_flush_w.pc + 32'd4;
+                default:    fe_redirect_pc = rob_flush_w.pc + 32'd4;
+            endcase
+        end else if (brupdate_w.b2.mispredict) begin
+            fe_redirect_valid = 1'b1;
+            unique case (brupdate_w.b2.pc_sel)
+                PC_PLUS4:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] + 32'd4;
+                PC_BRJMP:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] +
+                        brupdate_w.b2.target_offset[31:0];
+                PC_JALR:
+                    fe_redirect_pc =
+                        brupdate_w.b2.jalr_target[31:0];
+                default:
+                    fe_redirect_pc =
+                        brupdate_w.b2.uop.pc[31:0] + 32'd4;
+            endcase
         end
     end
 

@@ -51,6 +51,8 @@ module lsu_ordering_test_top (
     input  logic                         ld_agen_valid,
     input  logic [LDQ_ADDR_SZ+1:0]       ld_agen_idx,
     input  logic [XLEN-1:0]              ld_agen_addr,
+    input  logic                         ld_commit_valid,
+    input  logic [LDQ_ADDR_SZ+1:0]       ld_commit_idx,
 
     output logic                         load_req_valid,
     input  logic                         load_req_ready,
@@ -81,7 +83,7 @@ module lsu_ordering_test_top (
     logic [0:0] ld_agen_valid_vec;
     uop_t [0:0] ld_agen_uops;
     logic [0:0][XLEN-1:0] ld_agen_addr_vec;
-    logic [0:0] ld_commit_valid;
+    logic [0:0] ld_commit_valid_vec;
     uop_t [0:0] ld_commit_uops;
     uop_t load_req_uop;
     exe_unit_resp_t load_wb_resp;
@@ -130,8 +132,10 @@ module lsu_ordering_test_top (
         ld_agen_uops[0].ldq_idx = ld_agen_idx;
         ld_agen_addr_vec[0] = ld_agen_addr;
 
-        ld_commit_valid = '0;
+        ld_commit_valid_vec[0] = ld_commit_valid;
         ld_commit_uops = '0;
+        ld_commit_uops[0].uses_ldq = 1'b1;
+        ld_commit_uops[0].ldq_idx = ld_commit_idx;
 
         st_enq_valid_vec[0] = st_enq_valid;
         st_enq_uops[0] = '0;
@@ -205,7 +209,7 @@ module lsu_ordering_test_top (
         .dmem_resp_data(load_resp_data),
         .load_wb_valid,
         .load_wb_resp,
-        .commit_valid(ld_commit_valid),
+        .commit_valid(ld_commit_valid_vec),
         .commit_uops(ld_commit_uops),
         .brupdate,
         .flush_pipeline,

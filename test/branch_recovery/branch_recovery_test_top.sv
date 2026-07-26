@@ -100,7 +100,10 @@ module branch_recovery_test_top (
         .rst_n,
         .fe_valid,
         .fe_insts,
+        .fe_pcs('0),
         .fe_ready,
+        .fe_redirect_valid(br_mispredict),
+        .fe_redirect_pc(),
         .dmem_req_valid(core_dmem_req_valid),
         .dmem_req_ready(core_dmem_req_ready),
         .dmem_req_is_store(core_dmem_req_is_store),
@@ -114,12 +117,13 @@ module branch_recovery_test_top (
         .dmem_resp_is_store(core_dmem_resp_is_store),
         .dmem_resp_data(core_dmem_resp_data),
         .dmem_resp_idx(core_dmem_resp_idx),
+        .hw_irq('0),
+        .ipi_irq(1'b0),
         .csr_req_valid(),
         .csr_addr(),
         .csr_cmd(),
         .csr_wdata(),
         .csr_wmask(),
-        .csr_rdata('0),
         .commit(core_commit),
         .rob_empty,
         .debug_pc,
@@ -147,8 +151,6 @@ module branch_recovery_test_top (
     assign commit_valids = core_commit.arch_valids;
     assign commit_ldst_0 = core_commit.uops[0].ldst;
     assign commit_ldst_1 = core_commit.uops[1].ldst;
-    assign br_mispredict = core.brupdate_w.b2.mispredict;
-
     always_comb begin
         rf_write_ldst = '0;
         for (int i = 0; i < 3; i++)

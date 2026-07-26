@@ -59,6 +59,7 @@ module mem_test_top (
         .dgen_valid,
         .dgen_data,
         .dgen_uop,
+        .xcpt(),
         .brupdate,
         .kill
     );

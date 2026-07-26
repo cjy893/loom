@@ -26,6 +26,7 @@ verilator --cc --trace --build -j 1 -Wno-fatal \
   "$ROOT/exu/exe/mem.sv" \
   "$ROOT/exu/exe/unq.sv" \
   "$ROOT/exu/rob.sv" \
+  "$ROOT/csr/csr_file.sv" \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \

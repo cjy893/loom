@@ -114,6 +114,7 @@ module mem_issue_test_top (
         .dgen_valid,
         .dgen_data,
         .dgen_uop,
+        .xcpt(),
         .brupdate,
         .kill(flush_pipeline)
     );

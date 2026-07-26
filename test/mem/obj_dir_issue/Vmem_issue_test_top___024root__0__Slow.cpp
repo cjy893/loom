@@ -11,10 +11,8 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___eval_static(Vmem_issue_test_to
     // Body
     {
         // Inlined CFunc: _eval_static__TOP
-        CData/*3:0*/ __Vinline_0__eval_static__TOP_mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available;
-        __Vinline_0__eval_static__TOP_mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available = 0;
-        __Vinline_0__eval_static__TOP_mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available = 0;
         const uint64_t __VscopeHash = VL_MURMUR64_HASH(vlSelf->vlNamep);
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 17952205073526594723ull);
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 13442453471626318003ull);
     }
     vlSelfRef.__Vtrigprevexpr___TOP__clk__0 = vlSelfRef.clk;

@@ -7,6 +7,7 @@ suites=(
   rename
   issue
   rob
+  csr
   alu
   decode
   dispatch
@@ -15,8 +16,17 @@ suites=(
   mem
   unq
   lsu
+  fetch_buffer
+  ifu
+  ifu_fetch_buffer
+  core_fetch_buffer
+  core_ifu
   core_lsu
+  core_lsu_exception
   core_program
+  core_exception
+  core_interrupt
+  core_interrupt_lsu
   branch_recovery
   integration
 )
