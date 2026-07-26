@@ -20,11 +20,11 @@ enum {
     IQ_MEM = 1, IQ_UNQ = 2, IQ_ALU = 4,
     FC_ALU = 0, FC_AGEN = 1, FC_DGEN = 2, FC_MUL = 3, FC_DIV = 4,
     FC_CSR = 5,
-    OP1_RS1 = 0, OP1_ZERO = 1,
-    OP2_RS2 = 0, OP2_IMM = 1,
+    OP1_SRC1 = 0, OP1_ZERO = 1,
+    OP2_SRC2 = 0, OP2_IMM = 1,
     RT_FIX = 0, RT_X = 2,
-    IS_I = 0, IS_B = 2, IS_U = 3, IS_J = 4, IS_N = 6, IS_F3 = 7,
-    B_EQ = 2, B_J = 7,
+    IMM_I12 = 0, IMM_I16_S2 = 2, IMM_U20_S12 = 3, IMM_I26_S2 = 4, IMM_NONE = 6, IMM_U14 = 7,
+    BR_BEQ = 2, BR_B_BL = 7,
     ALU_ADD = 0, ALU_OR = 5,
     MULDIV_MUL_W = 0, MULDIV_MULH_W = 1, MULDIV_MULH_WU = 2,
     MULDIV_DIV_W = 3, MULDIV_DIV_WU = 4,
@@ -58,8 +58,8 @@ static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
         dut->iq_type == 0 &&
         dut->fu_code == 0 &&
         dut->ldst == 0 &&
-        dut->lrs1 == 0 &&
-        dut->lrs2 == 0 &&
+        dut->lsrc1 == 0 &&
+        dut->lsrc2 == 0 &&
         dut->dst_rtype == RT_X &&
         dut->is_unique == 0 &&
         dut->flush_on_commit == 0;
@@ -68,15 +68,15 @@ static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
         std::fprintf(
             stderr,
             "FAIL: %s in PLV3: exception=%u cause=%u iq=%u fu=0x%x "
-            "ldst=%u lrs1=%u lrs2=%u dst_rtype=%u unique=%u flush=%u\n",
+            "ldst=%u lsrc1=%u lsrc2=%u dst_rtype=%u unique=%u flush=%u\n",
             instruction_name,
             dut->exception,
             dut->exc_cause,
             dut->iq_type,
             dut->fu_code,
             dut->ldst,
-            dut->lrs1,
-            dut->lrs2,
+            dut->lsrc1,
+            dut->lsrc2,
             dut->dst_rtype,
             dut->is_unique,
             dut->flush_on_commit);
@@ -90,8 +90,8 @@ static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
     decode(dut, inst);
     expect_eq("mul/div queue", dut->iq_type, IQ_UNQ);
     expect_fu("mul/div functional unit", dut, fu);
-    expect_eq("mul/div source 1", dut->lrs1, 12);
-    expect_eq("mul/div source 2", dut->lrs2, 13);
+    expect_eq("mul/div source 1", dut->lsrc1, 12);
+    expect_eq("mul/div source 2", dut->lsrc2, 13);
     expect_eq("mul/div destination", dut->ldst, 15);
     expect_eq(fcn_name, dut->fcn_op, fcn);
     expect_eq("mul/div no exception", dut->exception, 0);
@@ -105,23 +105,23 @@ int main(int argc, char** argv) {
     decode(dut, 0x02bffc0c);
     expect_eq("addi queue", dut->iq_type, IQ_ALU);
     expect_fu("addi ALU", dut, FC_ALU);
-    expect_eq("addi source", dut->lrs1, 0);
+    expect_eq("addi source", dut->lsrc1, 0);
     expect_eq("addi destination", dut->ldst, 12);
-    expect_eq("addi op1", dut->op1_sel, OP1_RS1);
+    expect_eq("addi op1", dut->op1_sel, OP1_SRC1);
     expect_eq("addi op2", dut->op2_sel, OP2_IMM);
     expect_eq("addi operation", dut->fcn_op, ALU_ADD);
-    expect_eq("addi immediate kind", dut->imm_sel, IS_I);
+    expect_eq("addi immediate kind", dut->imm_sel, IMM_I12);
     expect_eq("addi sign-extended packed immediate", dut->imm_packed, 0x03ffffff);
     expect_eq("addi no exception", dut->exception, 0);
 
     // 1c000018: add.w $r15,$r17,$r18
     decode(dut, 0x00104a2f);
     expect_eq("add queue", dut->iq_type, IQ_ALU);
-    expect_eq("add source 1", dut->lrs1, 17);
-    expect_eq("add source 2", dut->lrs2, 18);
+    expect_eq("add source 1", dut->lsrc1, 17);
+    expect_eq("add source 2", dut->lsrc2, 18);
     expect_eq("add destination", dut->ldst, 15);
-    expect_eq("add operand 2", dut->op2_sel, OP2_RS2);
-    expect_eq("add immediate kind", dut->imm_sel, IS_N);
+    expect_eq("add operand 2", dut->op2_sel, OP2_SRC2);
+    expect_eq("add immediate kind", dut->imm_sel, IMM_NONE);
     expect_eq("add operation", dut->fcn_op, ALU_ADD);
 
     // Real encodings from nscscc_func/obj/test.s.
@@ -153,14 +153,14 @@ int main(int argc, char** argv) {
     expect_eq("lu12i op1", dut->op1_sel, OP1_ZERO);
     expect_eq("lu12i op2", dut->op2_sel, OP2_IMM);
     expect_eq("lu12i destination", dut->ldst, 12);
-    expect_eq("lu12i immediate kind", dut->imm_sel, IS_U);
+    expect_eq("lu12i immediate kind", dut->imm_sel, IMM_U20_S12);
     expect_eq("lu12i immediate", dut->imm_packed, 0x80000);
 
     // 1c00001c: ld.w $r16,$r12,0
     decode(dut, 0x28800190);
     expect_eq("load queue", dut->iq_type, IQ_MEM);
     expect_fu("load AGEN", dut, FC_AGEN);
-    expect_eq("load base", dut->lrs1, 12);
+    expect_eq("load base", dut->lsrc1, 12);
     expect_eq("load destination", dut->ldst, 16);
     expect_eq("load uses LDQ", dut->uses_ldq, 1);
     expect_eq("load does not use STQ", dut->uses_stq, 0);
@@ -172,8 +172,8 @@ int main(int argc, char** argv) {
     expect_eq("store queue", dut->iq_type, IQ_MEM);
     expect_fu("store AGEN", dut, FC_AGEN);
     expect_fu("store DGEN", dut, FC_DGEN);
-    expect_eq("store base", dut->lrs1, 14);
-    expect_eq("store data source", dut->lrs2, 0);
+    expect_eq("store base", dut->lsrc1, 14);
+    expect_eq("store data source", dut->lsrc2, 0);
     expect_eq("store has no destination", dut->ldst, 0);
     expect_eq("store destination type", dut->dst_rtype, RT_X);
     expect_eq("store uses STQ", dut->uses_stq, 1);
@@ -183,20 +183,20 @@ int main(int argc, char** argv) {
     decode(dut, 0x50fff800);
     expect_eq("b queue", dut->iq_type, IQ_ALU);
     expect_eq("b allocates branch tag", dut->allocate_brtag, 1);
-    expect_eq("b is jump", dut->is_jal, 1);
-    expect_eq("b branch type", dut->br_type, B_J);
+    expect_eq("b is jump", dut->is_b_bl, 1);
+    expect_eq("b branch type", dut->br_type, BR_B_BL);
     expect_eq("b destination r0", dut->ldst, 0);
-    expect_eq("b immediate kind", dut->imm_sel, IS_J);
+    expect_eq("b immediate kind", dut->imm_sel, IMM_I26_S2);
     expect_eq("b encoded offset", dut->imm_packed, 0x3ffe);
 
     // 1c00800c: beq $r13,$r12,0x78
     decode(dut, 0x580079ac);
     expect_eq("beq queue", dut->iq_type, IQ_ALU);
-    expect_eq("beq source 1", dut->lrs1, 13);
-    expect_eq("beq source 2", dut->lrs2, 12);
+    expect_eq("beq source 1", dut->lsrc1, 13);
+    expect_eq("beq source 2", dut->lsrc2, 12);
     expect_eq("beq is conditional branch", dut->is_br, 1);
-    expect_eq("beq type", dut->br_type, B_EQ);
-    expect_eq("beq immediate kind", dut->imm_sel, IS_B);
+    expect_eq("beq type", dut->br_type, BR_BEQ);
+    expect_eq("beq immediate kind", dut->imm_sel, IMM_I16_S2);
     expect_eq("beq encoded offset", dut->imm_packed, 0x1e);
 
     // 1c008088: csrrd $r12,0x6
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
     expect_fu("csrrd CSR FU", dut, FC_CSR);
     expect_eq("csrrd destination", dut->ldst, 12);
     expect_eq("csrrd command", dut->csr_cmd, 0);
-    expect_eq("csrrd address kind", dut->imm_sel, IS_F3);
+    expect_eq("csrrd address kind", dut->imm_sel, IMM_U14);
     expect_eq("csrrd address", dut->imm_packed, 6);
     expect_eq("csrrd serializes", dut->flush_on_commit, 1);
 
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
     decode(dut, 0x0401102d);
     expect_eq("csrwr queue", dut->iq_type, IQ_UNQ);
     expect_fu("csrwr CSR FU", dut, FC_CSR);
-    expect_eq("csrwr source", dut->lrs1, 13);
+    expect_eq("csrwr source", dut->lsrc1, 13);
     expect_eq("csrwr destination", dut->ldst, 13);
     expect_eq("csrwr command", dut->csr_cmd, 1);
     expect_eq("csrwr address", dut->imm_packed, 0x44);
@@ -222,8 +222,8 @@ int main(int argc, char** argv) {
     decode(dut, 0x0400158d);
     expect_eq("csrxchg queue", dut->iq_type, IQ_UNQ);
     expect_fu("csrxchg CSR FU", dut, FC_CSR);
-    expect_eq("csrxchg value source", dut->lrs1, 13);
-    expect_eq("csrxchg mask source", dut->lrs2, 12);
+    expect_eq("csrxchg value source", dut->lsrc1, 13);
+    expect_eq("csrxchg mask source", dut->lsrc2, 12);
     expect_eq("csrxchg destination", dut->ldst, 13);
     expect_eq("csrxchg command", dut->csr_cmd, 2);
     expect_eq("csrxchg address", dut->imm_packed, 5);
@@ -239,11 +239,11 @@ int main(int argc, char** argv) {
     // only when the uop commits from the ROB.
     decode(dut, 0x06483800);
     expect_eq("ERTN queue", dut->iq_type, IQ_UNQ);
-    expect_eq("ERTN marker", dut->is_eret, 1);
+    expect_eq("ERTN marker", dut->is_ertn, 1);
     expect_eq("ERTN is unique", dut->is_unique, 1);
     expect_eq("ERTN serializes", dut->flush_on_commit, 1);
     expect_eq("ERTN has no functional-unit request", dut->fu_code, 0);
-    expect_eq("ERTN is not a JIRL", dut->is_jalr, 0);
+    expect_eq("ERTN is not a JIRL", dut->is_jirl, 0);
     expect_eq("ERTN has no exception in PLV0", dut->exception, 0);
 
     dut->status_prv = 3;
@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
     expect_eq("ERTN raises IPE outside PLV0", dut->exception, 1);
     expect_eq("ERTN privilege exception cause", dut->exc_cause, 14);
     expect_eq("faulting ERTN is not issued", dut->iq_type, 0);
-    expect_eq("faulting ERTN has no marker", dut->is_eret, 0);
+    expect_eq("faulting ERTN has no marker", dut->is_ertn, 0);
 
     // Real RDCNT encodings from nscscc_func/obj/test.s.
     decode(dut, 0x0000600d);
@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
     dut->eval();
     expect_eq("misaligned fetch raises exception", dut->exception, 1);
     expect_eq("misaligned fetch ADEF cause", dut->exc_cause, 8);
-    expect_eq("misaligned fetch marker", dut->xcpt_ae_if, 1);
+    expect_eq("misaligned fetch marker", dut->exc_adef, 1);
     expect_eq("ADEF has no issue queue", dut->iq_type, 0);
     expect_eq("ADEF has no functional unit", dut->fu_code, 0);
     expect_eq("ADEF has no destination", dut->ldst, 0);

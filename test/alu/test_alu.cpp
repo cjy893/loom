@@ -8,16 +8,16 @@ enum {
     ALU_AND = 4, ALU_OR = 5, ALU_XOR = 6, ALU_NOR = 7,
     ALU_SLL = 8, ALU_SRL = 9, ALU_SRA = 10, ALU_LUI = 11
 };
-enum { OP1_RS1 = 0, OP1_ZERO = 1 };
-enum { OP2_RS2 = 0, OP2_IMM = 1 };
-enum { B_EQ = 2, B_LT = 5 };
+enum { OP1_SRC1 = 0, OP1_ZERO = 1 };
+enum { OP2_SRC2 = 0, OP2_IMM = 1 };
+enum { BR_BEQ = 2, BR_BLT = 5 };
 
 static void clear_inputs(Valu_test_top* dut) {
     dut->valid = 0;
     dut->op = ALU_ADD;
-    dut->op1_sel = OP1_RS1;
-    dut->op2_sel = OP2_RS2;
-    dut->rs1 = dut->rs2 = dut->imm = 0;
+    dut->op1_sel = OP1_SRC1;
+    dut->op2_sel = OP2_SRC2;
+    dut->src1 = dut->src2 = dut->imm = 0;
     dut->rob_idx = 0;
     dut->is_br = 0;
     dut->br_type = 0;
@@ -29,16 +29,16 @@ static void clear_inputs(Valu_test_top* dut) {
     dut->kill = 0;
 }
 
-static uint32_t execute(Valu_test_top* dut, unsigned op, uint32_t rs1,
-                        uint32_t rs2, unsigned op1 = OP1_RS1,
-                        unsigned op2 = OP2_RS2, uint32_t imm = 0,
+static uint32_t execute(Valu_test_top* dut, unsigned op, uint32_t src1,
+                        uint32_t src2, unsigned op1 = OP1_SRC1,
+                        unsigned op2 = OP2_SRC2, uint32_t imm = 0,
                         unsigned rob_idx = 3) {
     dut->valid = 1;
     dut->op = op;
     dut->op1_sel = op1;
     dut->op2_sel = op2;
-    dut->rs1 = rs1;
-    dut->rs2 = rs2;
+    dut->src1 = src1;
+    dut->src2 = src2;
     dut->imm = imm;
     dut->rob_idx = rob_idx;
     eval_cycle(dut);
@@ -71,17 +71,17 @@ int main(int argc, char** argv) {
     expect_eq("shift right", execute(dut, ALU_SRL, 0x80, 4), 8);
     expect_eq("arithmetic shift", execute(dut, ALU_SRA, 0x80000000, 4), 0xf8000000);
     expect_eq("immediate add",
-              execute(dut, ALU_ADD, 10, 0, OP1_RS1, OP2_IMM, 5), 15);
+              execute(dut, ALU_ADD, 10, 0, OP1_SRC1, OP2_IMM, 5), 15);
     expect_eq("lui", execute(dut, ALU_LUI, 0, 0, OP1_ZERO, OP2_IMM, 0x12345000),
               0x12345000);
 
     // Equal while predicted not-taken must resolve as a misprediction.
     dut->valid = 1;
     dut->op = ALU_ADD;
-    dut->rs1 = 5;
-    dut->rs2 = 5;
+    dut->src1 = 5;
+    dut->src2 = 5;
     dut->is_br = 1;
-    dut->br_type = B_EQ;
+    dut->br_type = BR_BEQ;
     dut->predicted_taken = 0;
     eval_cycle(dut);
     dut->valid = 0;

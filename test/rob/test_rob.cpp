@@ -8,11 +8,12 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->enq_rob_idx_1 = 0;
     dut->enq_ldst_0 = 0;
     dut->enq_ldst_1 = 0;
+    dut->enq_writes_gpr = 0;
     dut->enq_busy_0 = 0;
     dut->enq_busy_1 = 0;
     dut->enq_exception = 0;
     dut->enq_flush_on_commit = 0;
-    dut->enq_is_eret = 0;
+    dut->enq_is_ertn = 0;
     dut->enq_exc_cause_0 = 0;
     dut->enq_exc_cause_1 = 0;
     dut->enq_pc_0 = 0;
@@ -22,6 +23,8 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->wb_valid = 0;
     dut->wb_rob_idx_0 = 0;
     dut->wb_rob_idx_1 = 0;
+    dut->wb_data_0 = 0;
+    dut->wb_data_1 = 0;
     dut->lsu_clr_bsy_valid = 0;
     dut->lsu_clr_bsy_addr_0 = 0;
     dut->lsu_clr_bsy_addr_1 = 0;
@@ -78,6 +81,64 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     expect_eq("row retired", dut->empty, 1);
 
+    // The external trace has one GPR write port. Preserve both writes by
+    // retiring two ready GPR-writing entries in program order over two cycles.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_0 = 12;
+    dut->enq_ldst_1 = 13;
+    dut->enq_writes_gpr = 3;
+    dut->enq_busy_0 = 1;
+    dut->enq_busy_1 = 1;
+    dut->enq_inst_0 = 0x00123456;
+    dut->enq_inst_1 = 0x00789abc;
+    eval_cycle(dut);
+    clear_inputs(dut);
+
+    dut->wb_valid = 3;
+    dut->wb_rob_idx_0 = 0;
+    dut->wb_rob_idx_1 = 1;
+    dut->wb_data_0 = 0x12345678;
+    dut->wb_data_1 = 0x89abcdef;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("first GPR write commits alone", dut->commit_valid, 1);
+    expect_eq("first GPR write is architectural", dut->commit_arch_valid, 1);
+    expect_eq("first GPR write data", dut->commit_wdata_0, 0x12345678);
+    expect_eq("first GPR debug instruction", dut->commit_inst_0, 0x00123456);
+    expect_eq("disabled limit commits both GPR writes",
+              dut->dual_mode_commit_valid, 3);
+    expect_eq("disabled limit first GPR data",
+              dut->dual_mode_commit_wdata_0, 0x12345678);
+    expect_eq("disabled limit second GPR data",
+              dut->dual_mode_commit_wdata_1, 0x89abcdef);
+
+    eval_cycle(dut);
+    expect_eq("second GPR write commits next", dut->commit_valid, 2);
+    expect_eq("second GPR write is architectural", dut->commit_arch_valid, 2);
+    expect_eq("second GPR write data", dut->commit_wdata_1, 0x89abcdef);
+    expect_eq("second GPR debug instruction", dut->commit_inst_1, 0x00789abc);
+    eval_cycle(dut);
+    expect_eq("dual GPR row retires", dut->empty, 1);
+
+    // An architectural write to r0 does not consume the debug write slot.
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = dut->tail_idx;
+    dut->enq_rob_idx_1 = dut->tail_idx + 1;
+    dut->enq_ldst_0 = 0;
+    dut->enq_ldst_1 = 14;
+    dut->enq_writes_gpr = 3;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("r0 and GPR writes commit together", dut->commit_valid, 3);
+    eval_cycle(dut);
+    expect_eq("mixed row retires", dut->empty, 1);
+
     // Exercise pointer wrap with four more rows.
     for (unsigned row = 0; row < 4; ++row) {
         unsigned idx = dut->tail_idx;
@@ -96,7 +157,7 @@ int main(int argc, char** argv) {
         expect_eq("wrapped commit identity", dut->commit_ldst_0, 16 + row);
         eval_cycle(dut);
     }
-    expect_eq("tail wrapped", dut->tail_idx, 2);
+    expect_eq("tail wrapped", dut->tail_idx, 4);
     expect_eq("ROB empty after wrap", dut->empty, 1);
 
     // Clear a younger row first. It must remain blocked by the busy head row,
@@ -213,7 +274,7 @@ int main(int argc, char** argv) {
     dut->enq_rob_idx_0 = dut->tail_idx;
     dut->enq_pc_0 = 0x1c000204;
     dut->enq_flush_on_commit = 1;
-    dut->enq_is_eret = 1;
+    dut->enq_is_ertn = 1;
     eval_cycle(dut);
     clear_inputs(dut);
     dut->eval();

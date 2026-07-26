@@ -20,12 +20,12 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___eval_static(Vmem_issue_test_to
     vlSelfRef.__Vtrigprevexpr___TOP__dis_valid__0 = vlSelfRef.dis_valid;
     vlSelfRef.__Vtrigprevexpr___TOP__dis_rob_idx__0 
         = vlSelfRef.dis_rob_idx;
-    vlSelfRef.__Vtrigprevexpr___TOP__dis_prs1__0 = vlSelfRef.dis_prs1;
-    vlSelfRef.__Vtrigprevexpr___TOP__dis_prs2__0 = vlSelfRef.dis_prs2;
-    vlSelfRef.__Vtrigprevexpr___TOP__dis_prs1_busy__0 
-        = vlSelfRef.dis_prs1_busy;
-    vlSelfRef.__Vtrigprevexpr___TOP__dis_prs2_busy__0 
-        = vlSelfRef.dis_prs2_busy;
+    vlSelfRef.__Vtrigprevexpr___TOP__dis_psrc1__0 = vlSelfRef.dis_psrc1;
+    vlSelfRef.__Vtrigprevexpr___TOP__dis_psrc2__0 = vlSelfRef.dis_psrc2;
+    vlSelfRef.__Vtrigprevexpr___TOP__dis_psrc1_busy__0 
+        = vlSelfRef.dis_psrc1_busy;
+    vlSelfRef.__Vtrigprevexpr___TOP__dis_psrc2_busy__0 
+        = vlSelfRef.dis_psrc2_busy;
     vlSelfRef.__Vtrigprevexpr___TOP__dis_use_agen__0 
         = vlSelfRef.dis_use_agen;
     vlSelfRef.__Vtrigprevexpr___TOP__dis_use_dgen__0 
@@ -38,8 +38,8 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___eval_static(Vmem_issue_test_to
         = vlSelfRef.wakeup_valid_1;
     vlSelfRef.__Vtrigprevexpr___TOP__wakeup_pdst_1__0 
         = vlSelfRef.wakeup_pdst_1;
-    vlSelfRef.__Vtrigprevexpr___TOP__rs1_data__0 = vlSelfRef.rs1_data;
-    vlSelfRef.__Vtrigprevexpr___TOP__rs2_data__0 = vlSelfRef.rs2_data;
+    vlSelfRef.__Vtrigprevexpr___TOP__src1_data__0 = vlSelfRef.src1_data;
+    vlSelfRef.__Vtrigprevexpr___TOP__src2_data__0 = vlSelfRef.src2_data;
     vlSelfRef.__Vtrigprevexpr___TOP__imm_data__0 = vlSelfRef.imm_data;
     vlSelfRef.__Vtrigprevexpr___TOP__resolve_mask__0 
         = vlSelfRef.resolve_mask;
@@ -84,7 +84,7 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___eval_settle(Vmem_issue_test_to
 #ifdef VL_DEBUG
             Vmem_issue_test_top___024root___dump_triggers__stl(vlSelfRef.__VstlTriggered, "stl"s);
 #endif
-            VL_FATAL_MT("/mnt/e/nscscc/chiplab/IP/myCPU/test/mem/mem_issue_test_top.sv", 5, "", "DIDNOTCONVERGE: Settle region did not converge after '--converge-limit' of 10000 tries");
+            VL_FATAL_MT("/mnt/e/nscscc/chiplab/ip/mycpu/test/mem/mem_issue_test_top.sv", 5, "", "DIDNOTCONVERGE: Settle region did not converge after '--converge-limit' of 10000 tries");
         }
         __VstlIterCount = ((IData)(1U) + __VstlIterCount);
         vlSelfRef.__VstlPhaseResult = Vmem_issue_test_top___024root___eval_phase__stl(vlSelf);

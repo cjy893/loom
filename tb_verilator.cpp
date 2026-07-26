@@ -174,9 +174,9 @@ int main(int argc, char** argv) {
 
         // 提交监控
         if (top->rf_wr_en_dbg) {
-            printf("[%5d] REGWR: r%d pdst=%d data=%d rs1=%d imm=%d imm_p=%x imm_s=%d\n", cycle,
+            printf("[%5d] REGWR: r%d pdst=%d data=%d src1=%d imm=%d imm_p=%x imm_s=%d\n", cycle,
                    top->rf_wr_ldst_dbg, top->rf_wr_pdst_dbg, top->rf_wr_data_dbg,
-                   top->alu_rs1_dbg, top->alu_imm_dbg,
+                   top->alu_src1_dbg, top->alu_imm_dbg,
                    top->alu_imm_packed_dbg, top->alu_imm_sel_dbg);
             if (top->rf_wr_ldst_dbg != 0)
                 arch_regs[top->rf_wr_ldst_dbg] = top->rf_wr_data_dbg;

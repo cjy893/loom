@@ -28,7 +28,7 @@
 3. 运行测试，确认新测试在功能未实现时能够失败。
 4. 获得用户明确授权后，才修改实际内核 RTL，并以最小范围完成当前功能。
 5. 运行模块测试和 `./test/run_all.sh`，避免回归。
-6. 将该功能加入 `boom_core` 集成测试，检查跨模块握手和反压。
+6. 将该功能加入 `loom_core` 集成测试，检查跨模块握手和反压。
 7. 更新本待办和 `MISSING.md`，记录仍未覆盖的边界情况。
 
 ## 阶段 0：固定当前基线
@@ -140,7 +140,7 @@
 
 ## 阶段 3：验证当前后端集成
 
-- [x] 将 `boom_core.sv` 明确保留为测试顶层，不作为最终内核顶层。
+- [x] 将 `loom_core.sv` 明确为乱序内核，外层由 `core_top.sv` 连接 SoC。
 - [x] 给输入指令同时提供真实 PC，不能只按数组下标隐式递增。
 - [ ] 修正并验证 Decode -> Rename -> Dispatch -> Issue -> Execute -> ROB 的握手。
 - [ ] 检查 ROB index 在所有 uop 副本中保持一致。
@@ -158,9 +158,9 @@
 
 - [x] 分别验证 IFU、Fetch Buffer 以及两者的反压和重定向连接。
 - [x] 验证 Fetch Buffer 的 4 取指到 2 译码宽度转换。
-- [x] 删除 `boom_core` 内部的重复指令包缓存，只保留逐 lane 完成掩码。
+- [x] 删除 `loom_core` 内部的重复指令包缓存，只保留逐 lane 完成掩码。
 - [x] 验证正常双发包连续进入 Decode，`is_unique` 包不会提前离开 Fetch Buffer。
-- [x] 用正式重定向端口替代测试顶层对 `boom_core` 内部信号的层次化引用。
+- [x] 用正式重定向端口替代测试顶层对 `loom_core` 内部信号的层次化引用。
 - [ ] 加入分支预测器、FTQ、I-Cache 和 ITLB 后再冻结生产前端接口。
 
 ### 真实指令用例
@@ -240,7 +240,7 @@
 [ ] 新行为有对应测试
 [ ] 单项测试通过
 [ ] ./test/run_all.sh 通过
-[ ] boom_core 集成测试通过
+[x] loom_core 集成测试通过
 [ ] 没有新增未登记的 Verilator 警告
 [ ] MISSING.md 和 TODO.md 状态一致
 [ ] 日志能够定位失败指令、PC 和 ROB index

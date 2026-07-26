@@ -9,8 +9,8 @@ module alu(
     input logic iss_valid,
     input uop_t iss_uop,
 
-    input logic [31:0] rs1_data,
-    input logic [31:0] rs2_data,
+    input logic [31:0] src1_data,
+    input logic [31:0] src2_data,
     input logic [31:0] imm_data,
 
     output logic res_valid,
@@ -30,12 +30,12 @@ module alu(
 
     logic rrd_valid, rrd_br_killed;
     uop_t rrd_uop, rrd_uop_updated;
-    logic [31:0] rrd_rs1, rrd_rs2, rrd_imm;
+    logic [31:0] rrd_src1, rrd_src2, rrd_imm;
     
 
     logic exe_valid, exe_br_killed;
     uop_t exe_uop;
-    logic [31:0] exe_rs1, exe_rs2, exe_imm;
+    logic [31:0] exe_src1, exe_src2, exe_imm;
 
     always_comb begin
         iss_br_killed = brupdate.b2.mispredict && |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
@@ -55,8 +55,8 @@ module alu(
             rrd_valid <= iss_valid && !iss_br_killed;
             if(iss_valid && !iss_br_killed) begin
                 rrd_uop <= iss_uop_updated;
-                rrd_rs1 <= rs1_data;
-                rrd_rs2 <= rs2_data;
+                rrd_src1 <= src1_data;
+                rrd_src2 <= src2_data;
                 rrd_imm <= imm_data;
             end
         end
@@ -69,8 +69,8 @@ module alu(
             exe_valid <= rrd_valid && !rrd_br_killed;
             if(rrd_valid && !rrd_br_killed) begin
                 exe_uop <= rrd_uop_updated;
-                exe_rs1 <= rrd_rs1;
-                exe_rs2 <= rrd_rs2;
+                exe_src1 <= rrd_src1;
+                exe_src2 <= rrd_src2;
                 exe_imm <= rrd_imm;
             end
         end
@@ -88,18 +88,18 @@ module alu(
         alu_result = '0;
 
         unique case(exe_uop.op1_sel)
-            OP1_RS1: op1 = exe_rs1;
+            OP1_SRC1: op1 = exe_src1;
             OP1_ZERO: op1 = '0;
             OP1_PC: op1 = exe_uop.pc;
-            default: op1 = exe_rs1;
+            default: op1 = exe_src1;
         endcase
 
         unique case(exe_uop.op2_sel)
-            OP2_RS2: op2 = exe_rs2;
+            OP2_SRC2: op2 = exe_src2;
             OP2_IMM: op2 = exe_imm;
             OP2_ZERO: op2 = '0;
             OP2_NEXT: op2 = 32'd4;
-            default: op2 = exe_rs2;
+            default: op2 = exe_src2;
         endcase
 
         unique case(exe_uop.fcn_op)
@@ -124,10 +124,10 @@ module alu(
     assign res.uop = exe_uop;
     assign res.data = alu_result;
     assign res.predicated = 1'b0;
-    assign res.fflags.valid = 1'b0;
-    assign res.fflags.bits = '0;
+    assign res.fp_flags.valid = 1'b0;
+    assign res.fp_flags.bits = '0;
 
-    assign brinfo_valid = exe_valid && (exe_uop.is_br || exe_uop.is_jal || exe_uop.is_jalr);
+    assign brinfo_valid = exe_valid && (exe_uop.is_br || exe_uop.is_b_bl || exe_uop.is_jirl);
     assign brinfo.uop = exe_uop;
 
     logic cond_true;
@@ -137,26 +137,26 @@ module alu(
         resolved_pc_sel = PC_PLUS4;
 
         unique case(exe_uop.br_type)
-            B_EQ: cond_true = ($signed(exe_rs1) == $signed(exe_rs2));
-            B_NE: cond_true = ($signed(exe_rs1) != $signed(exe_rs2));
-            B_GE: cond_true = ($signed(exe_rs1) >= $signed(exe_rs2));
-            B_GEU: cond_true = (exe_rs1 >= exe_rs2);
-            B_LT: cond_true = ($signed(exe_rs1) < $signed(exe_rs2));
-            B_LTU: cond_true = (exe_rs1 < exe_rs2);
+            BR_BEQ: cond_true = ($signed(exe_src1) == $signed(exe_src2));
+            BR_BNE: cond_true = ($signed(exe_src1) != $signed(exe_src2));
+            BR_BGE: cond_true = ($signed(exe_src1) >= $signed(exe_src2));
+            BR_BGEU: cond_true = (exe_src1 >= exe_src2);
+            BR_BLT: cond_true = ($signed(exe_src1) < $signed(exe_src2));
+            BR_BLTU: cond_true = (exe_src1 < exe_src2);
             default: cond_true = 1'b0;
         endcase
 
-        if(exe_uop.is_br && cond_true) resolved_pc_sel = PC_BRJMP;
-        if(exe_uop.is_jal) resolved_pc_sel = PC_BRJMP;
-        if(exe_uop.is_jalr) resolved_pc_sel = PC_JALR;
+        if(exe_uop.is_br && cond_true) resolved_pc_sel = PC_BRANCH;
+        if(exe_uop.is_b_bl) resolved_pc_sel = PC_BRANCH;
+        if(exe_uop.is_jirl) resolved_pc_sel = PC_JIRL;
     end
 
-    assign brinfo.mispredict = (exe_uop.is_br && (exe_uop.taken != cond_true)) || exe_uop.is_jal || exe_uop.is_jalr;
+    assign brinfo.mispredict = (exe_uop.is_br && (exe_uop.taken != cond_true)) || exe_uop.is_b_bl || exe_uop.is_jirl;
     assign brinfo.cfi_type = exe_uop.is_br ? CFI_BR :
-                             exe_uop.is_jal ? CFI_JAL :
-                             exe_uop.is_jalr ? CFI_JALR : CFI_X;
+                             exe_uop.is_b_bl ? CFI_B_BL :
+                             exe_uop.is_jirl ? CFI_JIRL : CFI_X;
     assign brinfo.taken = resolved_pc_sel != PC_PLUS4;
     assign brinfo.pc_sel = resolved_pc_sel;
-    assign brinfo.jalr_target = exe_rs1 + exe_imm;
+    assign brinfo.jirl_target = exe_src1 + exe_imm;
     assign brinfo.target_offset = exe_imm;
 endmodule

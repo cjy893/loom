@@ -681,34 +681,34 @@ int main(int argc, char** argv) {
             dmem.num_value());
         auto print_blocked_uop =
             [&](const char* label, uint32_t pc, unsigned busy,
-                unsigned prs1, unsigned prs2, unsigned pdst,
+                unsigned psrc1, unsigned psrc2, unsigned pdst,
                 unsigned busytable_bit) {
                 std::fprintf(
                     stderr,
-                    "%s: pc=%08x busy=0x%x prs1=p%u prs2=p%u "
-                    "pdst=p%u busytable[prs1]=%u",
-                    label, pc, busy, prs1, prs2, pdst,
+                    "%s: pc=%08x busy=0x%x psrc1=p%u psrc2=p%u "
+                    "pdst=p%u busytable[psrc1]=%u",
+                    label, pc, busy, psrc1, psrc2, pdst,
                     busytable_bit);
-                if (prs1 < saw_wakeup.size() && saw_wakeup[prs1]) {
+                if (psrc1 < saw_wakeup.size() && saw_wakeup[psrc1]) {
                     std::fprintf(
-                        stderr, " last_prs1_wakeup=%llu(port%u)",
+                        stderr, " last_psrc1_wakeup=%llu(port%u)",
                         static_cast<unsigned long long>(
-                            last_wakeup_cycle[prs1]),
-                        last_wakeup_port[prs1]);
+                            last_wakeup_cycle[psrc1]),
+                        last_wakeup_port[psrc1]);
                 } else {
-                    std::fprintf(stderr, " last_prs1_wakeup=never");
+                    std::fprintf(stderr, " last_psrc1_wakeup=never");
                 }
                 std::fprintf(stderr, "\n");
             };
         print_blocked_uop(
             "MEM IQ first", dut->mem_iq_oldest_pc,
-            dut->mem_iq_oldest_busy, dut->mem_iq_oldest_prs1,
-            dut->mem_iq_oldest_prs2, dut->mem_iq_oldest_pdst,
+            dut->mem_iq_oldest_busy, dut->mem_iq_oldest_psrc1,
+            dut->mem_iq_oldest_psrc2, dut->mem_iq_oldest_pdst,
             dut->mem_iq_oldest_bt_busy);
         print_blocked_uop(
             "MEM IQ second", dut->mem_iq_second_pc,
-            dut->mem_iq_second_busy, dut->mem_iq_second_prs1,
-            dut->mem_iq_second_prs2, dut->mem_iq_second_pdst,
+            dut->mem_iq_second_busy, dut->mem_iq_second_psrc1,
+            dut->mem_iq_second_psrc2, dut->mem_iq_second_pdst,
             dut->mem_iq_second_bt_busy);
         std::fprintf(
             stderr,

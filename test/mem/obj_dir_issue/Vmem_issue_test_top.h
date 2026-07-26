@@ -33,10 +33,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top VL_NOT_FINAL : public Ver
     VL_IN8(&dis_valid,0,0);
     VL_OUT8(&dis_ready,0,0);
     VL_IN8(&dis_rob_idx,5,0);
-    VL_IN8(&dis_prs1,5,0);
-    VL_IN8(&dis_prs2,5,0);
-    VL_IN8(&dis_prs1_busy,0,0);
-    VL_IN8(&dis_prs2_busy,0,0);
+    VL_IN8(&dis_psrc1,5,0);
+    VL_IN8(&dis_psrc2,5,0);
+    VL_IN8(&dis_psrc1_busy,0,0);
+    VL_IN8(&dis_psrc2_busy,0,0);
     VL_IN8(&dis_use_agen,0,0);
     VL_IN8(&dis_use_dgen,0,0);
     VL_IN8(&wakeup_valid_0,0,0);
@@ -55,8 +55,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top VL_NOT_FINAL : public Ver
     VL_OUT8(&agen_rob_idx,5,0);
     VL_OUT8(&dgen_valid,0,0);
     VL_OUT8(&dgen_rob_idx,5,0);
-    VL_IN(&rs1_data,31,0);
-    VL_IN(&rs2_data,31,0);
+    VL_IN(&src1_data,31,0);
+    VL_IN(&src2_data,31,0);
     VL_IN(&imm_data,31,0);
     VL_OUT(&agen_addr,31,0);
     VL_OUT(&dgen_data,31,0);

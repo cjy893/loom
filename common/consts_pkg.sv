@@ -1,28 +1,28 @@
 package loom_consts;
     localparam logic [2:0] CFI_X = 3'd0;
     localparam logic [2:0] CFI_BR = 3'd1;
-    localparam logic [2:0] CFI_JAL = 3'd2;
-    localparam logic [2:0] CFI_JALR = 3'd3;
+    localparam logic [2:0] CFI_B_BL = 3'd2;
+    localparam logic [2:0] CFI_JIRL = 3'd3;
 
     localparam logic [1:0] PC_PLUS4 = 2'd0;
-    localparam logic [1:0] PC_BRJMP = 2'd1;
-    localparam logic [1:0] PC_JALR = 2'd2;
+    localparam logic [1:0] PC_BRANCH = 2'd1;
+    localparam logic [1:0] PC_JIRL = 2'd2;
 
-    localparam logic [3:0] B_N = 4'd0;
-    localparam logic [3:0] B_NE = 4'd1;
-    localparam logic [3:0] B_EQ = 4'd2;
-    localparam logic [3:0] B_GE = 4'd3;
-    localparam logic [3:0] B_GEU = 4'd4;
-    localparam logic [3:0] B_LT = 4'd5;
-    localparam logic [3:0] B_LTU = 4'd6;
-    localparam logic [3:0] B_J = 4'd7;
-    localparam logic [3:0] B_JR = 4'd8;
+    localparam logic [3:0] BR_NONE = 4'd0;
+    localparam logic [3:0] BR_BNE = 4'd1;
+    localparam logic [3:0] BR_BEQ = 4'd2;
+    localparam logic [3:0] BR_BGE = 4'd3;
+    localparam logic [3:0] BR_BGEU = 4'd4;
+    localparam logic [3:0] BR_BLT = 4'd5;
+    localparam logic [3:0] BR_BLTU = 4'd6;
+    localparam logic [3:0] BR_B_BL = 4'd7;
+    localparam logic [3:0] BR_JIRL = 4'd8;
 
-    localparam logic [1:0] OP1_RS1 = 2'd0;
+    localparam logic [1:0] OP1_SRC1 = 2'd0;
     localparam logic [1:0] OP1_ZERO = 2'd1;
     localparam logic [1:0] OP1_PC = 2'd2;
 
-    localparam logic [2:0] OP2_RS2 = 3'd0;
+    localparam logic [2:0] OP2_SRC2 = 3'd0;
     localparam logic [2:0] OP2_IMM = 3'd1;
     localparam logic [2:0] OP2_ZERO = 3'd2;
     localparam logic [2:0] OP2_NEXT = 3'd3;
@@ -54,14 +54,14 @@ package loom_consts;
     localparam int FC_I2F = 8;
     localparam int FC_F2I = 9;
 
-    localparam logic [2:0] IS_I = 3'd0;
-    localparam logic [2:0] IS_Z = 3'd1;
-    localparam logic [2:0] IS_B = 3'd2;
-    localparam logic [2:0] IS_U = 3'd3;
-    localparam logic [2:0] IS_J = 3'd4;
-    localparam logic [2:0] IS_SH = 3'd5;
-    localparam logic [2:0] IS_N = 3'd6;
-    localparam logic [2:0] IS_F3 = 3'd7;
+    localparam logic [2:0] IMM_I12 = 3'd0;
+    localparam logic [2:0] IMM_U12 = 3'd1;
+    localparam logic [2:0] IMM_I16_S2 = 3'd2;
+    localparam logic [2:0] IMM_U20_S12 = 3'd3;
+    localparam logic [2:0] IMM_I26_S2 = 3'd4;
+    localparam logic [2:0] IMM_U5 = 3'd5;
+    localparam logic [2:0] IMM_NONE = 3'd6;
+    localparam logic [2:0] IMM_U14 = 3'd7;
 
     localparam logic [2:0] BSRC_1 = 3'd0;
     localparam logic [2:0] BSRC_2 = 3'd1;
@@ -71,12 +71,9 @@ package loom_consts;
 
     localparam logic [2:0] FT_NONE    = 3'd0;
     localparam logic [2:0] FT_XCPT    = 3'd1;
-    localparam logic [2:0] FT_ERET    = 3'd3; 
+    localparam logic [2:0] FT_ERTN    = 3'd3;
     localparam logic [2:0] FT_REFETCH = 3'd2;
     localparam logic [2:0] FT_NEXT    = 3'd4;
-
-    localparam logic [6:0] FUNCT7_ADD = 7'b0000000;
-    localparam logic [6:0] FUNCT7_SUB = 7'b0000010;
 
     localparam logic [3:0] ALU_ADD  = 4'd0;
     localparam logic [3:0] ALU_SUB  = 4'd1;

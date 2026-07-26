@@ -25,16 +25,16 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__0(const Vl
         VL_DBG_MSGS("         '" + tag + "' region trigger index 3 is active: @( dis_rob_idx)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 4U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 4 is active: @( dis_prs1)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 4 is active: @( dis_psrc1)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 5U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 5 is active: @( dis_prs2)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 5 is active: @( dis_psrc2)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 6U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 6 is active: @( dis_prs1_busy)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 6 is active: @( dis_psrc1_busy)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 7U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 7 is active: @( dis_prs2_busy)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 7 is active: @( dis_psrc2_busy)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 8U)))) {
         VL_DBG_MSGS("         '" + tag + "' region trigger index 8 is active: @( dis_use_agen)\n");

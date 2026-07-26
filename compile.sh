@@ -28,7 +28,7 @@ EXU="$ROOT/exu/decode.sv \
      $ROOT/lsu/store_queue.sv \
      $ROOT/lsu/lsu.sv"
 
-TOP="$ROOT/boom_core.sv"
+TOP="$ROOT/exu/loom_core.sv"
 TB="$ROOT/tb.sv"
 
 echo "=== Compiling ==="

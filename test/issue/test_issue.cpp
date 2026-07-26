@@ -5,8 +5,8 @@
 static void clear_inputs(Vissue_test_top* dut) {
     dut->dis_valid = 0;
     dut->dis_rob_idx = 0;
-    dut->dis_prs1 = 0;
-    dut->dis_prs1_busy = 0;
+    dut->dis_psrc1 = 0;
+    dut->dis_psrc1_busy = 0;
     dut->dis_br_mask = 0;
     dut->wakeup_valid = 0;
     dut->wakeup_pdst = 0;
@@ -17,12 +17,12 @@ static void clear_inputs(Vissue_test_top* dut) {
 }
 
 static void enqueue(Vissue_test_top* dut, unsigned rob_idx,
-                    unsigned prs1 = 0, bool busy = false,
+                    unsigned psrc1 = 0, bool busy = false,
                     unsigned br_mask = 0) {
     dut->dis_valid = 1;
     dut->dis_rob_idx = rob_idx;
-    dut->dis_prs1 = prs1;
-    dut->dis_prs1_busy = busy;
+    dut->dis_psrc1 = psrc1;
+    dut->dis_psrc1_busy = busy;
     dut->dis_br_mask = br_mask;
     dut->eval();
     expect_true("issue queue accepts dispatch", dut->dis_ready);
@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
 
     dut->dis_valid = 1;
     dut->dis_rob_idx = 52;
-    dut->dis_prs1 = 0;
-    dut->dis_prs1_busy = 0;
+    dut->dis_psrc1 = 0;
+    dut->dis_psrc1_busy = 0;
     dut->dis_br_mask = 0x4;
     eval_cycle(dut);
     dut->dis_valid = 0;

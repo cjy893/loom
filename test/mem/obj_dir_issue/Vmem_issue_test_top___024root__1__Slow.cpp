@@ -39,7 +39,7 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.dgen_data = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs2;
+    vlSelfRef.dgen_data = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src2;
     vlSelfRef.mem_issue_test_top__DOT__wakeup_valid 
         = (((IData)(vlSelfRef.wakeup_valid_1) << 1U) 
            | (IData)(vlSelfRef.wakeup_valid_0));
@@ -67,41 +67,41 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
                << 0x0000001fU) | ((IData)(vlSelfRef.dis_use_dgen) 
                                   << 0x0000001eU)));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[2U] 
-        = (IData)(((QData)((IData)((((IData)(vlSelfRef.dis_prs1_busy) 
-                                     << 1U) | (IData)(vlSelfRef.dis_prs2_busy)))) 
+        = (IData)(((QData)((IData)((((IData)(vlSelfRef.dis_psrc1_busy) 
+                                     << 1U) | (IData)(vlSelfRef.dis_psrc2_busy)))) 
                    << 0x00000031U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[3U] 
         = ((0xe0000000U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[3U]) 
-           | (IData)((((QData)((IData)((((IData)(vlSelfRef.dis_prs1_busy) 
-                                         << 1U) | (IData)(vlSelfRef.dis_prs2_busy)))) 
+           | (IData)((((QData)((IData)((((IData)(vlSelfRef.dis_psrc1_busy) 
+                                         << 1U) | (IData)(vlSelfRef.dis_psrc2_busy)))) 
                        << 0x00000031U) >> 0x00000020U)));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[3U] 
         = ((0x1fffffffU & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[3U]) 
            | ((IData)((((QData)((IData)(vlSelfRef.dis_rob_idx)) 
                         << 0x00000020U) | (QData)((IData)(
-                                                          (((IData)(vlSelfRef.dis_prs1) 
+                                                          (((IData)(vlSelfRef.dis_psrc1) 
                                                             << 6U) 
-                                                           | (IData)(vlSelfRef.dis_prs2)))))) 
+                                                           | (IData)(vlSelfRef.dis_psrc2)))))) 
               << 0x0000001dU));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[4U] 
         = (((IData)((((QData)((IData)(vlSelfRef.dis_rob_idx)) 
                       << 0x00000020U) | (QData)((IData)(
-                                                        (((IData)(vlSelfRef.dis_prs1) 
+                                                        (((IData)(vlSelfRef.dis_psrc1) 
                                                           << 6U) 
-                                                         | (IData)(vlSelfRef.dis_prs2)))))) 
+                                                         | (IData)(vlSelfRef.dis_psrc2)))))) 
             >> 3U) | ((IData)(((((QData)((IData)(vlSelfRef.dis_rob_idx)) 
                                  << 0x00000020U) | (QData)((IData)(
-                                                                   (((IData)(vlSelfRef.dis_prs1) 
+                                                                   (((IData)(vlSelfRef.dis_psrc1) 
                                                                      << 6U) 
-                                                                    | (IData)(vlSelfRef.dis_prs2))))) 
+                                                                    | (IData)(vlSelfRef.dis_psrc2))))) 
                                >> 0x00000020U)) << 0x0000001dU));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[5U] 
         = ((0xfffffff8U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[5U]) 
            | ((IData)(((((QData)((IData)(vlSelfRef.dis_rob_idx)) 
                          << 0x00000020U) | (QData)((IData)(
-                                                           (((IData)(vlSelfRef.dis_prs1) 
+                                                           (((IData)(vlSelfRef.dis_psrc1) 
                                                              << 6U) 
-                                                            | (IData)(vlSelfRef.dis_prs2))))) 
+                                                            | (IData)(vlSelfRef.dis_psrc2))))) 
                        >> 0x00000020U)) >> 3U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[5U] 
         = (7U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[5U]);
@@ -114,7 +114,7 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[10U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[11U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[12U] = 0U;
-    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs1 
+    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src1 
                            + vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_imm);
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_2 = ((~ 
                                                  ((IData)(vlSelfRef.br_mispredict) 

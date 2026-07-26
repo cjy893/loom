@@ -28,8 +28,8 @@ static void clear_inputs(Vunq_test_top* dut) {
     dut->rob_idx = 0;
     dut->csr_addr_in = 0;
     dut->csr_cmd_in = 0;
-    dut->rs1_data = 0;
-    dut->rs2_data = 0;
+    dut->src1_data = 0;
+    dut->src2_data = 0;
     dut->csr_rdata = 0;
     dut->counter_value = 0;
     dut->counter_id_value = 0;
@@ -42,12 +42,12 @@ static void clear_inputs(Vunq_test_top* dut) {
 
 static void start_op(Vunq_test_top* dut, unsigned op_class,
                      unsigned fcn_op, unsigned rob_idx,
-                     uint32_t rs1, uint32_t rs2) {
+                     uint32_t src1, uint32_t src2) {
     dut->op_class = op_class;
     dut->fcn_op = fcn_op;
     dut->rob_idx = rob_idx;
-    dut->rs1_data = rs1;
-    dut->rs2_data = rs2;
+    dut->src1_data = src1;
+    dut->src2_data = src2;
     dut->iss_valid = 1;
     eval_cycle(dut);
     dut->iss_valid = 0;
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     dut->rob_idx = 3;
     dut->csr_addr_in = 0x123;
     dut->csr_cmd_in = 2;
-    dut->rs1_data = 0x55aa55aa;
+    dut->src1_data = 0x55aa55aa;
     dut->csr_rdata = 0xabcdef01;
     dut->iss_valid = 1;
     dut->eval();
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
     dut->eval();
     expect_eq("ERTN completion is available after issue", dut->res_valid, 1);
     expect_eq("ERTN completion identity", dut->res_rob_idx, 21);
-    expect_eq("ERTN marker survives UNQ", dut->res_is_eret, 1);
+    expect_eq("ERTN marker survives UNQ", dut->res_is_ertn, 1);
     expect_eq("ERTN has no result data", dut->res_data, 0);
     finish_result(dut);
 
@@ -222,8 +222,8 @@ int main(int argc, char** argv) {
     dut->op_class = OP_MUL;
     dut->fcn_op = MULDIV_MUL_W;
     dut->rob_idx = 8;
-    dut->rs1_data = 11;
-    dut->rs2_data = 13;
+    dut->src1_data = 11;
+    dut->src2_data = 13;
     dut->uop_br_mask = 1;
     dut->iss_valid = 1;
     eval_cycle(dut);
@@ -241,8 +241,8 @@ int main(int argc, char** argv) {
     dut->op_class = OP_MUL;
     dut->fcn_op = MULDIV_MUL_W;
     dut->rob_idx = 9;
-    dut->rs1_data = 7;
-    dut->rs2_data = 9;
+    dut->src1_data = 7;
+    dut->src2_data = 9;
     dut->uop_br_mask = 1;
     dut->resolve_mask = 1;
     dut->iss_valid = 1;

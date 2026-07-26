@@ -102,6 +102,7 @@ module csr_file #(
     logic [31:0] resp_data_q;
 
     logic [31:0] estat_read_value;
+    logic [31:0] pending_tcfg_write_value;
     logic commit_match;
 
     function automatic logic [31:0] write_mask(input logic [CSR_ADDR_WIDTH-1:0] addr);
@@ -198,6 +199,15 @@ module csr_file #(
             merge_write = (old_value & ~effective_mask) | (new_value & effective_mask);
         end
     endfunction
+
+    always_comb begin
+        pending_tcfg_write_value = merge_write(
+            tcfg_q,
+            pending_wdata_q,
+            pending_wmask_q,
+            write_mask(pending_addr_q)
+        );
+    end
 
     always_comb begin
         estat_read_value = estat_q;
@@ -387,18 +397,11 @@ module csr_file #(
                                 tid_q, pending_wdata_q,
                                 pending_wmask_q, write_mask(pending_addr_q));
                         14'h041: begin
-                            tcfg_q <= merge_write(
-                                tcfg_q, pending_wdata_q,
-                                pending_wmask_q, write_mask(pending_addr_q));
-                            timer_armed_q <= merge_write(
-                                tcfg_q, pending_wdata_q,
-                                pending_wmask_q,
-                                write_mask(pending_addr_q))[0];
+                            tcfg_q <= pending_tcfg_write_value;
+                            timer_armed_q <=
+                                pending_tcfg_write_value[0];
                             tval_q <= {
-                                merge_write(
-                                    tcfg_q, pending_wdata_q,
-                                    pending_wmask_q,
-                                    write_mask(pending_addr_q))[31:2],
+                                pending_tcfg_write_value[31:2],
                                 2'b00
                             };
                         end

@@ -46,10 +46,10 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__1(Vmem_issue_test_top___0
         if ((1U & (~ (IData)(vlSelfRef.flush_pipeline)))) {
             if (((IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_valid) 
                  & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_br_killed)))) {
-                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs2 
-                    = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_rs2;
-                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs1 
-                    = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_rs1;
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src2 
+                    = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_src2;
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src1 
+                    = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_src1;
             }
         }
     }

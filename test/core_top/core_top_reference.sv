@@ -142,7 +142,7 @@ module core_top_reference #(
         .rf_wr_pdst_dbg(),
         .rf_wr_ldst_dbg(),
         .rf_wr_data_dbg(),
-        .alu_rs1_dbg(),
+        .alu_src1_dbg(),
         .alu_imm_dbg(),
         .alu_imm_packed_dbg(),
         .alu_imm_sel_dbg(),

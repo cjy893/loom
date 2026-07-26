@@ -7,7 +7,8 @@ module rob #(
     parameter int CORE_WIDTH = 2,
     parameter int NUM_ROWS = NUM_ENTRIES / CORE_WIDTH,
     parameter int ROB_ADDR_SZ = $clog2(NUM_ENTRIES),
-    parameter int NUM_WAKEUP_PORTS = 6
+    parameter int NUM_WAKEUP_PORTS = 6,
+    parameter bit ENABLE_SINGLE_DEBUG_COMMIT = 1'b1
 )(
     input logic clk,
     input logic rst_n,
@@ -47,6 +48,7 @@ module rob #(
     logic [NUM_ROWS-1:0] rob_bsy [CORE_WIDTH-1:0];
     logic [NUM_ROWS-1:0] rob_unsafe [CORE_WIDTH-1:0];
     uop_t [NUM_ROWS-1:0] rob_uop [CORE_WIDTH-1:0];
+    logic [NUM_ROWS-1:0][XLEN-1:0] rob_wdata [CORE_WIDTH-1:0];
     logic [NUM_ROWS-1:0] rob_exception [CORE_WIDTH-1:0];
     logic [NUM_ROWS-1:0] rob_predicated [CORE_WIDTH-1:0];
 
@@ -166,16 +168,31 @@ module rob #(
     logic block_commit;
     logic block_xcpt;
     logic exception_throw;
+    logic debug_gpr_seen;
     always_comb begin
         block_commit = (rob_state !=S_NORMAL && rob_state != S_WAIT_TILL_EMPTY) || exception_throw_d1 || exception_throw_d2 || interrupt_taken;
         block_xcpt = 1'b0;
         exception_throw = 1'b0;
         will_commit = '0;
+        debug_gpr_seen = 1'b0;
 
         for(int w = 0; w < CORE_WIDTH; w++) begin
             can_commit[w] = rob_head_vals[w] && !rob_head_bsy[w] && !csr_stall && !brupdate.b2.mispredict;
             can_throw_exception[w] = rob_head_vals[w] && rob_head_exception[w];
             will_commit[w] = can_commit[w] && !can_throw_exception[w] && !block_commit;
+
+            if(ENABLE_SINGLE_DEBUG_COMMIT &&
+               will_commit[w] &&
+               !rob_predicated[w][rob_head] &&
+               rob_uop[w][rob_head].dst_rtype == RT_FIX &&
+               rob_uop[w][rob_head].ldst != '0) begin
+                if(debug_gpr_seen) begin
+                    will_commit[w] = 1'b0;
+                    block_commit = 1'b1;
+                end else begin
+                    debug_gpr_seen = 1'b1;
+                end
+            end
 
             if(can_throw_exception[w] && !block_commit && !block_xcpt) exception_throw = 1'b1;
 
@@ -248,7 +265,7 @@ module rob #(
             flush.pc = flush_uop.pc[XLEN-1:0];
             flush.inst = flush_uop.inst;
 
-            if(flush_uop.is_eret) flush.flush_typ = FT_ERET;
+            if(flush_uop.is_ertn) flush.flush_typ = FT_ERTN;
             else if(|flush_commit_mask) flush.flush_typ = FT_REFETCH;
         end
     end
@@ -259,6 +276,8 @@ module rob #(
         assign commit.valids[w] = will_commit[w];
         assign commit.arch_valids[w] = will_commit[w] && !rob_predicated[w][rob_head];
         assign commit.uops[w] = rob_uop[w][rob_head];
+        assign commit.debug_insts[w*32 +: 32] = rob_uop[w][rob_head].inst;
+        assign commit.debug_wdata[w*XLEN +: XLEN] = rob_wdata[w][rob_head];
     end
 
     logic exception_throw_d1, exception_throw_d2;
@@ -318,6 +337,7 @@ module rob #(
                 rob_val[w] <= '0;
                 rob_bsy[w] <= '0;
                 rob_unsafe[w] <= '0;
+                rob_wdata[w] <= '0;
                 rob_exception[w] <= '0;
                 rob_predicated[w] <= '0;
                 rob_exc_cause[w] <= '0;
@@ -330,6 +350,7 @@ module rob #(
                     rob_exception[w][rob_tail] <= enq_uops[w].exception;
                     rob_predicated[w][rob_tail] <= enq_uops[w].predicated;
                     rob_uop[w][rob_tail] <= enq_uops[w];
+                    rob_wdata[w][rob_tail] <= '0;
                     rob_exc_cause[w][rob_tail] <= enq_uops[w].exc_cause;
                     rob_exc_badvaddr[w][rob_tail] <= '0;
                 end
@@ -343,10 +364,15 @@ module rob #(
                 end
 
                 for(int i = 0; i < NUM_WAKEUP_PORTS; i++) begin
-                    if(wb_resps[i].valid && get_bank(wb_resps[i].uop.rob_idx) == w) begin
+                    if(wb_resps[i].valid &&
+                       get_bank(wb_resps[i].uop.rob_idx) == w &&
+                       rob_val[w][get_row(wb_resps[i].uop.rob_idx)] &&
+                       rob_uop[w][get_row(wb_resps[i].uop.rob_idx)].rob_idx ==
+                           wb_resps[i].uop.rob_idx) begin
                         rob_bsy[w][get_row(wb_resps[i].uop.rob_idx)] <= 1'b0;
                         rob_unsafe[w][get_row(wb_resps[i].uop.rob_idx)] <= 1'b0;
                         rob_predicated[w][get_row(wb_resps[i].uop.rob_idx)] <= 1'b0;
+                        rob_wdata[w][get_row(wb_resps[i].uop.rob_idx)] <= wb_resps[i].data;
                     end
                 end
 

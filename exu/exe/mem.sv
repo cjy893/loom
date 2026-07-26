@@ -12,8 +12,8 @@ module mem #(
     input logic iss_valid,
     input uop_t iss_uop,
 
-    input logic [31:0] rs1_data,
-    input logic [31:0] rs2_data,
+    input logic [31:0] src1_data,
+    input logic [31:0] src2_data,
     input logic [31:0] imm_data,
 
     output logic agen_valid,
@@ -34,11 +34,11 @@ module mem #(
 
     logic rrd_valid, rrd_br_killed;
     uop_t rrd_uop, rrd_uop_updated;
-    logic [31:0] rrd_rs1, rrd_rs2, rrd_imm;
+    logic [31:0] rrd_src1, rrd_src2, rrd_imm;
 
     logic exe_valid, exe_br_killed;
     uop_t exe_uop;
-    logic [31:0] exe_rs1, exe_rs2, exe_imm;
+    logic [31:0] exe_src1, exe_src2, exe_imm;
 
     always_comb begin
         iss_br_killed = brupdate.b2.mispredict && |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
@@ -58,8 +58,8 @@ module mem #(
             rrd_valid <= iss_valid && !iss_br_killed;
             if(iss_valid && !iss_br_killed) begin
                 rrd_uop <= iss_uop_updated;
-                rrd_rs1 <= rs1_data;
-                rrd_rs2 <= rs2_data;
+                rrd_src1 <= src1_data;
+                rrd_src2 <= src2_data;
                 rrd_imm <= imm_data;
             end
         end
@@ -72,15 +72,15 @@ module mem #(
             exe_valid <= rrd_valid && !rrd_br_killed;
             if(rrd_valid && !rrd_br_killed) begin
                 exe_uop <= rrd_uop_updated;
-                exe_rs1 <= rrd_rs1;
-                exe_rs2 <= rrd_rs2;
+                exe_src1 <= rrd_src1;
+                exe_src2 <= rrd_src2;
                 exe_imm <= rrd_imm;
             end
         end
     end
 
     logic [31:0]eff_addr;
-    assign eff_addr = exe_rs1 + exe_imm;
+    assign eff_addr = exe_src1 + exe_imm;
 
     if(HAS_AGEN) begin: gen_agen
         assign agen_valid = exe_agen_valid && !xcpt.valid;
@@ -94,7 +94,7 @@ module mem #(
 
     if(HAS_DGEN) begin: gen_dgen
         assign dgen_valid = exe_valid && !exe_br_killed && exe_uop.fu_code[FC_DGEN] && !xcpt.valid;
-        assign dgen_data = exe_rs2;
+        assign dgen_data = exe_src2;
         assign dgen_uop = exe_uop;
     end else begin
         assign dgen_valid = 1'b0;

@@ -28,6 +28,7 @@ suites=(
   core_interrupt
   core_interrupt_lsu
   core_top
+  core_top_axi
   branch_recovery
   integration
 )

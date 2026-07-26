@@ -36,6 +36,7 @@ Run one suite:
 ./test/core_interrupt/run.sh
 ./test/core_interrupt_lsu/run.sh
 ./test/core_top/run.sh
+./test/core_top_axi/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -44,6 +45,8 @@ Run the real NSCSCC ELF milestone separately:
 
 ```bash
 ./test/core_elf/run.sh
+./test/core_top_elf_axi/run.sh --allow-exceptions --target-tests 58
+./test/core_top_elf_axi/run.sh --allow-exceptions --target-tests 58 --stress
 ```
 
 `test/core_elf/run.sh` parses the ELF32 program headers, loads every `PT_LOAD`
@@ -51,6 +54,13 @@ segment into a shared instruction/data memory model, starts execution at
 `0x1c000000`, and uses `test.s` to annotate failure traces. It is not included
 in `run_all.sh` because the default ELF is stored outside this RTL directory.
 See `test/core_elf/README.md` for milestone and diagnostic options.
+
+`test/core_top_elf_axi/run.sh` uses the same ELF completion signature but
+routes every instruction fetch, load, and store through the production
+`core_top` AXI3 ports. It checks AXI IDs, burst attributes, independent AW/W
+handshakes, request stability under backpressure, and completion of the final
+store response. It is also kept out of `run_all.sh` because it depends on the
+external functional-test ELF.
 
 `test/csr/run.sh` is the standalone contract suite for the CSR file and is
 included in `run_all.sh`.

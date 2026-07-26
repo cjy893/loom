@@ -70,7 +70,7 @@ module boom_core #(
     output logic [$clog2(PHYSICAL_REGS)-1:0] rf_wr_pdst_dbg,
     output logic [4:0]                   rf_wr_ldst_dbg,
     output logic [31:0]                  rf_wr_data_dbg,
-    output logic [31:0]                  alu_rs1_dbg,
+    output logic [31:0]                  alu_src1_dbg,
     output logic [31:0]                  alu_imm_dbg,
     output logic [25:0]                  alu_imm_packed_dbg,
     output logic [2:0]                   alu_imm_sel_dbg,
@@ -423,8 +423,8 @@ module boom_core #(
         .child_rebusys('0)
     );
 
-    // BOOM assigns the ROB index before dispatch so every copy of the uop,
-    // including the one sent to the issue queue, carries the same identity.
+    // Assign the ROB index before dispatch so every copy of the uop,
+    // including the issue-queue copy, carries the same identity.
     always_comb begin
         rn2_uops = rn2_uops_raw;
         for (int w = 0; w < CORE_WIDTH; w++) begin
@@ -579,13 +579,13 @@ module boom_core #(
     function automatic logic [31:0] expand_imm(input uop_t in_uop);
         expand_imm = '0;
         unique case (in_uop.imm_sel)
-            IS_I:  expand_imm = {{20{in_uop.imm_packed[11]}}, in_uop.imm_packed[11:0]};
-            IS_Z:  expand_imm = {20'b0, in_uop.imm_packed[11:0]};
-            IS_B:  expand_imm = {{14{in_uop.imm_packed[15]}}, in_uop.imm_packed[15:0], 2'b00};
-            IS_U:  expand_imm = {in_uop.imm_packed[19:0], 12'b0};
-            IS_J:  expand_imm = {{4{in_uop.imm_packed[25]}}, in_uop.imm_packed[25:0], 2'b00};
-            IS_SH: expand_imm = {27'b0, in_uop.imm_packed[4:0]};
-            IS_F3: expand_imm = {18'b0, in_uop.imm_packed[13:0]};
+            IMM_I12:  expand_imm = {{20{in_uop.imm_packed[11]}}, in_uop.imm_packed[11:0]};
+            IMM_U12:  expand_imm = {20'b0, in_uop.imm_packed[11:0]};
+            IMM_I16_S2:  expand_imm = {{14{in_uop.imm_packed[15]}}, in_uop.imm_packed[15:0], 2'b00};
+            IMM_U20_S12:  expand_imm = {in_uop.imm_packed[19:0], 12'b0};
+            IMM_I26_S2:  expand_imm = {{4{in_uop.imm_packed[25]}}, in_uop.imm_packed[25:0], 2'b00};
+            IMM_U5: expand_imm = {27'b0, in_uop.imm_packed[4:0]};
+            IMM_U14: expand_imm = {18'b0, in_uop.imm_packed[13:0]};
             default: expand_imm = '0;
         endcase
     endfunction
@@ -602,19 +602,19 @@ module boom_core #(
 
     for (genvar i = 0; i < ALU_WIDTH; i++) begin : gen_alu
         // 读寄存器和 bypass 数据
-        // prs1 → rf port i*2+0, prs2 → rf port i*2+1
+        // psrc1 → rf port i*2+0, psrc2 → rf port i*2+1
         assign rf_read_en[i*2+0]   = alu_iss_valid[i];
-        assign rf_read_addr[i*2+0] = alu_iss_uop[i].prs1;
+        assign rf_read_addr[i*2+0] = alu_iss_uop[i].psrc1;
         assign rf_read_en[i*2+1]   = alu_iss_valid[i];
-        assign rf_read_addr[i*2+1] = alu_iss_uop[i].prs2;
+        assign rf_read_addr[i*2+1] = alu_iss_uop[i].psrc2;
 
         logic [31:0] alu_imm_data;
         assign alu_imm_data = expand_imm(alu_iss_uop[i]);
 
         alu alu_inst (.clk(clk), .rst_n(rst_n),
             .iss_valid(alu_iss_valid[i]), .iss_uop(alu_iss_uop[i]),
-            .rs1_data(bypass_mux(alu_iss_uop[i].prs1, rf_read_data[i*2+0])),
-            .rs2_data(bypass_mux(alu_iss_uop[i].prs2, rf_read_data[i*2+1])),
+            .src1_data(bypass_mux(alu_iss_uop[i].psrc1, rf_read_data[i*2+0])),
+            .src2_data(bypass_mux(alu_iss_uop[i].psrc2, rf_read_data[i*2+1])),
             .imm_data(alu_imm_data),
             .res_valid(alu_res_valid[i]), .res(alu_res[i]),
             .wakeup_valid(alu_wakeup_valid[i]), .wakeup(alu_wakeup[i]),
@@ -634,26 +634,26 @@ module boom_core #(
     exception_t [MEM_WIDTH-1:0] mem_xcpt;
 
     for (genvar i = 0; i < MEM_WIDTH; i++) begin : gen_mem
-        logic [31:0] mem_rs1_data;
-        logic [31:0] mem_rs2_data;
+        logic [31:0] mem_src1_data;
+        logic [31:0] mem_src2_data;
         logic [31:0] mem_imm_data;
 
         assign rf_read_en[MEM_RF_BASE + i*2]     = mem_iss_valid[i];
-        assign rf_read_addr[MEM_RF_BASE + i*2]   = mem_iss_uop[i].prs1;
+        assign rf_read_addr[MEM_RF_BASE + i*2]   = mem_iss_uop[i].psrc1;
         assign rf_read_en[MEM_RF_BASE + i*2 + 1] = mem_iss_valid[i];
-        assign rf_read_addr[MEM_RF_BASE + i*2 + 1] = mem_iss_uop[i].prs2;
+        assign rf_read_addr[MEM_RF_BASE + i*2 + 1] = mem_iss_uop[i].psrc2;
 
-        assign mem_rs1_data = bypass_mux(mem_iss_uop[i].prs1,
+        assign mem_src1_data = bypass_mux(mem_iss_uop[i].psrc1,
                                          rf_read_data[MEM_RF_BASE + i*2]);
-        assign mem_rs2_data = bypass_mux(mem_iss_uop[i].prs2,
+        assign mem_src2_data = bypass_mux(mem_iss_uop[i].psrc2,
                                          rf_read_data[MEM_RF_BASE + i*2 + 1]);
         assign mem_imm_data = expand_imm(mem_iss_uop[i]);
 
         mem #(.HAS_AGEN(i == 0), .HAS_DGEN(i == 0)) mem_inst (
             .clk(clk), .rst_n(rst_n),
             .iss_valid(mem_iss_valid[i]), .iss_uop(mem_iss_uop[i]),
-            .rs1_data(mem_rs1_data),
-            .rs2_data(mem_rs2_data),
+            .src1_data(mem_src1_data),
+            .src2_data(mem_src2_data),
             .imm_data(mem_imm_data),
             .agen_valid(mem_agen_valid[i]), .agen_addr(mem_agen_addr[i]), .agen_uop(mem_agen_uop[i]),
             .dgen_valid(mem_dgen_valid[i]), .dgen_data(mem_dgen_data[i]), .dgen_uop(mem_dgen_uop[i]),
@@ -723,15 +723,15 @@ module boom_core #(
     exe_unit_resp_t unq_res;
 
     assign rf_read_en[UNQ_RF_BASE] = unq_iss_valid;
-    assign rf_read_addr[UNQ_RF_BASE] = unq_iss_uop.prs1;
+    assign rf_read_addr[UNQ_RF_BASE] = unq_iss_uop.psrc1;
     assign rf_read_en[UNQ_RF_BASE + 1] = unq_iss_valid;
-    assign rf_read_addr[UNQ_RF_BASE + 1] = unq_iss_uop.prs2;
+    assign rf_read_addr[UNQ_RF_BASE + 1] = unq_iss_uop.psrc2;
 
     unq unq_inst (.clk(clk), .rst_n(rst_n),
         .iss_valid(unq_iss_valid), .iss_uop(unq_iss_uop),
         .iss_ready(unq_exec_ready),
-        .rs1_data(bypass_mux(unq_iss_uop.prs1, rf_read_data[UNQ_RF_BASE])),
-        .rs2_data(bypass_mux(unq_iss_uop.prs2, rf_read_data[UNQ_RF_BASE + 1])),
+        .src1_data(bypass_mux(unq_iss_uop.psrc1, rf_read_data[UNQ_RF_BASE])),
+        .src2_data(bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE + 1])),
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
         .csr_rdata(csr_rdata_w),
         .counter_value(csr_counter_value_w),
@@ -909,7 +909,7 @@ module boom_core #(
             end
 
             csr_ertn_valid_w |=
-                commit.valids[w] && commit.uops[w].is_eret;
+                commit.valids[w] && commit.uops[w].is_ertn;
         end
     end
 
@@ -1021,7 +1021,7 @@ module boom_core #(
             fe_redirect_valid = 1'b1;
             unique case (rob_flush_w.flush_typ)
                 FT_XCPT:    fe_redirect_pc = csr_xcpt_target_w;
-                FT_ERET:    fe_redirect_pc = csr_ertn_target_w;
+                FT_ERTN:    fe_redirect_pc = csr_ertn_target_w;
                 FT_REFETCH: fe_redirect_pc = rob_flush_w.pc + 32'd4;
                 default:    fe_redirect_pc = rob_flush_w.pc + 32'd4;
             endcase
@@ -1031,13 +1031,13 @@ module boom_core #(
                 PC_PLUS4:
                     fe_redirect_pc =
                         brupdate_w.b2.uop.pc[31:0] + 32'd4;
-                PC_BRJMP:
+                PC_BRANCH:
                     fe_redirect_pc =
                         brupdate_w.b2.uop.pc[31:0] +
                         brupdate_w.b2.target_offset[31:0];
-                PC_JALR:
+                PC_JIRL:
                     fe_redirect_pc =
-                        brupdate_w.b2.jalr_target[31:0];
+                        brupdate_w.b2.jirl_target[31:0];
                 default:
                     fe_redirect_pc =
                         brupdate_w.b2.uop.pc[31:0] + 32'd4;
@@ -1060,7 +1060,7 @@ module boom_core #(
                             unq_res.uop.ldst;
     assign rf_wr_data_dbg = rf_write_en[0] ? rf_write_data[0] :
                             rf_write_data[NUM_REGF_WRITES-1];
-    assign alu_rs1_dbg = rf_read_data[0];
+    assign alu_src1_dbg = rf_read_data[0];
     assign alu_imm_dbg = gen_alu[0].alu_imm_data;
     assign alu_imm_packed_dbg = alu_iss_uop[0].imm_packed;
     assign alu_imm_sel_dbg = alu_iss_uop[0].imm_sel;

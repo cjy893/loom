@@ -1,7 +1,6 @@
 package loom_params;
     localparam bit USING_FPU = 1'b1;
     localparam bit USING_FDIV_SQRT = 1'b1;
-    localparam bit USING_ROCC = 1'b0;
     localparam bit USING_VM = 1'b1;
     localparam bit DCACHE_SINGLE_PORTED = 1'b0;
     localparam bit ICACHE_SINGLE_PORTED = 1'b1;

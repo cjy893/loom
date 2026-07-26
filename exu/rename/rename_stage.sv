@@ -173,10 +173,10 @@ module rename_stage #(
         for(int w = 0; w < CORE_WIDTH; w++) begin
             if(!rn2_mask_q[w]) continue;
 
-            mt_read_en[3*w+0] = rn2_uops_q[w].lrs1_rtype == RT_FIX;
-            mt_lreg[3*w+0] = rn2_uops_q[w].lrs1;
-            mt_read_en[3*w+1] = rn2_uops_q[w].lrs2_rtype == RT_FIX;
-            mt_lreg[3*w+1] = rn2_uops_q[w].lrs2;
+            mt_read_en[3*w+0] = rn2_uops_q[w].lsrc1_rtype == RT_FIX;
+            mt_lreg[3*w+0] = rn2_uops_q[w].lsrc1;
+            mt_read_en[3*w+1] = rn2_uops_q[w].lsrc2_rtype == RT_FIX;
+            mt_lreg[3*w+1] = rn2_uops_q[w].lsrc2;
             mt_read_en[3*w+2] = needs_pdst(rn2_uops_q[w]);
             mt_lreg[3*w+2] = rn2_uops_q[w].ldst;
 
@@ -197,12 +197,12 @@ module rename_stage #(
             bt_write_en[w] = fl_alloc_en[w];
             bt_write_preg[w] = fl_alloc_preg[w];
 
-            rn2_uops[w].prs1 = mt_preg[3*w+0];
-            rn2_uops[w].prs2 = mt_preg[3*w+1];
+            rn2_uops[w].psrc1 = mt_preg[3*w+0];
+            rn2_uops[w].psrc2 = mt_preg[3*w+1];
             rn2_uops[w].pdst = needs_pdst(rn2_uops_q[w]) ? fl_alloc_preg[w] : '0;
             rn2_uops[w].stale_pdst = mt_preg[3*w+2];
-            rn2_uops[w].prs1_busy = rn2_uops_q[w].lrs1_rtype == RT_FIX ? bt_busy[3*w+0] : 1'b0;
-            rn2_uops[w].prs2_busy = rn2_uops_q[w].lrs2_rtype == RT_FIX ? bt_busy[3*w+1] : 1'b0;
+            rn2_uops[w].psrc1_busy = rn2_uops_q[w].lsrc1_rtype == RT_FIX ? bt_busy[3*w+0] : 1'b0;
+            rn2_uops[w].psrc2_busy = rn2_uops_q[w].lsrc2_rtype == RT_FIX ? bt_busy[3*w+1] : 1'b0;
             rn2_mask[w] = 1'b1;
         end
     
