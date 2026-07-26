@@ -9,10 +9,10 @@ module mem_issue_test_top (
     input  logic        dis_valid,
     output logic        dis_ready,
     input  logic [5:0]  dis_rob_idx,
-    input  logic [5:0]  dis_prs1,
-    input  logic [5:0]  dis_prs2,
-    input  logic        dis_prs1_busy,
-    input  logic        dis_prs2_busy,
+    input  logic [5:0]  dis_psrc1,
+    input  logic [5:0]  dis_psrc2,
+    input  logic        dis_psrc1_busy,
+    input  logic        dis_psrc2_busy,
     input  logic        dis_use_agen,
     input  logic        dis_use_dgen,
 
@@ -21,8 +21,8 @@ module mem_issue_test_top (
     input  logic        wakeup_valid_1,
     input  logic [5:0]  wakeup_pdst_1,
 
-    input  logic [31:0] rs1_data,
-    input  logic [31:0] rs2_data,
+    input  logic [31:0] src1_data,
+    input  logic [31:0] src2_data,
     input  logic [31:0] imm_data,
 
     input  logic [3:0]  resolve_mask,
@@ -55,10 +55,10 @@ module mem_issue_test_top (
     always_comb begin
         dis_uop[0] = '0;
         dis_uop[0].rob_idx = dis_rob_idx;
-        dis_uop[0].prs1 = dis_prs1;
-        dis_uop[0].prs2 = dis_prs2;
-        dis_uop[0].prs1_busy = dis_prs1_busy;
-        dis_uop[0].prs2_busy = dis_prs2_busy;
+        dis_uop[0].psrc1 = dis_psrc1;
+        dis_uop[0].psrc2 = dis_psrc2;
+        dis_uop[0].psrc1_busy = dis_psrc1_busy;
+        dis_uop[0].psrc2_busy = dis_psrc2_busy;
         dis_uop[0].fu_code[FC_AGEN] = dis_use_agen;
         dis_uop[0].fu_code[FC_DGEN] = dis_use_dgen;
         dis_uop[0].uses_ldq = dis_use_agen && !dis_use_dgen;
@@ -105,8 +105,8 @@ module mem_issue_test_top (
         .rst_n,
         .iss_valid(iss_valid_vec[0]),
         .iss_uop(iss_uop[0]),
-        .rs1_data,
-        .rs2_data,
+        .src1_data,
+        .src2_data,
         .imm_data,
         .agen_valid,
         .agen_addr,

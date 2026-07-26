@@ -95,7 +95,7 @@ module branch_recovery_test_top (
         (lsu_resp_slot < lsu_req_count_q) ?
         lsu_req_uops[lsu_resp_slot].br_mask : '0;
 
-    boom_core core (
+    loom_core core (
         .clk,
         .rst_n,
         .fe_valid,
@@ -134,7 +134,7 @@ module branch_recovery_test_top (
         .rf_wr_pdst_dbg(),
         .rf_wr_ldst_dbg(),
         .rf_wr_data_dbg(),
-        .alu_rs1_dbg(),
+        .alu_src1_dbg(),
         .alu_imm_dbg(),
         .alu_imm_packed_dbg(),
         .alu_imm_sel_dbg(),

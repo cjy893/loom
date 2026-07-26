@@ -8,18 +8,18 @@ namespace {
 void clear_inputs(Vmem_issue_test_top* dut) {
     dut->dis_valid = 0;
     dut->dis_rob_idx = 0;
-    dut->dis_prs1 = 0;
-    dut->dis_prs2 = 0;
-    dut->dis_prs1_busy = 0;
-    dut->dis_prs2_busy = 0;
+    dut->dis_psrc1 = 0;
+    dut->dis_psrc2 = 0;
+    dut->dis_psrc1_busy = 0;
+    dut->dis_psrc2_busy = 0;
     dut->dis_use_agen = 0;
     dut->dis_use_dgen = 0;
     dut->wakeup_valid_0 = 0;
     dut->wakeup_pdst_0 = 0;
     dut->wakeup_valid_1 = 0;
     dut->wakeup_pdst_1 = 0;
-    dut->rs1_data = 0;
-    dut->rs2_data = 0;
+    dut->src1_data = 0;
+    dut->src2_data = 0;
     dut->imm_data = 0;
     dut->resolve_mask = 0;
     dut->mispredict_mask = 0;
@@ -33,15 +33,15 @@ void reset_case(Vmem_issue_test_top* dut) {
 }
 
 void enqueue(Vmem_issue_test_top* dut, unsigned rob_idx,
-             unsigned prs1, bool prs1_busy,
-             unsigned prs2, bool prs2_busy,
+             unsigned psrc1, bool psrc1_busy,
+             unsigned psrc2, bool psrc2_busy,
              bool use_agen, bool use_dgen) {
     dut->dis_valid = 1;
     dut->dis_rob_idx = rob_idx;
-    dut->dis_prs1 = prs1;
-    dut->dis_prs2 = prs2;
-    dut->dis_prs1_busy = prs1_busy;
-    dut->dis_prs2_busy = prs2_busy;
+    dut->dis_psrc1 = psrc1;
+    dut->dis_psrc2 = psrc2;
+    dut->dis_psrc1_busy = psrc1_busy;
+    dut->dis_psrc2_busy = psrc2_busy;
     dut->dis_use_agen = use_agen;
     dut->dis_use_dgen = use_dgen;
     dut->eval();
@@ -78,7 +78,7 @@ void expect_issue(Vmem_issue_test_top* dut, unsigned rob_idx,
 
 void test_single_port_contention(Vmem_issue_test_top* dut) {
     reset_case(dut);
-    dut->rs1_data = 0x1000;
+    dut->src1_data = 0x1000;
     dut->imm_data = 4;
 
     enqueue(dut, 10, 40, true, 0, false, true, false);
@@ -108,8 +108,8 @@ void test_single_port_contention(Vmem_issue_test_top* dut) {
 
 void test_store_waits_for_all_operands(Vmem_issue_test_top* dut) {
     reset_case(dut);
-    dut->rs1_data = 0x2000;
-    dut->rs2_data = 0xdeadbeef;
+    dut->src1_data = 0x2000;
+    dut->src2_data = 0xdeadbeef;
     dut->imm_data = 8;
 
     enqueue(dut, 20, 42, false, 43, true, true, true);
@@ -144,8 +144,8 @@ void test_full_queue_issue_wakeup_and_refill(Vmem_issue_test_top* dut) {
 
     dut->dis_valid = 1;
     dut->dis_rob_idx = 99;
-    dut->dis_prs1 = 55;
-    dut->dis_prs1_busy = 1;
+    dut->dis_psrc1 = 55;
+    dut->dis_psrc1_busy = 1;
     dut->dis_use_agen = 1;
     dut->eval();
     expect_eq("full MEM IQ backpressures dispatch", dut->dis_ready, 0);
@@ -157,10 +157,10 @@ void test_full_queue_issue_wakeup_and_refill(Vmem_issue_test_top* dut) {
     // On one edge: rob30 issues, rob40 replaces it, and rob31 wakes up.
     dut->dis_valid = 1;
     dut->dis_rob_idx = 40;
-    dut->dis_prs1 = 54;
-    dut->dis_prs2 = 0;
-    dut->dis_prs1_busy = 1;
-    dut->dis_prs2_busy = 0;
+    dut->dis_psrc1 = 54;
+    dut->dis_psrc2 = 0;
+    dut->dis_psrc1_busy = 1;
+    dut->dis_psrc2_busy = 0;
     dut->dis_use_agen = 1;
     dut->dis_use_dgen = 0;
     dut->wakeup_valid_0 = 1;

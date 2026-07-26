@@ -1,7 +1,7 @@
 # IFU and temporary core integration tests
 
 This suite connects the production `ifu.sv` directly to the temporary
-`boom_core.sv`. It is part of `test/run_all.sh`.
+`loom_core.sv`. It is part of `test/run_all.sh`.
 
 The integration contract is:
 

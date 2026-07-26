@@ -10,8 +10,8 @@ module unq(
     input uop_t iss_uop,
     output logic iss_ready,
 
-    input logic [31:0] rs1_data,
-    input logic [31:0] rs2_data,
+    input logic [31:0] src1_data,
+    input logic [31:0] src2_data,
 
     output logic csr_req_valid,
     output logic [13:0] csr_addr,
@@ -41,7 +41,7 @@ module unq(
 
     state_t state, next_state;
     uop_t pipe_uop;
-    logic [31:0] pipe_rs1, pipe_rs2;
+    logic [31:0] pipe_src1, pipe_src2;
 
     logic [4:0] busy_cnt;
     logic busy_done;
@@ -76,7 +76,7 @@ module unq(
                     else if(iss_uop.fu_code[FC_MUL]) next_state = S_MUL;
                     else if(iss_uop.fu_code[FC_DIV]) next_state = S_DIV;
                     else if(iss_uop.is_rdcnt) next_state = S_CNT;
-                    else if(iss_uop.is_eret) next_state = S_ERTN;
+                    else if(iss_uop.is_ertn) next_state = S_ERTN;
                 end
             end
             S_CSR: next_state = S_IDLE;
@@ -91,16 +91,16 @@ module unq(
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             pipe_uop <= '0;
-            pipe_rs1 <= '0;
-            pipe_rs2 <= '0;
+            pipe_src1 <= '0;
+            pipe_src2 <= '0;
         end else if(kill || pipe_br_killed) begin
             pipe_uop <= '0;
-            pipe_rs1 <= '0;
-            pipe_rs2 <= '0;
+            pipe_src1 <= '0;
+            pipe_src2 <= '0;
         end else if(issue_fire) begin
             pipe_uop <= iss_uop_updated;
-            pipe_rs1 <= rs1_data;
-            pipe_rs2 <= rs2_data;
+            pipe_src1 <= src1_data;
+            pipe_src2 <= src2_data;
         end else if(state != S_IDLE) begin
             pipe_uop.br_mask <= pipe_uop.br_mask & ~brupdate.b1.resolve_mask;
         end
@@ -119,8 +119,8 @@ module unq(
     assign csr_req_valid = issue_fire && iss_uop.fu_code[FC_CSR];
     assign csr_addr = iss_uop.imm_packed[13:0];
     assign csr_cmd = iss_uop.csr_cmd;
-    assign csr_wdata = rs1_data;
-    assign csr_wmask = (iss_uop.csr_cmd == CSR_XCHG) ? rs2_data : 32'hffffffff;
+    assign csr_wdata = src1_data;
+    assign csr_wmask = (iss_uop.csr_cmd == CSR_XCHG) ? src2_data : 32'hffffffff;
 
     logic signed [63:0] mul_signed_op1, mul_signed_op2;
     logic signed [63:0] mul_signed_result;
@@ -128,10 +128,10 @@ module unq(
     logic [31:0] mul_result;
 
     always_comb begin
-        mul_signed_op1 = {{32{pipe_rs1[31]}}, pipe_rs1};
-        mul_signed_op2 = {{32{pipe_rs2[31]}}, pipe_rs2};
+        mul_signed_op1 = {{32{pipe_src1[31]}}, pipe_src1};
+        mul_signed_op2 = {{32{pipe_src2[31]}}, pipe_src2};
         mul_signed_result = mul_signed_op1 * mul_signed_op2;
-        mul_unsigned_result = {32'b0, pipe_rs1} * {32'b0, pipe_rs2};
+        mul_unsigned_result = {32'b0, pipe_src1} * {32'b0, pipe_src2};
 
         unique case(pipe_uop.fcn_op)
             MULDIV_MUL_W:   mul_result = mul_signed_result[31:0];
@@ -148,25 +148,25 @@ module unq(
     logic [31:0] div_result;
 
     always_comb begin
-        if(pipe_rs2 == '0) begin
+        if(pipe_src2 == '0) begin
             // The ISA permits any result and no exception for a zero divisor.
             div_signed_quotient = '1;
             div_unsigned_quotient = '1;
-            div_signed_remainder = pipe_rs1;
-            div_unsigned_remainder = pipe_rs1;
+            div_signed_remainder = pipe_src1;
+            div_unsigned_remainder = pipe_src1;
         end else begin
-            if(pipe_rs1 == 32'h80000000 && pipe_rs2 == 32'hffffffff) begin
+            if(pipe_src1 == 32'h80000000 && pipe_src2 == 32'hffffffff) begin
                 div_signed_quotient = 32'h80000000;
                 div_signed_remainder = '0;
             end else begin
                 div_signed_quotient =
-                    $signed(pipe_rs1) / $signed(pipe_rs2);
+                    $signed(pipe_src1) / $signed(pipe_src2);
                 div_signed_remainder =
-                    $signed(pipe_rs1) % $signed(pipe_rs2);
+                    $signed(pipe_src1) % $signed(pipe_src2);
             end
 
-            div_unsigned_quotient = pipe_rs1 / pipe_rs2;
-            div_unsigned_remainder = pipe_rs1 % pipe_rs2;
+            div_unsigned_quotient = pipe_src1 / pipe_src2;
+            div_unsigned_remainder = pipe_src1 % pipe_src2;
         end
 
         unique case(pipe_uop.fcn_op)
@@ -183,8 +183,8 @@ module unq(
     assign res.valid = res_valid;
     assign res.uop = pipe_uop;
     assign res.predicated = 1'b0;
-    assign res.fflags.valid = 1'b0;
-    assign res.fflags.bits = '0;
+    assign res.fp_flags.valid = 1'b0;
+    assign res.fp_flags.bits = '0;
 
     always_comb begin
         res.data = '0;

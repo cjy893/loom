@@ -30,7 +30,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
-  "$ROOT/boom_core.sv" \
+  "$ROOT/exu/loom_core.sv" \
   "$TEST_DIR/core_exception_test_top.sv"
 
 "$TEST_DIR/obj_dir/Vcore_exception_test_top"

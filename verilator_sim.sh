@@ -13,16 +13,16 @@ SRCS="common/params_pkg.sv common/consts_pkg.sv common/types_pkg.sv \
       exu/issue/issue_slot.sv exu/issue/issue_unit_collapsing.sv \
       exu/regfile.sv exu/exe/alu.sv exu/exe/mem.sv exu/exe/unq.sv \
       exu/rob.sv lsu/load_queue.sv lsu/store_queue.sv lsu/lsu.sv \
-      boom_core.sv"
+      exu/loom_core.sv"
 
 echo "=== Verilating ==="
 verilator --cc --trace --build -j \
     -Wno-fatal \
     -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
-    --top-module boom_core \
+    --top-module loom_core \
     --exe tb_verilator.cpp \
     $SRCS
 
 echo ""
 echo "=== Running ==="
-./obj_dir/Vboom_core
+./obj_dir/Vloom_core

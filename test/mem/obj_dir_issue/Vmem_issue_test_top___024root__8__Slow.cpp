@@ -23,10 +23,10 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__1(const Vl
         VL_DBG_MSGS("         '" + tag + "' region trigger index 13 is active: @( wakeup_pdst_1)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 0x0000000eU)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 14 is active: @( rs1_data)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 14 is active: @( src1_data)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 0x0000000fU)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 15 is active: @( rs2_data)\n");
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 15 is active: @( src2_data)\n");
     }
     if ((1U & (IData)((triggers[0U] >> 0x00000010U)))) {
         VL_DBG_MSGS("         '" + tag + "' region trigger index 16 is active: @( imm_data)\n");

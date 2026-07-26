@@ -46,11 +46,11 @@ module core_elf_test_top (
     output logic [2:0]                   mem_iq_oldest_busy,
     output logic [31:0]                  mem_iq_second_pc,
     output logic [2:0]                   mem_iq_second_busy,
-    output logic [5:0]                   mem_iq_oldest_prs1,
-    output logic [5:0]                   mem_iq_oldest_prs2,
+    output logic [5:0]                   mem_iq_oldest_psrc1,
+    output logic [5:0]                   mem_iq_oldest_psrc2,
     output logic [5:0]                   mem_iq_oldest_pdst,
-    output logic [5:0]                   mem_iq_second_prs1,
-    output logic [5:0]                   mem_iq_second_prs2,
+    output logic [5:0]                   mem_iq_second_psrc1,
+    output logic [5:0]                   mem_iq_second_psrc2,
     output logic [5:0]                   mem_iq_second_pdst,
     output logic                         mem_iq_oldest_bt_busy,
     output logic                         mem_iq_second_bt_busy,
@@ -172,7 +172,7 @@ module core_elf_test_top (
         .deq_ready(buffer_deq_ready)
     );
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(RESET_PC),
         .USE_EXTERNAL_FE_PCS(1'b1),
         .FETCH_WIDTH(2),
@@ -216,7 +216,7 @@ module core_elf_test_top (
         .rf_wr_pdst_dbg(),
         .rf_wr_ldst_dbg(),
         .rf_wr_data_dbg(),
-        .alu_rs1_dbg(),
+        .alu_src1_dbg(),
         .alu_imm_dbg(),
         .alu_imm_packed_dbg(),
         .alu_imm_sel_dbg(),
@@ -268,11 +268,11 @@ module core_elf_test_top (
         mem_iq_oldest_busy = '0;
         mem_iq_second_pc = '0;
         mem_iq_second_busy = '0;
-        mem_iq_oldest_prs1 = '0;
-        mem_iq_oldest_prs2 = '0;
+        mem_iq_oldest_psrc1 = '0;
+        mem_iq_oldest_psrc2 = '0;
         mem_iq_oldest_pdst = '0;
-        mem_iq_second_prs1 = '0;
-        mem_iq_second_prs2 = '0;
+        mem_iq_second_psrc1 = '0;
+        mem_iq_second_psrc2 = '0;
         mem_iq_second_pdst = '0;
         mem_iq_oldest_bt_busy = 1'b0;
         mem_iq_second_bt_busy = 1'b0;
@@ -312,38 +312,38 @@ module core_elf_test_top (
                     mem_iq_oldest_pc =
                         core.mem_iq.slot_uop[entry].pc[31:0];
                     mem_iq_oldest_busy = {
-                        core.mem_iq.slot_uop[entry].prs3_busy,
-                        core.mem_iq.slot_uop[entry].prs2_busy,
-                        core.mem_iq.slot_uop[entry].prs1_busy
+                        core.mem_iq.slot_uop[entry].psrc3_busy,
+                        core.mem_iq.slot_uop[entry].psrc2_busy,
+                        core.mem_iq.slot_uop[entry].psrc1_busy
                     };
-                    mem_iq_oldest_prs1 =
-                        core.mem_iq.slot_uop[entry].prs1;
-                    mem_iq_oldest_prs2 =
-                        core.mem_iq.slot_uop[entry].prs2;
+                    mem_iq_oldest_psrc1 =
+                        core.mem_iq.slot_uop[entry].psrc1;
+                    mem_iq_oldest_psrc2 =
+                        core.mem_iq.slot_uop[entry].psrc2;
                     mem_iq_oldest_pdst =
                         core.mem_iq.slot_uop[entry].pdst;
                     mem_iq_oldest_bt_busy =
                         core.rename.busytable.busy_vec[
-                            core.mem_iq.slot_uop[entry].prs1
+                            core.mem_iq.slot_uop[entry].psrc1
                         ];
                 end else if (!found_second_mem_uop) begin
                     found_second_mem_uop = 1'b1;
                     mem_iq_second_pc =
                         core.mem_iq.slot_uop[entry].pc[31:0];
                     mem_iq_second_busy = {
-                        core.mem_iq.slot_uop[entry].prs3_busy,
-                        core.mem_iq.slot_uop[entry].prs2_busy,
-                        core.mem_iq.slot_uop[entry].prs1_busy
+                        core.mem_iq.slot_uop[entry].psrc3_busy,
+                        core.mem_iq.slot_uop[entry].psrc2_busy,
+                        core.mem_iq.slot_uop[entry].psrc1_busy
                     };
-                    mem_iq_second_prs1 =
-                        core.mem_iq.slot_uop[entry].prs1;
-                    mem_iq_second_prs2 =
-                        core.mem_iq.slot_uop[entry].prs2;
+                    mem_iq_second_psrc1 =
+                        core.mem_iq.slot_uop[entry].psrc1;
+                    mem_iq_second_psrc2 =
+                        core.mem_iq.slot_uop[entry].psrc2;
                     mem_iq_second_pdst =
                         core.mem_iq.slot_uop[entry].pdst;
                     mem_iq_second_bt_busy =
                         core.rename.busytable.busy_vec[
-                            core.mem_iq.slot_uop[entry].prs1
+                            core.mem_iq.slot_uop[entry].psrc1
                         ];
                 end
             end

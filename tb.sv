@@ -45,7 +45,7 @@ module tb;
     // ================================================================
     // DUT
     // ================================================================
-    boom_core dut (
+    loom_core dut (
         .clk(clk), .rst_n(rst_n),
         .fe_valid, .fe_insts, .fe_pcs('0), .fe_ready,
         .fe_redirect_valid(), .fe_redirect_pc(),

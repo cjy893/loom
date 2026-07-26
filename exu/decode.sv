@@ -76,7 +76,7 @@ module decode(
     logic [19:0] i20;
     logic [15:0] offs_16;
     logic [25:0] offs_26;
-    logic [6:0] funct7;
+    logic [6:0] op_21_15;
     logic [4:0] funct3;
     logic [13:0] csr_addr;
 
@@ -95,7 +95,7 @@ module decode(
     assign i20 = inst[24:5];
     assign offs_16 = inst[25:10];
     assign offs_26 = {inst[9:0], inst[25:10]};
-    assign funct7   = inst[21:15];
+    assign op_21_15 = inst[21:15];
     assign funct3   = inst[17:15];
     assign csr_addr = inst[23:10];
 
@@ -116,20 +116,20 @@ module decode(
         // 默认路由
         uop.iq_type     = 4'b0;
         uop.fu_code     = 10'b0;
-        uop.br_type     = B_N;
+        uop.br_type     = BR_NONE;
         uop.pc_sel      = PC_PLUS4;
 
         // 默认操作数
-        uop.lrs1        = 5'd0;
-        uop.lrs2        = 5'd0;
-        uop.lrs3        = 5'd0;
+        uop.lsrc1        = 5'd0;
+        uop.lsrc2        = 5'd0;
+        uop.lsrc3        = 5'd0;
         uop.ldst        = 5'd0;
         uop.dst_rtype   = RT_X;
-        uop.lrs1_rtype  = RT_X;
-        uop.lrs2_rtype  = RT_X;
-        uop.frs3_en     = 1'b0;
+        uop.lsrc1_rtype  = RT_X;
+        uop.lsrc2_rtype  = RT_X;
+        uop.fsrc3_en    = 1'b0;
 
-        uop.imm_sel     = IS_N;
+        uop.imm_sel     = IMM_NONE;
         uop.imm_packed  = '0;
 
         case(instr_type)
@@ -142,103 +142,103 @@ module decode(
                 uop.fu_code[FC_ALU] = 1'b1;
                 uop.allocate_brtag  = 1'b1;
 
-                uop.lrs2    = rd;        // LA 分支比较 rj vs rd
-                uop.op1_sel = OP1_RS1;
-                uop.op2_sel = OP2_RS2;
+                uop.lsrc2    = rd;        // LA 分支比较 rj vs rd
+                uop.op1_sel = OP1_SRC1;
+                uop.op2_sel = OP2_SRC2;
 
                 unique case(op_31_26)
                     6'b010011: begin
-                        uop.is_jalr = 1'b1;
-                        uop.br_type = B_JR;
-                        uop.pc_sel = PC_JALR;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
+                        uop.is_jirl = 1'b1;
+                        uop.br_type = BR_JIRL;
+                        uop.pc_sel = PC_JIRL;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
                         uop.ldst = rd;
                         uop.dst_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
                         uop.op1_sel = OP1_PC;
                         uop.op2_sel = OP2_NEXT;
                         uop.fcn_op = ALU_ADD;
                     end
                     6'b010100: begin
-                        uop.is_jal = 1'b1;
-                        uop.br_type = B_J;
-                        uop.pc_sel = PC_BRJMP;
-                        uop.imm_sel = IS_J;
+                        uop.is_b_bl = 1'b1;
+                        uop.br_type = BR_B_BL;
+                        uop.pc_sel = PC_BRANCH;
+                        uop.imm_sel = IMM_I26_S2;
                         uop.imm_packed = offs_26;
                     end
                     6'b010101: begin
-                        uop.is_jal = 1'b1;
-                        uop.br_type = B_J;
-                        uop.pc_sel = PC_BRJMP;
+                        uop.is_b_bl = 1'b1;
+                        uop.br_type = BR_B_BL;
+                        uop.pc_sel = PC_BRANCH;
                         uop.ldst = 5'd1;
                         uop.dst_rtype = RT_FIX;
-                        uop.imm_sel = IS_J;
+                        uop.imm_sel = IMM_I26_S2;
                         uop.imm_packed = offs_26;
                         uop.op1_sel = OP1_PC;
                         uop.op2_sel = OP2_NEXT;
                         uop.fcn_op = ALU_ADD;
                     end
                     6'b010110: begin
-                        uop.br_type = B_EQ;
+                        uop.br_type = BR_BEQ;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     6'b010111: begin
-                        uop.br_type = B_NE;
+                        uop.br_type = BR_BNE;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     6'b011000: begin
-                        uop.br_type = B_LT;
+                        uop.br_type = BR_BLT;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     6'b011001: begin
-                        uop.br_type = B_GE;
+                        uop.br_type = BR_BGE;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     6'b011010: begin
-                        uop.br_type = B_LTU;
+                        uop.br_type = BR_BLTU;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     6'b011011: begin
-                        uop.br_type = B_GEU;
+                        uop.br_type = BR_BGEU;
                         uop.is_br = 1'b1;
-                        uop.lrs1 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
-                        uop.imm_sel = IS_B;
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                        uop.imm_sel = IMM_I16_S2;
                         uop.imm_packed = {10'b0, offs_16};
-                        uop.pc_sel = PC_BRJMP;
+                        uop.pc_sel = PC_BRANCH;
                     end
                     default: begin
                         uop.exception = 1'b1;
@@ -255,10 +255,10 @@ module decode(
                 uop.fu_code[FC_AGEN] = 1'b1;
                 uop.starts_unsafe   = 1'b1;
 
-                uop.op1_sel = OP1_RS1;
+                uop.op1_sel = OP1_SRC1;
                 uop.op2_sel = OP2_IMM;
-                uop.lrs1    = rj;
-                uop.lrs1_rtype = RT_FIX;
+                uop.lsrc1    = rj;
+                uop.lsrc1_rtype = RT_FIX;
 
                 case(inst[23:22])
                     2'b00: uop.mem_size = 2'd0;  // byte
@@ -270,12 +270,12 @@ module decode(
                 // 区分 load / store / atomic
                 if(inst[31:25] == 7'b0010000) begin
                     // ── LL/SC atomic ──
-                    uop.is_amo       = 1'b1;
+                    uop.is_llsc       = 1'b1;
                     uop.is_unique    = 1'b1;
                     uop.ldst         = rd;
                     uop.dst_rtype = RT_FIX;
                     uop.mem_size     = 2'd2;
-                    uop.imm_sel      = IS_B;
+                    uop.imm_sel      = IMM_I16_S2;
                     uop.imm_packed   = {{12{i14[13]}}, i14};
                     if(!bit24) begin
                         uop.uses_ldq = 1'b1;
@@ -283,33 +283,33 @@ module decode(
                     end else begin
                         uop.uses_stq = 1'b1;
                         uop.fu_code[FC_DGEN] = 1'b1;
-                        uop.lrs2 = rd;
-                        uop.lrs2_rtype = RT_FIX;
+                        uop.lsrc2 = rd;
+                        uop.lsrc2_rtype = RT_FIX;
                         uop.mem_cmd = 5'd1;
                     end
                 end else if(bit24 == 1'b0) begin
                     // ── Load ──
                     uop.uses_ldq     = 1'b1;
                     uop.uses_stq     = 1'b0;
-                    uop.lrs2         = 5'd0;
+                    uop.lsrc2         = 5'd0;
                     uop.ldst         = rd;
                     uop.dst_rtype    = RT_FIX;
                     uop.mem_cmd      = 5'd0;       // M_XRD
                     uop.mem_signed   = ~bit25;      // LA: bit25 区分 signed/unsigned
-                    uop.imm_sel      = IS_I;
+                    uop.imm_sel      = IMM_I12;
                     uop.imm_packed   = {{14{i12[11]}}, i12};
                 end else begin
                     // ── Store ──
                     uop.uses_ldq     = 1'b0;
                     uop.uses_stq     = 1'b1;
-                    uop.lrs2         = rd;          // store data = rd
-                    uop.lrs2_rtype = RT_FIX;
+                    uop.lsrc2         = rd;          // store data = rd
+                    uop.lsrc2_rtype = RT_FIX;
                     uop.ldst         = 5'd0;
                     uop.dst_rtype    = RT_X;
                     uop.mem_cmd      = 5'd1;       // M_XWR
                     uop.mem_signed   = 1'b0;
                     uop.fu_code[FC_DGEN] = 1'b1;
-                    uop.imm_sel      = IS_I;
+                    uop.imm_sel      = IMM_I12;
                     uop.imm_packed   = {{14{i12[11]}}, i12};
                 end
             end
@@ -321,13 +321,13 @@ module decode(
                 uop.iq_type         = IQ_ALU;
                 uop.fu_code[FC_ALU] = 1'b1;
 
-                uop.op1_sel = OP1_RS1;
+                uop.op1_sel = OP1_SRC1;
                 uop.op2_sel = OP2_IMM;
-                uop.lrs1    = rj;
-                uop.lrs1_rtype = RT_FIX;
+                uop.lsrc1    = rj;
+                uop.lsrc1_rtype = RT_FIX;
                 uop.ldst    = rd;
                 uop.dst_rtype = RT_FIX;
-                uop.imm_sel = IS_I;
+                uop.imm_sel = IMM_I12;
                 uop.imm_packed = {{14{i12[11]}}, i12};
 
                 // inst[24:22] 决定操作
@@ -337,16 +337,16 @@ module decode(
                     3'b010:  uop.fcn_op = ALU_ADD;    // addi.w
                     3'b101: begin
                         uop.fcn_op = ALU_AND;    // andi
-                        uop.imm_sel = IS_Z;
+                        uop.imm_sel = IMM_U12;
 
                     end
                     3'b110: begin
                         uop.fcn_op = ALU_OR;     // ori
-                        uop.imm_sel = IS_Z;
+                        uop.imm_sel = IMM_U12;
                     end
                     3'b111: begin
                         uop.fcn_op = ALU_XOR;    // xori
-                        uop.imm_sel = IS_Z;
+                        uop.imm_sel = IMM_U12;
                     end
                     default: begin                      // 011, 100 → illegal
                         uop.exception = 1'b1;
@@ -359,106 +359,106 @@ module decode(
             // Operator (R-type) : inst[31:18] = 000000_000001 / 000000_000010
             // ============================================================
             INSTR_OP: begin
-                uop.op1_sel = OP1_RS1;
-                uop.lrs1    = rj;
-                uop.lrs1_rtype = RT_FIX;
+                uop.op1_sel = OP1_SRC1;
+                uop.lsrc1    = rj;
+                uop.lsrc1_rtype = RT_FIX;
                 uop.ldst    = rd;
                 uop.dst_rtype = RT_FIX;
-                uop.lrs2_rtype = RT_FIX;
-                uop.imm_sel = IS_N;
+                uop.lsrc2_rtype = RT_FIX;
+                uop.imm_sel = IMM_NONE;
 
-                // funct7 决定具体操作，mul/div 走 UNQ，其余走 ALU
-                unique case(funct7)
+                // inst[21:15] selects the ALU or multiply/divide operation.
+                unique case(op_21_15)
                     // pattern 000000000001: inst[21]=0, inst[20]=1
                     7'b0100000: begin  // add.w
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_ADD;
                     end
                     7'b0100010: begin  // sub.w
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SUB;
                     end
                     7'b0100100: begin  // slt
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SLT;
                     end
                     7'b0100101: begin  // sltu
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SLTU;
                     end
                     7'b0101000: begin  // nor
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_NOR;
                     end
                     7'b0101001: begin  // and
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_AND;
                     end
                     7'b0101010: begin  // or
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_OR;
                     end
                     7'b0101011: begin  // xor
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_XOR;
                     end
                     7'b0101110: begin  // sll.w (R-type, 移位量在 rk)
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SLL;
                     end
                     7'b0101111: begin  // srl.w
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SRL;
                     end
                     7'b0110000: begin  // sra.w
                         uop.iq_type = IQ_ALU; uop.fu_code[FC_ALU] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op  = ALU_SRA;
                     end
                     7'b0111000: begin  // mul.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_MUL_W;
                     end
                     7'b0111001: begin  // mulh.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_MULH_W;
                     end
                     7'b0111010: begin  // mulh.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_MULH_WU;
                     end
                     // pattern 000000000010: inst[21]=1, inst[20]=0
                     7'b1000000: begin  // div.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_DIV_W;
                     end
                     7'b1000010: begin  // div.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_DIV_WU;
                     end
                     7'b1000001: begin  // mod.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_MOD_W;
                     end
                     7'b1000011: begin  // mod.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_DIV] = 1'b1;
-                        uop.op2_sel = OP2_RS2; uop.lrs2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
                         uop.fcn_op = MULDIV_MOD_WU;
                     end
                     default: begin
@@ -475,13 +475,13 @@ module decode(
                 uop.iq_type         = IQ_ALU;
                 uop.fu_code[FC_ALU] = 1'b1;
 
-                uop.op1_sel = OP1_RS1;       // rj = 移位量
+                uop.op1_sel = OP1_SRC1;       // rj = 移位量
                 uop.op2_sel = OP2_IMM;       // rk = 被移位数
-                uop.lrs1    = rj;
-                uop.lrs1_rtype = RT_FIX;
+                uop.lsrc1    = rj;
+                uop.lsrc1_rtype = RT_FIX;
                 uop.ldst = rd;
                 uop.dst_rtype = RT_FIX;
-                uop.imm_sel = IS_SH;
+                uop.imm_sel = IMM_U5;
                 uop.imm_packed = {21'b0, i5};
 
                 unique case(inst[19:18])
@@ -506,7 +506,7 @@ module decode(
                 uop.op2_sel  = OP2_IMM;
                 uop.ldst     = rd;
                 uop.dst_rtype = RT_FIX;
-                uop.imm_sel  = IS_U;
+                uop.imm_sel  = IMM_U20_S12;
                 uop.imm_packed = i20;
 
                 // bit27 区分: 0=lu12i.w, 1=lu32i.d/pcaddu12i
@@ -532,21 +532,21 @@ module decode(
                     uop.flush_on_commit = 1'b1;     // CSR 串行化
                     uop.ldst = rd;
                     uop.dst_rtype = RT_FIX;
-                    uop.imm_sel = IS_F3;
+                    uop.imm_sel = IMM_U14;
                     uop.imm_packed = {12'b0, csr_addr};
 
                     if(rj == 5'd0) begin
                         uop.csr_cmd = CSR_READ;
                     end else if(rj == 1) begin
                         uop.csr_cmd = CSR_WRITE;
-                        uop.lrs1 = rd;
-                        uop.lrs1_rtype = RT_FIX;
+                        uop.lsrc1 = rd;
+                        uop.lsrc1_rtype = RT_FIX;
                     end else begin
                         uop.csr_cmd = CSR_XCHG;
-                        uop.lrs1 = rd;
-                        uop.lrs2 = rj;
-                        uop.lrs1_rtype = RT_FIX;
-                        uop.lrs2_rtype = RT_FIX;
+                        uop.lsrc1 = rd;
+                        uop.lsrc2 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
                     end
                 end
             end
@@ -564,11 +564,11 @@ module decode(
                         uop.iq_type = IQ_UNQ;
                         uop.is_unique = 1'b1;
                         uop.flush_on_commit = 1'b1;
-                        uop.is_eret = 1'b1;
+                        uop.is_ertn = 1'b1;
 
                         uop.dst_rtype = RT_X;
-                        uop.lrs1_rtype = RT_X;
-                        uop.lrs2_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
                     end
                 end else begin
                     uop.exception = 1'b1;
@@ -577,9 +577,9 @@ module decode(
                 // end else if(inst[31:22] == 10'b0000011000) begin
                 //     // CACOP
                 //     uop.fu_code[FC_AGEN] = 1'b1;
-                //     uop.op1_sel = OP1_RS1;
+                //     uop.op1_sel = OP1_SRC1;
                 //     uop.op2_sel = OP2_IMM;
-                //     uop.imm_sel = IS_I;
+                //     uop.imm_sel = IMM_I12;
                 //     uop.imm_packed = i12;
                 // end else if(inst[31:15] == 17'b00111000011100100) begin
                 //     // DBAR
@@ -609,7 +609,7 @@ module decode(
                     uop.dst_rtype = RT_FIX;
 
                     // inst[10]=0: rdcntvl.w (低32位), inst[10]=1: rdcntvh.w (高32位)
-                    uop.imm_sel  = IS_F3;
+                    uop.imm_sel  = IMM_U14;
                     uop.imm_packed = {25'b0, inst[10]};
 
                     if(rj != 5'd0) begin
@@ -648,8 +648,8 @@ module decode(
             uop.iq_type = '0;
             uop.fu_code = '0;
             uop.dst_rtype = RT_X;
-            uop.lrs1_rtype = RT_X;
-            uop.lrs2_rtype = RT_X;
+            uop.lsrc1_rtype = RT_X;
+            uop.lsrc2_rtype = RT_X;
             uop.allocate_brtag = 1'b0;
             uop.starts_bsy = 1'b0;
             uop.starts_unsafe = 1'b0;
@@ -663,7 +663,7 @@ module decode(
 
             uop.exception = 1'b1;
             uop.exc_cause = ECODE_ADE;
-            uop.xcpt_ae_if = 1'b1;
+            uop.exc_adef = 1'b1;
         end
     end
 

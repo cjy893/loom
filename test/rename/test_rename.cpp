@@ -4,8 +4,8 @@
 
 static void clear_inputs(Vrename_test_top* dut) {
     dut->in_valid = 0;
-    dut->in_lrs1_0 = dut->in_lrs2_0 = dut->in_ldst_0 = 0;
-    dut->in_lrs1_1 = dut->in_lrs2_1 = dut->in_ldst_1 = 0;
+    dut->in_lsrc1_0 = dut->in_lsrc2_0 = dut->in_ldst_0 = 0;
+    dut->in_lsrc1_1 = dut->in_lsrc2_1 = dut->in_ldst_1 = 0;
     dut->in_br_mask_0 = 0;
     dut->in_br_mask_1 = 0;
     dut->in_allocate_brtag_0 = 0;
@@ -34,19 +34,19 @@ int main(int argc, char** argv) {
 
     // A read-modify-write must read the old mapping and allocate from p32.
     dut->in_valid = 1;
-    dut->in_lrs1_0 = 13;
+    dut->in_lsrc1_0 = 13;
     dut->in_ldst_0 = 13;
     eval_cycle(dut);
     expect_eq("first pdst", dut->out_pdst_0, 32);
-    expect_eq("first prs1", dut->out_prs1_0, 13);
+    expect_eq("first psrc1", dut->out_psrc1_0, 13);
     expect_eq("first stale", dut->out_stale_0, 13);
-    expect_eq("first source ready", dut->out_prs1_busy_0, 0);
+    expect_eq("first source ready", dut->out_psrc1_busy_0, 0);
     // The next writer consumes p32 and allocates p33.
     eval_cycle(dut);
     expect_eq("RAW pdst", dut->out_pdst_0, 33);
-    expect_eq("RAW prs1", dut->out_prs1_0, 32);
+    expect_eq("RAW psrc1", dut->out_psrc1_0, 32);
     expect_eq("RAW stale", dut->out_stale_0, 32);
-    expect_eq("RAW source busy", dut->out_prs1_busy_0, 1);
+    expect_eq("RAW source busy", dut->out_psrc1_busy_0, 1);
     // A wakeup must make the physical source ready.
     clear_inputs(dut);
     dut->wakeup_valid = 1;
@@ -59,22 +59,22 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     dut->rst_n = 1;
     dut->in_valid = 3;
-    dut->in_lrs1_0 = 0;
+    dut->in_lsrc1_0 = 0;
     dut->in_ldst_0 = 5;
-    dut->in_lrs1_1 = 5;
+    dut->in_lsrc1_1 = 5;
     dut->in_ldst_1 = 6;
     eval_cycle(dut);
     expect_eq("lane0 pdst", dut->out_pdst_0, 32);
-    expect_eq("lane1 sees lane0 mapping", dut->out_prs1_1, 32);
+    expect_eq("lane1 sees lane0 mapping", dut->out_psrc1_1, 32);
     expect_eq("lane1 pdst", dut->out_pdst_1, 33);
-    expect_eq("lane1 source busy", dut->out_prs1_busy_1, 1);
+    expect_eq("lane1 source busy", dut->out_psrc1_busy_1, 1);
     // Reset, rename once, commit it, and ensure stale p13 becomes reusable.
     clear_inputs(dut);
     dut->rst_n = 0;
     eval_cycle(dut);
     dut->rst_n = 1;
     dut->in_valid = 1;
-    dut->in_lrs1_0 = 13;
+    dut->in_lsrc1_0 = 13;
     dut->in_ldst_0 = 13;
     eval_cycle(dut);
     clear_inputs(dut);
@@ -160,9 +160,9 @@ int main(int argc, char** argv) {
 
     clear_inputs(dut);
     dut->in_valid = 1;
-    dut->in_lrs1_0 = 5;
+    dut->in_lsrc1_0 = 5;
     eval_cycle(dut);
-    expect_eq("killed writer does not change map", dut->out_prs1_0, 5);
+    expect_eq("killed writer does not change map", dut->out_psrc1_0, 5);
     expect_eq("killed writer does not consume candidate", dut->out_pdst_0, 0);
 
     // Rename2 must clear only fired lanes while the packet is partially
@@ -238,13 +238,13 @@ int main(int argc, char** argv) {
     // Recovered p33 and p34 must be immediately available for allocation.
     clear_inputs(dut);
     dut->in_valid = 3;
-    dut->in_lrs1_0 = 5;
-    dut->in_lrs2_0 = 6;
+    dut->in_lsrc1_0 = 5;
+    dut->in_lsrc2_0 = 6;
     dut->in_ldst_0 = 7;
     dut->in_ldst_1 = 8;
     eval_cycle(dut);
-    expect_eq("branch recovery restores older mapping", dut->out_prs1_0, 32);
-    expect_eq("branch recovery removes wrong-path mapping", dut->out_prs2_0, 6);
+    expect_eq("branch recovery restores older mapping", dut->out_psrc1_0, 32);
+    expect_eq("branch recovery removes wrong-path mapping", dut->out_psrc2_0, 6);
     expect_eq("branch recovery frees first wrong-path pdst", dut->out_pdst_0, 33);
     expect_eq("branch recovery frees second wrong-path pdst", dut->out_pdst_1, 34);
 
@@ -286,13 +286,13 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     clear_inputs(dut);
     dut->in_valid = 1;
-    dut->in_lrs1_0 = 5;
-    dut->in_lrs2_0 = 6;
+    dut->in_lsrc1_0 = 5;
+    dut->in_lsrc2_0 = 6;
     dut->in_ldst_0 = 7;
     dut->in_br_mask_0 = 1;
     eval_cycle(dut);
-    expect_eq("inner recovery keeps outer allocation", dut->out_prs1_0, 32);
-    expect_eq("inner recovery restores r6", dut->out_prs2_0, 6);
+    expect_eq("inner recovery keeps outer allocation", dut->out_psrc1_0, 32);
+    expect_eq("inner recovery restores r6", dut->out_psrc2_0, 6);
     expect_eq("inner recovery reuses younger pdst", dut->out_pdst_0, 33);
 
     // Do not dispatch the probe; recover the still-unresolved outer branch.
@@ -302,11 +302,11 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     clear_inputs(dut);
     dut->in_valid = 3;
-    dut->in_lrs1_0 = 5;
+    dut->in_lsrc1_0 = 5;
     dut->in_ldst_0 = 7;
     dut->in_ldst_1 = 8;
     eval_cycle(dut);
-    expect_eq("outer recovery restores architectural map", dut->out_prs1_0, 5);
+    expect_eq("outer recovery restores architectural map", dut->out_psrc1_0, 5);
     expect_eq("outer recovery frees outer pdst", dut->out_pdst_0, 32);
     expect_eq("outer recovery also frees inner pdst", dut->out_pdst_1, 33);
 
@@ -330,11 +330,11 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
     clear_inputs(dut);
     dut->in_valid = 1;
-    dut->in_lrs1_0 = 6;
+    dut->in_lsrc1_0 = 6;
     dut->in_ldst_0 = 7;
     eval_cycle(dut);
     expect_eq("same-bundle recovery removes younger mapping",
-              dut->out_prs1_0, 6);
+              dut->out_psrc1_0, 6);
     expect_eq("same-bundle recovery frees younger pdst",
               dut->out_pdst_0, 32);
 

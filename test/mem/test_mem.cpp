@@ -8,8 +8,8 @@ static void clear_inputs(Vmem_test_top* dut) {
     dut->use_agen = 0;
     dut->use_dgen = 0;
     dut->rob_idx = 0;
-    dut->rs1_data = 0;
-    dut->rs2_data = 0;
+    dut->src1_data = 0;
+    dut->src2_data = 0;
     dut->imm_data = 0;
     dut->uop_br_mask = 0;
     dut->resolve_mask = 0;
@@ -19,14 +19,14 @@ static void clear_inputs(Vmem_test_top* dut) {
 }
 
 static void issue(Vmem_test_top* dut, bool agen, bool dgen,
-                  unsigned rob_idx, uint32_t rs1, uint32_t rs2,
+                  unsigned rob_idx, uint32_t src1, uint32_t src2,
                   uint32_t imm) {
     dut->iss_valid = 1;
     dut->use_agen = agen;
     dut->use_dgen = dgen;
     dut->rob_idx = rob_idx;
-    dut->rs1_data = rs1;
-    dut->rs2_data = rs2;
+    dut->src1_data = src1;
+    dut->src2_data = src2;
     dut->imm_data = imm;
     eval_cycle(dut);
     dut->iss_valid = 0;
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     dut->iss_valid = 1;
     dut->use_agen = 1;
     dut->rob_idx = 9;
-    dut->rs1_data = 0x4000;
+    dut->src1_data = 0x4000;
     dut->imm_data = 4;
     eval_cycle(dut);
     dut->iss_valid = 0;
@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
     dut->use_agen = 1;
     dut->use_dgen = 1;
     dut->uop_br_mask = 1;
-    dut->rs1_data = 0x5000;
-    dut->rs2_data = 0xa5a5a5a5;
+    dut->src1_data = 0x5000;
+    dut->src2_data = 0xa5a5a5a5;
     dut->imm_data = 8;
     eval_cycle(dut);
     dut->iss_valid = 0;
@@ -147,8 +147,8 @@ int main(int argc, char** argv) {
     dut->use_dgen = 1;
     dut->uop_br_mask = 1;
     dut->resolve_mask = 1;
-    dut->rs1_data = 0x6000;
-    dut->rs2_data = 0x12345678;
+    dut->src1_data = 0x6000;
+    dut->src2_data = 0x12345678;
     dut->imm_data = 4;
     eval_cycle(dut);
     dut->iss_valid = 0;

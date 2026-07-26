@@ -118,7 +118,7 @@ module core_fetch_buffer_test_top (
         .deq_ready(buffer_deq_ready)
     );
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(PROGRAM_BASE),
         .USE_EXTERNAL_FE_PCS(1'b1),
         .FETCH_WIDTH(2),
@@ -162,7 +162,7 @@ module core_fetch_buffer_test_top (
         .rf_wr_pdst_dbg(),
         .rf_wr_ldst_dbg(),
         .rf_wr_data_dbg(),
-        .alu_rs1_dbg(),
+        .alu_src1_dbg(),
         .alu_imm_dbg(),
         .alu_imm_packed_dbg(),
         .alu_imm_sel_dbg(),

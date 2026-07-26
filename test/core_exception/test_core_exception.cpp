@@ -30,7 +30,7 @@ static constexpr unsigned ECODE_INE = 13;
 
 static constexpr unsigned FT_NONE = 0;
 static constexpr unsigned FT_XCPT = 1;
-static constexpr unsigned FT_ERET = 3;
+static constexpr unsigned FT_ERTN = 3;
 
 static constexpr uint32_t addi_w(unsigned rd, unsigned rj, int imm12) {
     return 0x02800000U |
@@ -441,7 +441,7 @@ static bool test_exception_ertn_round_trip(
     passed &= check("ERTN round trip has only the original exception",
                     result.exceptions.size() == 1);
     passed &= check("ERTN redirects to updated ERA",
-                    has_redirect(result, FT_ERET, return_pc));
+                    has_redirect(result, FT_ERTN, return_pc));
     passed &= check("ERTN instruction commits",
                     has_commit(result, HANDLER_PC + 12));
     passed &= check_eq("ERTN resumes at the return instruction",

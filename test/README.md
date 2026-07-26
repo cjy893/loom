@@ -35,6 +35,8 @@ Run one suite:
 ./test/core_exception/run.sh
 ./test/core_interrupt/run.sh
 ./test/core_interrupt_lsu/run.sh
+./test/core_top/run.sh
+./test/core_top_axi/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
@@ -43,6 +45,8 @@ Run the real NSCSCC ELF milestone separately:
 
 ```bash
 ./test/core_elf/run.sh
+./test/core_top_elf_axi/run.sh --allow-exceptions --target-tests 58
+./test/core_top_elf_axi/run.sh --allow-exceptions --target-tests 58 --stress
 ```
 
 `test/core_elf/run.sh` parses the ELF32 program headers, loads every `PT_LOAD`
@@ -50,6 +54,13 @@ segment into a shared instruction/data memory model, starts execution at
 `0x1c000000`, and uses `test.s` to annotate failure traces. It is not included
 in `run_all.sh` because the default ELF is stored outside this RTL directory.
 See `test/core_elf/README.md` for milestone and diagnostic options.
+
+`test/core_top_elf_axi/run.sh` uses the same ELF completion signature but
+routes every instruction fetch, load, and store through the production
+`core_top` AXI3 ports. It checks AXI IDs, burst attributes, independent AW/W
+handshakes, request stability under backpressure, and completion of the final
+store response. It is also kept out of `run_all.sh` because it depends on the
+external functional-test ELF.
 
 `test/csr/run.sh` is the standalone contract suite for the CSR file and is
 included in `run_all.sh`.
@@ -62,6 +73,9 @@ suite and is included in `run_all.sh`.
 
 `test/core_interrupt_lsu/run.sh` covers interrupt recovery boundaries shared
 with the LSU and branch unit and is included in `run_all.sh`.
+
+`test/core_top/run.sh` defines the black-box port contract for the future
+production `cpu_core` top and is included in `run_all.sh` in reference mode.
 
 `test/core_lsu_exception/run.sh` covers precise misaligned load/store `ALE`
 exceptions and is included in `run_all.sh`.
@@ -145,6 +159,11 @@ Current coverage:
   covering uncommitted-store suppression, committed-store draining, rejection
   of delayed pre-interrupt load responses, and branch-mispredict priority over
   a simultaneously pending IRQ.
+- `core_top`: black-box instruction/data-memory handshakes, request stability
+  under deterministic backpressure, architectural commit traces, branch
+  recovery, precise synchronous exception reporting, and hardware-interrupt
+  handler entry. The default reference mode composes IFU, Fetch Buffer, and
+  the temporary backend without exposing their internal hierarchy.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.
@@ -171,7 +190,7 @@ Current status:
   in a low physical slot cannot starve an older runnable load in a higher slot.
   The LDQ request query uses a rotating cursor, including after blocked
   store-ordering queries.
-- The temporary `boom_core.sv` now uses the production LSU request/response
+- The production `loom_core.sv` uses the production LSU request/response
   path. The branch recovery suite verifies that an old wrong-path memory
   response cannot write back, wake a consumer, or complete a reused ROB entry.
 - The `core_lsu` suite passes word loads, all byte/half/word load extensions,

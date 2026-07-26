@@ -38,17 +38,17 @@ package loom_types;
         logic taken;
         logic [1:0] pc_sel;
 
-        logic is_fence;
-        logic is_fencei;
-        logic is_sfence;
-        logic is_amo;
-        logic is_eret;
-        logic is_sys_pc2epc;
-        logic is_rocc;
+        logic is_dbar;
+        logic is_ibar;
+        logic is_invtlb;
+        logic is_llsc;
+        logic is_ertn;
+        logic is_sys_pc2era;
+        logic is_coprocessor;
         logic is_mov;
         logic is_br;
-        logic is_jal;
-        logic is_jalr;
+        logic is_b_bl;
+        logic is_jirl;
         logic is_rdcnt;
 
         logic [FTQ_ADDR_SZ-1:0] ftq_idx;
@@ -71,14 +71,14 @@ package loom_types;
         logic [$clog2(RXQ_ENTRIES)-1:0] rxq_idx;
 
         logic [MAX_PREG_SZ-1:0] pdst;
-        logic [MAX_PREG_SZ-1:0] prs1;
-        logic [MAX_PREG_SZ-1:0] prs2;
-        logic [MAX_PREG_SZ-1:0] prs3;
+        logic [MAX_PREG_SZ-1:0] psrc1;
+        logic [MAX_PREG_SZ-1:0] psrc2;
+        logic [MAX_PREG_SZ-1:0] psrc3;
         logic [$clog2(FTQ_ENTRIES)-1:0] ppred;
 
-        logic prs1_busy;
-        logic prs2_busy;
-        logic prs3_busy;
+        logic psrc1_busy;
+        logic psrc2_busy;
+        logic psrc3_busy;
         logic ppred_busy;
 
         logic [MAX_PREG_SZ-1:0] stale_pdst;
@@ -100,17 +100,17 @@ package loom_types;
 
         logic [2:0] csr_cmd;
 
-        logic ldst_is_rs1;
+        logic ldst_is_src1;
 
         logic [LREG_SZ-1:0] ldst;
-        logic [LREG_SZ-1:0] lrs1;
-        logic [LREG_SZ-1:0] lrs2;
-        logic [LREG_SZ-1:0] lrs3;
+        logic [LREG_SZ-1:0] lsrc1;
+        logic [LREG_SZ-1:0] lsrc2;
+        logic [LREG_SZ-1:0] lsrc3;
 
         logic [1:0] dst_rtype;
-        logic [1:0] lrs1_rtype;
-        logic [1:0] lrs2_rtype;
-        logic frs3_en;
+        logic [1:0] lsrc1_rtype;
+        logic [1:0] lsrc2_rtype;
+        logic fsrc3_en;
 
         logic fcn_dw;
         logic [3:0] fcn_op;
@@ -119,9 +119,9 @@ package loom_types;
         logic [2:0] fp_rm;
         logic [1:0] fp_typ;
 
-        logic xcpt_pf_if;
-        logic xcpt_ae_if;
-        logic xcpt_ma_if;
+        logic exc_pif;
+        logic exc_adef;
+        logic exc_adef_misaligned;
         logic bp_debug_if;
         logic bp_xcpt_if;
 
@@ -138,7 +138,7 @@ package loom_types;
         struct packed {
             logic valid;
             logic [4:0] bits;
-        } fflags;
+        } fp_flags;
     } exe_unit_resp_t;
 
     typedef struct packed {
@@ -155,7 +155,7 @@ package loom_types;
         logic [2:0] cfi_type;
         logic taken;
         logic [1:0] pc_sel;
-        logic [VADDR_BITS:0] jalr_target;
+        logic [VADDR_BITS:0] jirl_target;
         logic [VADDR_BITS:0] target_offset;
     } br_resolution_info_t;
 
@@ -190,7 +190,7 @@ package loom_types;
         struct packed {
             logic valid;
             logic [4:0] bits;
-        }fflags;
+        }fp_flags;
         logic [DECODE_WIDTH*32-1:0] debug_insts;
         logic [DECODE_WIDTH*XLEN-1:0] debug_wdata;
     } commit_signal_t;

@@ -41,38 +41,38 @@ module issue_slot #(
     end
 
     uop_t next_uop;
-    logic prs1_wake, prs2_wake, prs3_wake;
+    logic psrc1_wake, psrc2_wake, psrc3_wake;
     always_comb begin
         next_uop = slot_uop;
         next_uop.br_mask = slot_uop.br_mask & ~brupdate.b1.resolve_mask;
 
-        prs1_wake = 1'b0;
-        prs2_wake = 1'b0;
-        prs3_wake = 1'b0;
+        psrc1_wake = 1'b0;
+        psrc2_wake = 1'b0;
+        psrc3_wake = 1'b0;
 
         for(int i = 0; i < NUM_WAKEUP_PORTS; i++) begin
             if(wakeup_valid[i]) begin
-                if(wakeup_pdst[i] == slot_uop.prs1 && slot_uop.prs1 != '0) prs1_wake = 1'b1;
-                if(wakeup_pdst[i] == slot_uop.prs2 && slot_uop.prs2 != '0) prs2_wake = 1'b1;
-                if(wakeup_pdst[i] == slot_uop.prs3 && slot_uop.prs3 != '0) prs3_wake = 1'b1;
+                if(wakeup_pdst[i] == slot_uop.psrc1 && slot_uop.psrc1 != '0) psrc1_wake = 1'b1;
+                if(wakeup_pdst[i] == slot_uop.psrc2 && slot_uop.psrc2 != '0) psrc2_wake = 1'b1;
+                if(wakeup_pdst[i] == slot_uop.psrc3 && slot_uop.psrc3 != '0) psrc3_wake = 1'b1;
             end
         end
 
-        if(prs1_wake) next_uop.prs1_busy = 1'b0;
-        if(prs2_wake) next_uop.prs2_busy = 1'b0;
-        if(prs3_wake) next_uop.prs3_busy = 1'b0;
+        if(psrc1_wake) next_uop.psrc1_busy = 1'b0;
+        if(psrc2_wake) next_uop.psrc2_busy = 1'b0;
+        if(psrc3_wake) next_uop.psrc3_busy = 1'b0;
 
         next_uop.iw_issued = 1'b0;
         if(grant) next_uop.iw_issued = 1'b1;
     end
 
     wire iss_ready;
-    assign iss_ready = !next_uop.prs1_busy && !next_uop.prs2_busy && !next_uop.prs3_busy;
+    assign iss_ready = !next_uop.psrc1_busy && !next_uop.psrc2_busy && !next_uop.psrc3_busy;
 
     wire agen_ready, dgen_ready;
     if(IS_MEM) begin
-        assign agen_ready = slot_uop.fu_code[FC_AGEN] && !next_uop.prs1_busy;
-        assign dgen_ready = slot_uop.fu_code[FC_DGEN] && !next_uop.prs2_busy;
+        assign agen_ready = slot_uop.fu_code[FC_AGEN] && !next_uop.psrc1_busy;
+        assign dgen_ready = slot_uop.fu_code[FC_DGEN] && !next_uop.psrc2_busy;
     end else begin
         assign agen_ready = 1'b0;
         assign dgen_ready = 1'b0;
@@ -88,16 +88,16 @@ module issue_slot #(
                 if(agen_ready) iss_uop.fu_code[FC_DGEN] = 1'b0;
                 else if(dgen_ready) begin
                     iss_uop.fu_code[FC_AGEN] = 1'b0;
-                    iss_uop.prs1 = slot_uop.prs2;
-                    iss_uop.lrs1_rtype = slot_uop.lrs2_rtype;
-                    iss_uop.imm_sel = IS_N;
+                    iss_uop.psrc1 = slot_uop.psrc2;
+                    iss_uop.lsrc1_rtype = slot_uop.lsrc2_rtype;
+                    iss_uop.imm_sel = IMM_NONE;
                 end
             end else if(slot_uop.fu_code[FC_DGEN]) begin
-                iss_uop.imm_sel = IS_N;
-                iss_uop.prs1 = slot_uop.prs2;
-                iss_uop.lrs1_rtype = slot_uop.lrs2_rtype;
+                iss_uop.imm_sel = IMM_NONE;
+                iss_uop.psrc1 = slot_uop.psrc2;
+                iss_uop.lsrc1_rtype = slot_uop.lsrc2_rtype;
             end
-            iss_uop.lrs2_rtype = RT_X;
+            iss_uop.lsrc2_rtype = RT_X;
         end
     end
 
@@ -135,9 +135,9 @@ module issue_slot #(
 
             for(int i = 0; i < NUM_WAKEUP_PORTS; i++) begin
                 if(wakeup_valid[i]) begin
-                    if(wakeup_pdst[i] == slot_uop.prs1) slot_uop.prs1_busy <= 1'b0;
-                    if(wakeup_pdst[i] == slot_uop.prs2) slot_uop.prs2_busy <= 1'b0;
-                    if(wakeup_pdst[i] == slot_uop.prs3) slot_uop.prs3_busy <= 1'b0;
+                    if(wakeup_pdst[i] == slot_uop.psrc1) slot_uop.psrc1_busy <= 1'b0;
+                    if(wakeup_pdst[i] == slot_uop.psrc2) slot_uop.psrc2_busy <= 1'b0;
+                    if(wakeup_pdst[i] == slot_uop.psrc3) slot_uop.psrc3_busy <= 1'b0;
                 end
             end
         end

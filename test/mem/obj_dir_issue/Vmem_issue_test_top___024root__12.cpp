@@ -9,7 +9,7 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__3(Vmem_issue_test_top___0
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs1 
+    vlSelfRef.agen_addr = (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src1 
                            + vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_imm);
     if (vlSelfRef.rst_n) {
         if ((1U & (~ (IData)(vlSelfRef.flush_pipeline)))) {

@@ -7,8 +7,8 @@ module issue_test_top (
     input  logic rst_n,
     input  logic dis_valid,
     input  logic [5:0] dis_rob_idx,
-    input  logic [5:0] dis_prs1,
-    input  logic       dis_prs1_busy,
+    input  logic [5:0] dis_psrc1,
+    input  logic       dis_psrc1_busy,
     input  logic [3:0] dis_br_mask,
     output logic       dis_ready,
 
@@ -31,8 +31,8 @@ module issue_test_top (
     always_comb begin
         dis_uop = '0;
         dis_uop[0].rob_idx = dis_rob_idx;
-        dis_uop[0].prs1 = dis_prs1;
-        dis_uop[0].prs1_busy = dis_prs1_busy;
+        dis_uop[0].psrc1 = dis_psrc1;
+        dis_uop[0].psrc1_busy = dis_psrc1_busy;
         dis_uop[0].br_mask = dis_br_mask;
         dis_uop[0].dst_rtype = RT_FIX;
         dis_uop[0].fu_code[FC_ALU] = 1'b1;

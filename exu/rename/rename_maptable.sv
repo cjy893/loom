@@ -58,7 +58,7 @@ module rename_maptable #(
         for(int i = 0; i < READ_PORTS; i++) begin
             preg[i] = map_q[lreg[i]];
             if(lreg[i] == '0) preg[i] = '0;
-            // Read ports are grouped per rename lane (rs1, rs2, stale dst).
+            // Read ports are grouped per rename lane (src1, src2, stale dst).
             // Only an older lane may bypass its newly allocated mapping to a
             // younger lane. A lane must never see its own destination here.
             for(int j = 0; j < WRITE_PORTS; j++) begin

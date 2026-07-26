@@ -1,6 +1,6 @@
 # Interrupt, LSU, and recovery integration test
 
-This suite drives real LA32 instructions through `boom_core` and checks the
+This suite drives real LA32 instructions through `loom_core` and checks the
 boundary between precise interrupts, branch recovery, and the production LSU.
 
 Covered contracts:

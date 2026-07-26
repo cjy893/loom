@@ -22,17 +22,17 @@ void Vmem_issue_test_top___024root___eval_debug_assertions(Vmem_issue_test_top__
     if (VL_UNLIKELY(((vlSelfRef.dis_rob_idx & 0xc0U)))) {
         Verilated::overWidthError("dis_rob_idx");
     }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs1 & 0xc0U)))) {
-        Verilated::overWidthError("dis_prs1");
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1 & 0xc0U)))) {
+        Verilated::overWidthError("dis_psrc1");
     }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs2 & 0xc0U)))) {
-        Verilated::overWidthError("dis_prs2");
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2 & 0xc0U)))) {
+        Verilated::overWidthError("dis_psrc2");
     }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs1_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_prs1_busy");
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1_busy & 0xfeU)))) {
+        Verilated::overWidthError("dis_psrc1_busy");
     }
-    if (VL_UNLIKELY(((vlSelfRef.dis_prs2_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_prs2_busy");
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2_busy & 0xfeU)))) {
+        Verilated::overWidthError("dis_psrc2_busy");
     }
     if (VL_UNLIKELY(((vlSelfRef.dis_use_agen & 0xfeU)))) {
         Verilated::overWidthError("dis_use_agen");

@@ -1,4 +1,4 @@
-#include "Vboom_core.h"
+#include "Vloom_core.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 #include <cstdio>
@@ -7,7 +7,7 @@
 static constexpr int CORE_WIDTH = 2;
 static constexpr uint32_t RESET_PC = 0x1c000000;
 
-static Vboom_core* top;
+static Vloom_core* top;
 static VerilatedVcdC* tfp;
 static vluint64_t sim_time = 0;
 
@@ -49,7 +49,7 @@ void tick() {
 
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
-    top = new Vboom_core;
+    top = new Vloom_core;
 
     Verilated::traceEverOn(true);
     tfp = new VerilatedVcdC;
@@ -174,9 +174,9 @@ int main(int argc, char** argv) {
 
         // 提交监控
         if (top->rf_wr_en_dbg) {
-            printf("[%5d] REGWR: r%d pdst=%d data=%d rs1=%d imm=%d imm_p=%x imm_s=%d\n", cycle,
+            printf("[%5d] REGWR: r%d pdst=%d data=%d src1=%d imm=%d imm_p=%x imm_s=%d\n", cycle,
                    top->rf_wr_ldst_dbg, top->rf_wr_pdst_dbg, top->rf_wr_data_dbg,
-                   top->alu_rs1_dbg, top->alu_imm_dbg,
+                   top->alu_src1_dbg, top->alu_imm_dbg,
                    top->alu_imm_packed_dbg, top->alu_imm_sel_dbg);
             if (top->rf_wr_ldst_dbg != 0)
                 arch_regs[top->rf_wr_ldst_dbg] = top->rf_wr_data_dbg;

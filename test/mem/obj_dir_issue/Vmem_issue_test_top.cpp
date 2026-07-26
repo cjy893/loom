@@ -14,10 +14,10 @@ Vmem_issue_test_top::Vmem_issue_test_top(VerilatedContext* _vcontextp__, const c
     , dis_valid{vlSymsp->TOP.dis_valid}
     , dis_ready{vlSymsp->TOP.dis_ready}
     , dis_rob_idx{vlSymsp->TOP.dis_rob_idx}
-    , dis_prs1{vlSymsp->TOP.dis_prs1}
-    , dis_prs2{vlSymsp->TOP.dis_prs2}
-    , dis_prs1_busy{vlSymsp->TOP.dis_prs1_busy}
-    , dis_prs2_busy{vlSymsp->TOP.dis_prs2_busy}
+    , dis_psrc1{vlSymsp->TOP.dis_psrc1}
+    , dis_psrc2{vlSymsp->TOP.dis_psrc2}
+    , dis_psrc1_busy{vlSymsp->TOP.dis_psrc1_busy}
+    , dis_psrc2_busy{vlSymsp->TOP.dis_psrc2_busy}
     , dis_use_agen{vlSymsp->TOP.dis_use_agen}
     , dis_use_dgen{vlSymsp->TOP.dis_use_dgen}
     , wakeup_valid_0{vlSymsp->TOP.wakeup_valid_0}
@@ -36,8 +36,8 @@ Vmem_issue_test_top::Vmem_issue_test_top(VerilatedContext* _vcontextp__, const c
     , agen_rob_idx{vlSymsp->TOP.agen_rob_idx}
     , dgen_valid{vlSymsp->TOP.dgen_valid}
     , dgen_rob_idx{vlSymsp->TOP.dgen_rob_idx}
-    , rs1_data{vlSymsp->TOP.rs1_data}
-    , rs2_data{vlSymsp->TOP.rs2_data}
+    , src1_data{vlSymsp->TOP.src1_data}
+    , src2_data{vlSymsp->TOP.src2_data}
     , imm_data{vlSymsp->TOP.imm_data}
     , agen_addr{vlSymsp->TOP.agen_addr}
     , dgen_data{vlSymsp->TOP.dgen_data}

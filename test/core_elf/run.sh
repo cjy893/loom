@@ -43,7 +43,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
-  "$ROOT/boom_core.sv" \
+  "$ROOT/exu/loom_core.sv" \
   "$TEST_DIR/core_elf_test_top.sv"
 
 args=(--elf "$ELF_PATH")

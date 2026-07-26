@@ -7,7 +7,7 @@ TEST_DIR="$ROOT/test/integration"
 verilator --cc --trace --build -j 1 -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
   --Mdir "$TEST_DIR/obj_dir" \
-  --top-module boom_core \
+  --top-module loom_core \
   --exe "$ROOT/tb_verilator.cpp" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
@@ -30,9 +30,9 @@ verilator --cc --trace --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
-  "$ROOT/boom_core.sv"
+  "$ROOT/exu/loom_core.sv"
 
 (
   cd "$TEST_DIR"
-  ./obj_dir/Vboom_core
+  ./obj_dir/Vloom_core
 )

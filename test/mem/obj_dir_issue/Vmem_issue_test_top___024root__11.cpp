@@ -60,10 +60,10 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__2(Vmem_issue_test_top___0
             }
             if (((IData)(vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec) 
                  & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed)))) {
-                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_rs2 
-                    = vlSelfRef.rs2_data;
-                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_rs1 
-                    = vlSelfRef.rs1_data;
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_src2 
+                    = vlSelfRef.src2_data;
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_src1 
+                    = vlSelfRef.src1_data;
             }
         }
     }
@@ -74,5 +74,5 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__2(Vmem_issue_test_top___0
             [__Vilp1];
         __Vilp1 = ((IData)(1U) + __Vilp1);
     }
-    vlSelfRef.dgen_data = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_rs2;
+    vlSelfRef.dgen_data = vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_src2;
 }

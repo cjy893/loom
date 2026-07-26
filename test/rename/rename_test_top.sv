@@ -7,12 +7,12 @@ module rename_test_top (
     input  logic rst_n,
 
     input  logic [1:0] in_valid,
-    input  logic [4:0] in_lrs1_0,
-    input  logic [4:0] in_lrs2_0,
+    input  logic [4:0] in_lsrc1_0,
+    input  logic [4:0] in_lsrc2_0,
     input  logic [4:0] in_ldst_0,
     input  logic [3:0] in_br_mask_0,
-    input  logic [4:0] in_lrs1_1,
-    input  logic [4:0] in_lrs2_1,
+    input  logic [4:0] in_lsrc1_1,
+    input  logic [4:0] in_lsrc2_1,
     input  logic [4:0] in_ldst_1,
     input  logic [3:0] in_br_mask_1,
     input  logic       in_allocate_brtag_0,
@@ -35,16 +35,16 @@ module rename_test_top (
     input  logic [1:0] dis_fire,
 
     output logic [1:0] out_valid,
-    output logic [5:0] out_prs1_0,
-    output logic [5:0] out_prs2_0,
+    output logic [5:0] out_psrc1_0,
+    output logic [5:0] out_psrc2_0,
     output logic [5:0] out_pdst_0,
     output logic [5:0] out_stale_0,
-    output logic       out_prs1_busy_0,
-    output logic [5:0] out_prs1_1,
-    output logic [5:0] out_prs2_1,
+    output logic       out_psrc1_busy_0,
+    output logic [5:0] out_psrc1_1,
+    output logic [5:0] out_psrc2_1,
     output logic [5:0] out_pdst_1,
     output logic [5:0] out_stale_1,
-    output logic       out_prs1_busy_1,
+    output logic       out_psrc1_busy_1,
     output logic [1:0] stalls
 );
     uop_t [1:0] dec_uops;
@@ -58,22 +58,22 @@ module rename_test_top (
 
     always_comb begin
         dec_uops = '0;
-        dec_uops[0].lrs1 = in_lrs1_0;
-        dec_uops[0].lrs2 = in_lrs2_0;
+        dec_uops[0].lsrc1 = in_lsrc1_0;
+        dec_uops[0].lsrc2 = in_lsrc2_0;
         dec_uops[0].ldst = in_ldst_0;
         dec_uops[0].dst_rtype = RT_FIX;
-        dec_uops[0].lrs1_rtype = RT_FIX;
-        dec_uops[0].lrs2_rtype = RT_FIX;
+        dec_uops[0].lsrc1_rtype = RT_FIX;
+        dec_uops[0].lsrc2_rtype = RT_FIX;
         dec_uops[0].allocate_brtag = in_allocate_brtag_0;
         dec_uops[0].br_tag = in_br_tag_0;
         dec_uops[0].br_mask = in_br_mask_0;
 
-        dec_uops[1].lrs1 = in_lrs1_1;
-        dec_uops[1].lrs2 = in_lrs2_1;
+        dec_uops[1].lsrc1 = in_lsrc1_1;
+        dec_uops[1].lsrc2 = in_lsrc2_1;
         dec_uops[1].ldst = in_ldst_1;
         dec_uops[1].dst_rtype = RT_FIX;
-        dec_uops[1].lrs1_rtype = RT_FIX;
-        dec_uops[1].lrs2_rtype = RT_FIX;
+        dec_uops[1].lsrc1_rtype = RT_FIX;
+        dec_uops[1].lsrc2_rtype = RT_FIX;
         dec_uops[1].allocate_brtag = in_allocate_brtag_1;
         dec_uops[1].br_tag = in_br_tag_1;
         dec_uops[1].br_mask = in_br_mask_1;
@@ -121,14 +121,14 @@ module rename_test_top (
         .child_rebusys('0)
     );
 
-    assign out_prs1_0 = rn_uops[0].prs1;
-    assign out_prs2_0 = rn_uops[0].prs2;
+    assign out_psrc1_0 = rn_uops[0].psrc1;
+    assign out_psrc2_0 = rn_uops[0].psrc2;
     assign out_pdst_0 = rn_uops[0].pdst;
     assign out_stale_0 = rn_uops[0].stale_pdst;
-    assign out_prs1_busy_0 = rn_uops[0].prs1_busy;
-    assign out_prs1_1 = rn_uops[1].prs1;
-    assign out_prs2_1 = rn_uops[1].prs2;
+    assign out_psrc1_busy_0 = rn_uops[0].psrc1_busy;
+    assign out_psrc1_1 = rn_uops[1].psrc1;
+    assign out_psrc2_1 = rn_uops[1].psrc2;
     assign out_pdst_1 = rn_uops[1].pdst;
     assign out_stale_1 = rn_uops[1].stale_pdst;
-    assign out_prs1_busy_1 = rn_uops[1].prs1_busy;
+    assign out_psrc1_busy_1 = rn_uops[1].psrc1_busy;
 endmodule

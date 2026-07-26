@@ -43,7 +43,7 @@ module core_program_test_top (
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
 
-    boom_core #(
+    loom_core #(
         .RESET_PC(PROGRAM_BASE)
     ) core (
         .clk,
@@ -84,7 +84,7 @@ module core_program_test_top (
         .rf_wr_pdst_dbg(),
         .rf_wr_ldst_dbg(),
         .rf_wr_data_dbg(),
-        .alu_rs1_dbg(),
+        .alu_src1_dbg(),
         .alu_imm_dbg(),
         .alu_imm_packed_dbg(),
         .alu_imm_sel_dbg(),
