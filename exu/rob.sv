@@ -291,7 +291,14 @@ module rob #(
         end
     end
 
-    wire finished_committing_row = (|commit.valids) && ((will_commit ^ rob_head_vals) == '0);
+    // A partial dispatch can leave younger lanes reserved in the current tail
+    // row. Do not let commit advance past that row before those lanes arrive.
+    wire head_row_has_pending_enq =
+        (rob_head == rob_tail) && (rob_tail_lsb != '0);
+    wire finished_committing_row =
+        (|commit.valids) &&
+        ((will_commit ^ rob_head_vals) == '0) &&
+        !head_row_has_pending_enq;
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             rob_head <= '0;

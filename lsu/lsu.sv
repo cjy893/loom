@@ -14,6 +14,8 @@ module lsu #(
 
     input logic [DISPATCH_WIDTH-1:0] dis_valid,
     input uop_t [DISPATCH_WIDTH-1:0] dis_uops,
+    input logic [DISPATCH_WIDTH-1:0] dis_uses_ldq,
+    input logic [DISPATCH_WIDTH-1:0] dis_uses_stq,
     output logic [DISPATCH_WIDTH-1:0] dis_lsq_ready,
     output logic [DISPATCH_WIDTH-1:0] [LDQ_ADDR_SZ+1:0] dis_ldq_idx,
     output logic [DISPATCH_WIDTH-1:0] [STQ_ADDR_SZ+1:0] dis_stq_idx,
@@ -108,25 +110,21 @@ module lsu #(
     logic selected_valid;
     logic dmem_req_fire;
 
+    assign ldq_enq_valid = dis_valid & dis_uses_ldq;
+    assign ldq_enq_fire = dis_fire & ldq_enq_valid;
+    assign stq_enq_valid = dis_valid & dis_uses_stq;
+    assign stq_enq_fire = dis_fire & stq_enq_valid;
+
     always_comb begin
-        ldq_enq_valid = '0;
-        ldq_enq_fire = '0;
-        stq_enq_valid = '0;
-        stq_enq_fire = '0;
         dis_lsq_ready = '0;
         dis_ldq_idx = '0;
         dis_stq_idx = '0;
 
         for(int w = 0; w < DISPATCH_WIDTH; w++) begin
-            ldq_enq_valid[w] = dis_valid[w] && dis_uops[w].uses_ldq;
-            stq_enq_valid[w] = dis_valid[w] && dis_uops[w].uses_stq;
-            ldq_enq_fire[w] = dis_fire[w] && ldq_enq_valid[w];
-            stq_enq_fire[w] = dis_fire[w] && stq_enq_valid[w];
-
             dis_lsq_ready[w] =
                 !dis_valid[w] ||
-                ((!dis_uops[w].uses_ldq || ldq_enq_ready[w]) &&
-                 (!dis_uops[w].uses_stq || stq_enq_ready[w]));
+                ((!dis_uses_ldq[w] || ldq_enq_ready[w]) &&
+                 (!dis_uses_stq[w] || stq_enq_ready[w]));
 
             if(ldq_enq_valid[w]) dis_ldq_idx[w] = ldq_enq_idx[w];
             if(stq_enq_valid[w]) dis_stq_idx[w] = stq_enq_idx[w];

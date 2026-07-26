@@ -129,6 +129,8 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
     logic [CORE_WIDTH-1:0]       rn2_unique_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_ldq_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_stq_q;
     logic [CORE_WIDTH-1:0][31:0] rn2_pc_q;
 
     logic                        csr_req_ready_w;
@@ -382,12 +384,16 @@ module boom_core #(
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
             rn2_unique_q <= '0;
+            rn2_uses_ldq_q <= '0;
+            rn2_uses_stq_q <= '0;
             rn2_pc_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
                 rn2_unique_q[w] <= dec_uops[w].is_unique;
+                rn2_uses_ldq_q[w] <= dec_uops[w].uses_ldq;
+                rn2_uses_stq_q[w] <= dec_uops[w].uses_stq;
                 rn2_pc_q[w] <= dec_uops[w].pc[31:0];
             end
         end else begin
@@ -396,6 +402,8 @@ module boom_core #(
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
                     rn2_unique_q[w] <= 1'b0;
+                    rn2_uses_ldq_q[w] <= 1'b0;
+                    rn2_uses_stq_q[w] <= 1'b0;
                     rn2_pc_q[w] <= '0;
                 end
             end
@@ -679,6 +687,8 @@ module boom_core #(
         .rst_n,
         .dis_valid(rn2_mask),
         .dis_uops(rn2_uops),
+        .dis_uses_ldq(rn2_uses_ldq_q),
+        .dis_uses_stq(rn2_uses_stq_q),
         .dis_lsq_ready(lsu_dis_ready),
         .dis_ldq_idx(lsu_dis_ldq_idx),
         .dis_stq_idx(lsu_dis_stq_idx),

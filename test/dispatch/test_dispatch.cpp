@@ -12,6 +12,8 @@ static void clear_inputs(Vdispatch_test_top* dut) {
     dut->rob_idx_1 = 0;
     dut->exception_0 = 0;
     dut->exception_1 = 0;
+    dut->dispatch_enable = 1;
+    dut->lane_ready = 3;
     dut->iq_mem_ready = 0;
     dut->iq_alu_ready = 0;
     dut->iq_unq_ready = 0;
@@ -114,6 +116,22 @@ int main(int argc, char** argv) {
     expect_eq("blocked oldest stops younger exception", dut->dis_fire, 0);
     expect_eq("blocked exception packet not ready", dut->dis_ready, 0);
     expect_eq("blocked packet emits no ALU uop", dut->iq_alu_dis_valid, 0);
+
+    dut->rn2_mask = 1;
+    dut->iq_type_0 = IQ_ALU;
+    dut->exception_0 = 0;
+    dut->iq_alu_ready = 1;
+    dut->dispatch_enable = 0;
+    dut->lane_ready = 3;
+    dut->eval();
+    expect_eq("global dispatch disable blocks fire", dut->dis_fire, 0);
+    expect_eq("global dispatch disable blocks ready", dut->dis_ready, 0);
+
+    dut->dispatch_enable = 1;
+    dut->lane_ready = 2;
+    dut->eval();
+    expect_eq("lane resource blocks its uop", dut->dis_fire, 0);
+    expect_eq("lane resource keeps packet pending", dut->dis_ready, 0);
 
     pass("dispatch");
     delete dut;

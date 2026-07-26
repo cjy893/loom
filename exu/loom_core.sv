@@ -99,7 +99,7 @@ module loom_core #(
     logic [31:0]                 next_decode_pc_d;
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
-    logic                        pre_dispatch_ready;
+    logic                        dispatch_enable;
     logic                        unique_dispatch_ready;
     logic                        branch_alloc_ready;
     localparam int FE_IDX_WIDTH =
@@ -130,6 +130,8 @@ module loom_core #(
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
     logic [CORE_WIDTH-1:0]       rn2_unique_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_ldq_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_stq_q;
     logic [CORE_WIDTH-1:0][31:0] rn2_pc_q;
 
     logic                        csr_req_ready_w;
@@ -304,53 +306,19 @@ module loom_core #(
         .flush_pipeline(bm_flush)
     );
 
-    // Determine whether the complete registered Rename2 packet can dispatch.
-    // Keeping this all-or-none in the temporary harness avoids a combinational
-    // ready/fire loop while the standalone dispatcher is integrated separately.
+    // Unique uops must enter an empty ROB by themselves. Other resource
+    // decisions are handled by the dispatcher in program order.
     always_comb begin
-        int alu_count;
-        int mem_count;
-        int unq_count;
         int valid_count;
         logic has_unique;
 
-        alu_count = 0;
-        mem_count = 0;
-        unq_count = 0;
         valid_count = 0;
         has_unique = 1'b0;
-        pre_dispatch_ready = rob_ready_w && !rob_flush_frontend_w &&
-                             !(|rn_stalls) &&
-                             !(|brupdate_w.b1.mispredict_mask) &&
-                             !brupdate_w.b2.mispredict;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (rn2_mask[w]) begin
                 valid_count++;
                 has_unique |= rn2_unique_q[w];
-                if (!rn2_exception_q[w]) begin
-                    unique case (rn2_iq_type_q[w])
-                        IQ_ALU: begin
-                            if (alu_count >= CORE_WIDTH ||
-                                !alu_iq_dis_ready[alu_count])
-                                pre_dispatch_ready = 1'b0;
-                            alu_count++;
-                        end
-                        IQ_MEM: begin
-                            if (mem_count >= CORE_WIDTH ||
-                                !mem_iq_dis_ready[mem_count])
-                                pre_dispatch_ready = 1'b0;
-                            mem_count++;
-                        end
-                        IQ_UNQ: begin
-                            if (unq_count >= CORE_WIDTH ||
-                                !unq_iq_dis_ready[unq_count])
-                                pre_dispatch_ready = 1'b0;
-                            unq_count++;
-                        end
-                        default: pre_dispatch_ready = 1'b0;
-                    endcase
-                end
             end
         end
 
@@ -360,6 +328,14 @@ module loom_core #(
         unique_dispatch_ready =
             !has_unique || (rob_empty && (valid_count == 1));
     end
+
+    assign dispatch_enable =
+        rob_ready_w &&
+        !rob_flush_frontend_w &&
+        !(|rn_stalls) &&
+        !(|brupdate_w.b1.mispredict_mask) &&
+        !brupdate_w.b2.mispredict &&
+        unique_dispatch_ready;
 
     // ── 灌入 dec_uops ──
     always_comb begin
@@ -383,12 +359,16 @@ module loom_core #(
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
             rn2_unique_q <= '0;
+            rn2_uses_ldq_q <= '0;
+            rn2_uses_stq_q <= '0;
             rn2_pc_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
                 rn2_unique_q[w] <= dec_uops[w].is_unique;
+                rn2_uses_ldq_q[w] <= dec_uops[w].uses_ldq;
+                rn2_uses_stq_q[w] <= dec_uops[w].uses_stq;
                 rn2_pc_q[w] <= dec_uops[w].pc[31:0];
             end
         end else begin
@@ -397,6 +377,8 @@ module loom_core #(
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
                     rn2_unique_q[w] <= 1'b0;
+                    rn2_uses_ldq_q[w] <= 1'b0;
+                    rn2_uses_stq_q[w] <= 1'b0;
                     rn2_pc_q[w] <= '0;
                 end
             end
@@ -427,16 +409,25 @@ module loom_core #(
     // Assign the ROB index before dispatch so every copy of the uop,
     // including the issue-queue copy, carries the same identity.
     always_comb begin
+        int rob_offset;
+
         rn2_uops = rn2_uops_raw;
+        rob_offset = 0;
         for (int w = 0; w < CORE_WIDTH; w++) begin
-            rn2_uops[w].rob_idx = rob_tail_idx_w + ROB_ADDR_SZ'(w);
-            rn2_uops[w].starts_bsy = rn2_mask[w] && !rn2_uops_raw[w].exception;
+            rn2_uops[w].starts_bsy = 1'b0;
+            if (rn2_mask[w]) begin
+                rn2_uops[w].rob_idx =
+                    rob_tail_idx_w + ROB_ADDR_SZ'(rob_offset);
+                rn2_uops[w].starts_bsy = !rn2_uops_raw[w].exception;
+                rob_offset++;
+            end
         end
     end
 
     // ================================================================
     // Dispatch
     // ================================================================
+    uop_t [CORE_WIDTH-1:0] dispatch_in_uops;
     uop_t [CORE_WIDTH-1:0] dis_uops_w;
     logic [CORE_WIDTH-1:0] lsu_dis_ready;
     logic [CORE_WIDTH-1:0][LDQ_ADDR_SZ+1:0] lsu_dis_ldq_idx;
@@ -444,63 +435,38 @@ module loom_core #(
     logic lsu_dispatch_ready;
 
     always_comb begin
-        lsu_dispatch_ready = 1'b1;
-        for (int w = 0; w < CORE_WIDTH; w++) begin
-            if (rn2_mask[w] && !lsu_dis_ready[w])
-                lsu_dispatch_ready = 1'b0;
-        end
-    end
-
-    assign dis_ready_w = pre_dispatch_ready && lsu_dispatch_ready &&
-                         unique_dispatch_ready;
-    assign dis_fire = rn2_mask & {CORE_WIDTH{dis_ready_w}};
-
-    // Pack each IQ independently. Exceptions bypass all issue queues but still
-    // fire into the ROB so they can be observed at the commit boundary.
-    always_comb begin
-        int alu_count;
-        int mem_count;
-        int unq_count;
-
-        alu_count = 0;
-        mem_count = 0;
-        unq_count = 0;
-        iq_alu_dis_valid = '0;
-        iq_mem_dis_valid = '0;
-        iq_unq_dis_valid = '0;
-        iq_alu_dis_uop = '0;
-        iq_mem_dis_uop = '0;
-        iq_unq_dis_uop = '0;
-        dis_uops_w = rn2_uops;
+        dispatch_in_uops = rn2_uops;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (rn2_uops[w].uses_ldq)
-                dis_uops_w[w].ldq_idx = lsu_dis_ldq_idx[w];
+                dispatch_in_uops[w].ldq_idx = lsu_dis_ldq_idx[w];
             if (rn2_uops[w].uses_stq)
-                dis_uops_w[w].stq_idx = lsu_dis_stq_idx[w];
-
-            if (dis_fire[w] && !rn2_exception_q[w]) begin
-                unique case (rn2_iq_type_q[w])
-                    IQ_ALU: begin
-                        iq_alu_dis_valid[alu_count] = 1'b1;
-                        iq_alu_dis_uop[alu_count] = dis_uops_w[w];
-                        alu_count++;
-                    end
-                    IQ_MEM: begin
-                        iq_mem_dis_valid[mem_count] = 1'b1;
-                        iq_mem_dis_uop[mem_count] = dis_uops_w[w];
-                        mem_count++;
-                    end
-                    IQ_UNQ: begin
-                        iq_unq_dis_valid[unq_count] = 1'b1;
-                        iq_unq_dis_uop[unq_count] = dis_uops_w[w];
-                        unq_count++;
-                    end
-                    default:;
-                endcase
-            end
+                dispatch_in_uops[w].stq_idx = lsu_dis_stq_idx[w];
         end
     end
+
+    assign lsu_dispatch_ready = &(~rn2_mask | lsu_dis_ready);
+
+    dispatch #(.CORE_WIDTH(CORE_WIDTH)) dispatch_inst (
+        .rn2_mask,
+        .rn2_uops(dispatch_in_uops),
+        .dispatch_enable,
+        .lane_ready(lsu_dis_ready),
+        .rn2_iq_type(rn2_iq_type_q),
+        .rn2_exception(rn2_exception_q),
+        .iq_mem_ready(mem_iq_dis_ready),
+        .iq_alu_ready(alu_iq_dis_ready),
+        .iq_unq_ready(unq_iq_dis_ready),
+        .iq_mem_dis_valid,
+        .iq_mem_dis_uop,
+        .iq_alu_dis_valid,
+        .iq_alu_dis_uop,
+        .iq_unq_dis_valid,
+        .iq_unq_dis_uop,
+        .dis_ready(dis_ready_w),
+        .dis_fire,
+        .dis_uops(dis_uops_w)
+    );
 
     // ================================================================
     // Issue Units
@@ -680,6 +646,8 @@ module loom_core #(
         .rst_n,
         .dis_valid(rn2_mask),
         .dis_uops(rn2_uops),
+        .dis_uses_ldq(rn2_uses_ldq_q),
+        .dis_uses_stq(rn2_uses_stq_q),
         .dis_lsq_ready(lsu_dis_ready),
         .dis_ldq_idx(lsu_dis_ldq_idx),
         .dis_stq_idx(lsu_dis_stq_idx),
@@ -869,7 +837,7 @@ module loom_core #(
         .clk(clk), .rst_n(rst_n),
         .enq_valids (rob_enq_valids),
         .enq_uops   (rob_enq_uops),
-        .enq_partial_stall(1'b0),
+        .enq_partial_stall((|dis_fire) && !dis_ready_w),
         .rob_tail_idx(rob_tail_idx_w),
         .wb_resps   (rob_wb_resps),
         .lsu_clr_bsy_valid(lsu_clr_bsy_valid),
