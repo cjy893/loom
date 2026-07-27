@@ -11,7 +11,10 @@ SRCS="common/params_pkg.sv common/consts_pkg.sv common/types_pkg.sv \
       exu/rename/rename_busytable.sv exu/rename/rename_stage.sv \
       exu/dispatch.sv \
       exu/issue/issue_slot.sv exu/issue/issue_unit_collapsing.sv \
-      exu/regfile.sv exu/exe/alu.sv exu/exe/mem.sv exu/exe/unq.sv \
+      exu/regfile.sv exu/exe/alu.sv exu/exe/mem.sv \
+      exu/exe/div/srt4_qselect.sv exu/exe/div/srt4_preprocess.sv \
+      exu/exe/div/srt4_otfc.sv exu/exe/div/srt4_core.sv \
+      exu/exe/div/divider.sv exu/exe/unq.sv \
       exu/rob.sv lsu/load_queue.sv lsu/store_queue.sv lsu/lsu.sv \
       exu/loom_core.sv"
 

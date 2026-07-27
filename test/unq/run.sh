@@ -12,6 +12,11 @@ verilator --cc --build -j -Wno-fatal --output-split 100 --output-split-cfuncs 10
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$ROOT/exu/exe/div/srt4_qselect.sv" \
+  "$ROOT/exu/exe/div/srt4_preprocess.sv" \
+  "$ROOT/exu/exe/div/srt4_otfc.sv" \
+  "$ROOT/exu/exe/div/srt4_core.sv" \
+  "$ROOT/exu/exe/div/divider.sv" \
   "$ROOT/exu/exe/unq.sv" \
   "$TEST_DIR/unq_test_top.sv"
 

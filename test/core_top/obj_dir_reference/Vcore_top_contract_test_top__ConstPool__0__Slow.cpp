@@ -260,6 +260,13 @@ extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h
         0x00000000, 0x00000000
 }};
 
+extern const VlWide<16>/*511:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hfc549d0a_0 = VlWide<16>{{
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x01067ce7, 0x01077ae3, 0x0107fae1, 0x01087add,
+        0x018978d9, 0x018a78d9, 0x020a78d5, 0x020c78d1
+}};
+
 extern const VlUnpacked<IData/*31:0*/, 35> Vcore_top_contract_test_top__ConstPool__TABLE_h0e170ef5_0 = {{
     0x000001ffU, 7U, 0U, 0x00001bffU,
     3U, 0xffffffc0U, 0xbf00001fU, 0xffffe000U,
@@ -308,11 +315,6 @@ extern const VlUnpacked<CData/*0:0*/, 128> Vcore_top_contract_test_top__ConstPoo
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
-}};
-
-extern const VlUnpacked<CData/*0:0*/, 16> Vcore_top_contract_test_top__ConstPool__TABLE_h5653577b_0 = {{
-    1U, 0U, 0U, 0U, 1U, 1U, 0U, 0U,
-    1U, 0U, 1U, 0U, 1U, 1U, 1U, 1U
 }};
 
 extern const VlUnpacked<CData/*0:0*/, 128> Vcore_top_contract_test_top__ConstPool__TABLE_ha9220205_0 = {{

@@ -25,6 +25,11 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/exu/regfile.sv" \
   "$ROOT/exu/exe/alu.sv" \
   "$ROOT/exu/exe/mem.sv" \
+  "$ROOT/exu/exe/div/srt4_qselect.sv" \
+  "$ROOT/exu/exe/div/srt4_preprocess.sv" \
+  "$ROOT/exu/exe/div/srt4_otfc.sv" \
+  "$ROOT/exu/exe/div/srt4_core.sv" \
+  "$ROOT/exu/exe/div/divider.sv" \
   "$ROOT/exu/exe/unq.sv" \
   "$ROOT/exu/rob.sv" \
   "$ROOT/csr/csr_file.sv" \

@@ -48,7 +48,7 @@ VM_USER_CLASSES = \
 # User .cpp directories (from .cpp's on Verilator command line)
 VM_USER_DIR = \
   .. \
-  ../.. \
+  ../../.. \
 
 ### Default rules...
 # Include list of all generated classes
@@ -59,7 +59,7 @@ include $(VERILATOR_ROOT)/include/verilated.mk
 ### Executable rules... (from --exe)
 VPATH += $(VM_USER_DIR)
 
-test_mem_issue.o: /mnt/e/nscscc/chiplab/ip/mycpu/test/mem/test_mem_issue.cpp 
+test_mem_issue.o: /mnt/e/nscscc/chiplab/IP/myCPU/test/mem/test_mem_issue.cpp 
 	$(OBJCACHE) $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OPT_FAST)  -c -o $@ $<
 
 ### Link rules... (from --exe)
