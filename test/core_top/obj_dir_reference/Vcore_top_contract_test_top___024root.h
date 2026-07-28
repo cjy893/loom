@@ -279,11 +279,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_5;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_6;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_7;
-        CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_8;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_38;
+        CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_39;
     };
     struct {
-        CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_39;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_44;
         CData/*5:0*/ __VdfgRegularize_h6e95ff9d_0_45;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_52;
@@ -347,9 +346,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         CData/*5:0*/ __VdfgRegularize_h6e95ff9d_0_209;
         CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_210;
         CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_235;
+        CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_236;
     };
     struct {
-        CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_236;
         CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_258;
         CData/*1:0*/ __VdfgRegularize_h6e95ff9d_0_261;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_267;
@@ -413,9 +412,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_uop__v0;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v0;
         CData/*0:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v0;
+        CData/*4:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v0;
     };
     struct {
-        CData/*4:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v0;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v1;
         CData/*4:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v1;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v2;
@@ -479,9 +478,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v34;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v35;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_uop__v1;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v12;
     };
     struct {
-        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v12;
         CData/*0:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v11;
         CData/*4:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_unsafe__v11;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_bsy__v13;
@@ -545,13 +544,23 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v68;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v69;
         CData/*4:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v70;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v70;
     };
     struct {
-        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v70;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_val__v71;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v3;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v4;
         CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v5;
+        CData/*5:0*/ __VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0;
+        CData/*5:0*/ __VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1;
+        CData/*5:0*/ __VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2;
+        CData/*5:0*/ __VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3;
+        CData/*5:0*/ __VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4;
+        CData/*0:0*/ __VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4;
         CData/*0:0*/ __VstlFirstIteration;
         CData/*0:0*/ __VstlPhaseResult;
         CData/*0:0*/ __Vtrigprevexpr___TOP__clk__0;
@@ -602,6 +611,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         SData/*9:0*/ __VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v4;
         VL_OUT(imem_req_addr,31,0);
         VL_INW(imem_resp_insts,127,0,4);
+    };
+    struct {
         VL_OUT(dmem_req_addr,31,0);
         VL_OUT(dmem_req_data,31,0);
         VL_IN(dmem_resp_data,31,0);
@@ -611,8 +622,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         VL_OUT(exception_inst,31,0);
         VL_OUT(exception_cause,31,0);
         VL_OUT(exception_badvaddr,31,0);
-    };
-    struct {
         QData/*63:0*/ core_top_contract_test_top__DOT__dut__DOT__buffer_deq_pc;
         QData/*63:0*/ core_top_contract_test_top__DOT__dut__DOT__buffer_deq_insts;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core_redirect_pc;
@@ -668,6 +677,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__gen_mem__BRA__0__KET____DOT__mem_inst__DOT__exe_imm;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__gen_mem__BRA__0__KET____DOT__mem_inst__DOT__eff_addr;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_29__write_mask;
+    };
+    struct {
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_28__write_mask;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_27__write_mask;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_26__write_mask;
@@ -677,8 +688,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_22__write_mask;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_21__merge_write;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_20__write_mask;
-    };
-    struct {
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_19__merge_write;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_18__write_mask;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT____VlemCall_17__merge_write;
@@ -734,6 +743,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__frontend__DOT__request_pc_q;
         IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__frontend__DOT__redirect_pc_q;
         VlWide<4>/*127:0*/ core_top_contract_test_top__DOT__dut__DOT__frontend__DOT__fetch_pc_q;
+    };
+    struct {
         VlWide<4>/*127:0*/ core_top_contract_test_top__DOT__dut__DOT__frontend__DOT__fetch_insts_q;
         IData/*31:0*/ __Vfunc_core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__store_queue_i__DOT__align_store_data__26__Vfuncout;
         IData/*31:0*/ __Vfunc_core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__store_queue_i__DOT__align_store_data__26__data;
@@ -743,8 +754,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         IData/*31:0*/ __VdfgRegularize_h6e95ff9d_0_43;
         VlWide<13>/*410:0*/ __VdfgRegularize_h6e95ff9d_0_51;
         IData/*29:0*/ __VdfgRegularize_h6e95ff9d_0_60;
-    };
-    struct {
         IData/*31:0*/ __VdfgRegularize_h6e95ff9d_0_70;
         IData/*31:0*/ __VdfgRegularize_h6e95ff9d_0_276;
         VlWide<9>/*258:0*/ __VdfgRegularize_h6e95ff9d_0_283;
@@ -766,6 +775,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_badvaddr__v4;
         IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v3;
         IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v4;
+        IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0;
+        IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1;
+        IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2;
+        IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3;
+        IData/*31:0*/ __VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4;
         VlWide<4>/*127:0*/ __Vtrigprevexpr___TOP__imem_resp_insts__0;
         IData/*31:0*/ __Vtrigprevexpr___TOP__dmem_resp_data__0;
         IData/*31:0*/ __VactIterCount;
@@ -795,6 +809,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         VlWide<241>/*7711:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__store_queue_i__DOT__entries;
         VlWide<31>/*963:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__store_queue_i__DOT__enq_entries;
         VlWide<13>/*410:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__store_queue_i__DOT__req_hold_uop;
+    };
+    struct {
         VlWide<224>/*7167:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__load_queue_i__DOT__entries;
         VlWide<28>/*895:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__load_queue_i__DOT__enq_entries;
         VlWide<13>/*410:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_inst__DOT__load_queue_i__DOT__req_hold_uop;
@@ -809,8 +825,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vcore_top_contract_test_top___024root final {
         VlWide<13>/*410:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__gen_mem__BRA__0__KET____DOT__mem_inst__DOT__exe_uop;
         QData/*63:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__csr_file_inst__DOT__stable_counter_q;
         VlWide<13>/*410:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__xcpt_uop;
-    };
-    struct {
         VlWide<155>/*4931:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__unq_iq__DOT__slot_uop;
         VlWide<26>/*821:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__unq_iq__DOT__dis_uop_updated;
         VlWide<206>/*6575:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__mem_iq__DOT__slot_uop;

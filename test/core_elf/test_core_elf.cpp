@@ -1,5 +1,6 @@
 #include "Vcore_elf_test_top.h"
 #include "elf_image.h"
+#include "la32_ref.h"
 #include "verilated.h"
 
 #include <algorithm>
@@ -36,6 +37,22 @@ struct Options {
     bool stress = false;
     bool trace = false;
     bool allow_exceptions = false;
+    bool differential = false;
+    uint64_t diff_corrupt = 0;
+};
+
+struct StoreEvent {
+    uint64_t order = 0;  // cycle (RTL) or step (reference)
+    uint32_t pc = 0;
+    uint32_t inst = 0;
+    uint32_t address = 0;
+    uint32_t data = 0;   // reference: raw register value; RTL: lane-packed
+    unsigned size = 0;   // bytes
+    unsigned mask = 0;
+    // Reference side only: the address/data producing registers were fed
+    // by an architecturally unstable source (e.g. the counter).
+    bool addr_tainted = false;
+    bool data_tainted = false;
 };
 
 struct CommitRecord {
@@ -92,6 +109,10 @@ void print_usage(const char* executable) {
         "  --dmem-latency N       request-to-response cycles (default 3)\n"
         "  --stress               add deterministic request backpressure\n"
         "  --allow-exceptions     continue through architectural exceptions\n"
+        "  --differential         lockstep-compare commits against la32_ref\n"
+        "  --diff-selftest-corrupt N\n"
+        "                         intentionally desync the reference at the Nth\n"
+        "                         comparison (verifies the checker fires)\n"
         "  --trace                print every commit and memory request\n",
         executable);
 }
@@ -132,6 +153,11 @@ Options parse_options(int argc, char** argv) {
             options.stress = true;
         } else if (argument == "--allow-exceptions") {
             options.allow_exceptions = true;
+        } else if (argument == "--differential") {
+            options.differential = true;
+        } else if (argument == "--diff-selftest-corrupt") {
+            options.diff_corrupt =
+                parse_unsigned(argument, require_value());
         } else if (argument == "--trace") {
             options.trace = true;
         } else if (argument == "--help" || argument == "-h") {
@@ -472,6 +498,67 @@ int main(int argc, char** argv) {
         0x1c000000U, 0x1c000004U, 0x1c000008U, 0x1c010000U,
     };
 
+    // ---------------- differential (lockstep) state ----------------
+    La32Ref reference;
+    std::deque<StoreEvent> reference_stores;
+    std::deque<StoreEvent> rtl_stores;
+    uint64_t diff_compares = 0;
+    uint64_t diff_exceptions = 0;
+    uint64_t diff_forced_irq = 0;
+    uint64_t diff_unstable = 0;
+    // Taint tracking: values derived from architecturally unstable sources
+    // (the free-running counters) propagate through the dataflow; tainted
+    // writebacks/stores compare rd/address only.
+    std::array<bool, 32> ref_gpr_taint{};
+    std::vector<bool> ref_csr_taint(0x4000, false);
+    if (options.differential) {
+        if (!reference.load_elf(options.elf_path, &load_error)) {
+            std::fprintf(stderr, "ERROR: reference: %s\n",
+                         load_error.c_str());
+            return 2;
+        }
+        // Timer clock sources differ; the reference takes timer
+        // interrupts only when the harness mirrors the RTL's boundary.
+        reference.set_timer_irq_external(true);
+        std::printf("differential: la32_ref lockstep enabled\n");
+    }
+
+    // Drain matched store pairs from the two program-order streams.
+    auto drain_stores = [&]() -> bool {
+        while (!reference_stores.empty() && !rtl_stores.empty()) {
+            const StoreEvent& expected = reference_stores.front();
+            const StoreEvent& actual = rtl_stores.front();
+            uint32_t value_mask =
+                expected.size >= 4
+                    ? 0xffffffffU
+                    : ((uint32_t{1} << (expected.size * 8)) - 1);
+            uint32_t rtl_data =
+                (actual.data >> (8 * (actual.address & 3U))) & value_mask;
+            bool mismatch =
+                (!expected.addr_tainted &&
+                 expected.address != actual.address) ||
+                expected.size != actual.size ||
+                (!expected.data_tainted &&
+                 (expected.data & value_mask) != rtl_data);
+            if (mismatch) {
+                char message[256];
+                std::snprintf(
+                    message, sizeof(message),
+                    "store-stream mismatch: ref {addr=0x%08x data=0x%08x "
+                    "size=%u pc=0x%08x} vs rtl {addr=0x%08x data=0x%08x "
+                    "size=%u mask=0x%x pc=0x%08x inst=0x%08x}",
+                    expected.address, expected.data, expected.size,
+                    expected.pc, actual.address, actual.data, actual.size,
+                    actual.mask, actual.pc, actual.inst);
+                failure = message;
+                return false;
+            }
+            reference_stores.pop_front();
+            rtl_stores.pop_front();
+        }
+        return true;
+    };
+
     for (uint64_t cycle = 0; cycle < options.max_cycles; ++cycle) {
         imem.drive(dut, cycle);
         dmem.drive(dut, cycle);
@@ -554,6 +641,107 @@ int main(int argc, char** argv) {
                     "committed instruction does not match the ELF image";
                 break;
             }
+
+            if (options.differential) {
+                ++diff_compares;
+                if (options.diff_corrupt != 0 &&
+                    diff_compares == options.diff_corrupt) {
+                    reference.step();
+                    std::fprintf(
+                        stderr,
+                        "[diff-selftest] corrupted reference at compare "
+                        "#%llu (extra step; reference pc now 0x%08x)\n",
+                        static_cast<unsigned long long>(diff_compares),
+                        reference.pc());
+                }
+                if (reference.pc() != record.pc) {
+                    char message[256];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "differential PC desync: RTL commit pc=0x%08x "
+                        "inst=0x%08x ldst=%u rob=%u, reference pc=0x%08x",
+                        record.pc, record.inst, record.ldst, record.rob_idx,
+                        reference.pc());
+                    failure = message;
+                    break;
+                }
+                La32Ref::StepResult ref_result = reference.step();
+                if (ref_result.exception) {
+                    char message[224];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "reference raised ecode=0x%02x at pc=0x%08x, but "
+                        "RTL committed the instruction (inst=0x%08x)",
+                        ref_result.ecode, record.pc, record.inst);
+                    failure = message;
+                    break;
+                }
+                uint32_t rtl_wdata = packed_word(dut->commit_wdata, lane);
+                bool src1_tainted =
+                    ref_result.src1 < 32 && ref_gpr_taint[ref_result.src1];
+                bool src2_tainted =
+                    ref_result.src2 < 32 && ref_gpr_taint[ref_result.src2];
+                bool result_tainted =
+                    ref_result.data_unstable || src1_tainted ||
+                    src2_tainted ||
+                    (ref_result.is_csr_op &&
+                     ref_csr_taint[ref_result.csr_addr]);
+                if (record.ldst != 0) {
+                    if (!ref_result.gpr_write ||
+                        ref_result.rd != record.ldst) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "GPR-write mismatch at pc=0x%08x inst=0x%08x: "
+                            "RTL writes r%u=0x%08x, reference %s",
+                            record.pc, record.inst, record.ldst, rtl_wdata,
+                            ref_result.gpr_write
+                                ? "writes a different register"
+                                : "writes nothing");
+                        failure = message;
+                        break;
+                    }
+                    if (result_tainted) {
+                        ++diff_unstable;
+                    } else if (ref_result.wdata != rtl_wdata) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "writeback mismatch at pc=0x%08x inst=0x%08x: "
+                            "RTL r%u=0x%08x, reference r%u=0x%08x",
+                            record.pc, record.inst, record.ldst, rtl_wdata,
+                            ref_result.rd, ref_result.wdata);
+                        failure = message;
+                        break;
+                    }
+                } else if (ref_result.gpr_write) {
+                    char message[224];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "reference wrote r%u=0x%08x at pc=0x%08x "
+                        "inst=0x%08x, but RTL commit has ldst=0",
+                        ref_result.rd, ref_result.wdata, record.pc,
+                        record.inst);
+                    failure = message;
+                    break;
+                }
+                // Taint bookkeeping: CSR writes carry GPR taint into the
+                // CSR; a written GPR takes the taint of its inputs.
+                if (ref_result.is_csr_op && ref_result.src1 < 32 &&
+                    src1_tainted)
+                    ref_csr_taint[ref_result.csr_addr] = true;
+                if (ref_result.gpr_write)
+                    ref_gpr_taint[ref_result.rd] = result_tainted;
+                if (ref_result.is_store) {
+                    reference_stores.push_back(
+                        {reference.steps(), record.pc, record.inst,
+                         ref_result.mem_addr, ref_result.mem_data,
+                         ref_result.mem_size, 0, src1_tainted,
+                         src2_tainted});
+                    if (!drain_stores())
+                        break;
+                }
+            }
         }
 
         if (failure.empty() && dut->exception_valid) {
@@ -566,7 +754,82 @@ int main(int argc, char** argv) {
                     dut->exception_pc, dut->exception_inst,
                     dut->exception_cause, dut->exception_badvaddr);
             }
-            if (!options.allow_exceptions) {
+            if (options.differential) {
+                ++diff_exceptions;
+                uint32_t cause = dut->exception_cause;
+                if (reference.pc() != dut->exception_pc) {
+                    char message[224];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "exception boundary desync: RTL exception "
+                        "pc=0x%08x cause=0x%02x, reference pc=0x%08x",
+                        dut->exception_pc, cause, reference.pc());
+                    failure = message;
+                } else if (cause == La32Ref::ECODE_INT) {
+                    // Timer sources differ; if the reference cannot take
+                    // this interrupt on its own (timer interrupt), mirror
+                    // the RTL boundary. Software interrupts (ESTAT.IS via
+                    // CSR write) are architecturally mirrored and are
+                    // taken naturally.
+                    if (!reference.interrupt_pending_now()) {
+                        reference.force_timer_irq();
+                        ++diff_forced_irq;
+                    }
+                    La32Ref::StepResult ref_result = reference.step();
+                    if (!ref_result.exception ||
+                        ref_result.ecode != La32Ref::ECODE_INT) {
+                        failure =
+                            "reference failed to take the interrupt the "
+                            "RTL reported";
+                    } else if (reference.csr_read(La32Ref::CSR_ERA) !=
+                               dut->exception_pc) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "interrupt ERA mismatch: RTL "
+                            "exception_pc=0x%08x, reference ERA=0x%08x",
+                            dut->exception_pc,
+                            reference.csr_read(La32Ref::CSR_ERA));
+                        failure = message;
+                    }
+                } else {
+                    La32Ref::StepResult ref_result = reference.step();
+                    if (!ref_result.exception ||
+                        ref_result.ecode != cause) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "exception mismatch at pc=0x%08x: RTL "
+                            "cause=0x%02x, reference %s", dut->exception_pc,
+                            cause,
+                            ref_result.exception ? "raised a different "
+                                                   "ecode" :
+                                                   "executed the "
+                                                   "instruction");
+                        failure = message;
+                    } else if (ref_result.inst != dut->exception_inst) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "exception inst mismatch at pc=0x%08x: RTL "
+                            "0x%08x, reference 0x%08x",
+                            dut->exception_pc, dut->exception_inst,
+                            ref_result.inst);
+                        failure = message;
+                    } else if (cause == La32Ref::ECODE_ALE &&
+                               reference.csr_read(La32Ref::CSR_BADV) !=
+                                   dut->exception_badvaddr) {
+                        char message[224];
+                        std::snprintf(
+                            message, sizeof(message),
+                            "ALE BADV mismatch at pc=0x%08x: RTL "
+                            "badvaddr=0x%08x, reference BADV=0x%08x",
+                            dut->exception_pc, dut->exception_badvaddr,
+                            reference.csr_read(La32Ref::CSR_BADV));
+                        failure = message;
+                    }
+                }
+            } else if (!options.allow_exceptions) {
                 char message[192];
                 std::snprintf(
                     message, sizeof(message),
@@ -576,6 +839,15 @@ int main(int argc, char** argv) {
                     dut->exception_cause, dut->exception_badvaddr);
                 failure = message;
             }
+        }
+
+        if (options.differential && failure.empty() &&
+            dmem_request_fire && dmem_request.is_store) {
+            rtl_stores.push_back({cycle, dmem_request.pc, dmem_request.inst,
+                                  dmem_request.address, dmem_request.data,
+                                  1U << dmem_request.size,
+                                  dmem_request.mask});
+            drain_stores();
         }
 
         tick(dut);
@@ -654,6 +926,22 @@ int main(int argc, char** argv) {
     if (!passed && failure.empty())
         failure = "maximum cycle limit reached";
 
+    if (passed && options.differential) {
+        drain_stores();
+        if (failure.empty() &&
+            (!reference_stores.empty() || !rtl_stores.empty())) {
+            char message[160];
+            std::snprintf(
+                message, sizeof(message),
+                "store streams not drained at end of simulation "
+                "(reference pending=%zu, RTL pending=%zu)",
+                reference_stores.size(), rtl_stores.size());
+            failure = message;
+        }
+        if (!failure.empty())
+            passed = false;
+    }
+
     if (passed) {
         std::printf(
             "PASS: core_elf commits=%llu redirects=%llu exceptions=%llu "
@@ -664,6 +952,16 @@ int main(int argc, char** argv) {
             static_cast<unsigned long long>(dmem.loads()),
             static_cast<unsigned long long>(dmem.stores()),
             dmem.num_value());
+        if (options.differential) {
+            std::printf(
+                "DIFF-PASS: compares=%llu exceptions=%llu "
+                "forced_irq=%llu unstable_masked=%llu ref_steps=%llu\n",
+                static_cast<unsigned long long>(diff_compares),
+                static_cast<unsigned long long>(diff_exceptions),
+                static_cast<unsigned long long>(diff_forced_irq),
+                static_cast<unsigned long long>(diff_unstable),
+                static_cast<unsigned long long>(reference.steps()));
+        }
     } else {
         std::fprintf(
             stderr,
@@ -679,6 +977,40 @@ int main(int argc, char** argv) {
             static_cast<unsigned long long>(dmem.loads()),
             static_cast<unsigned long long>(dmem.stores()),
             dmem.num_value());
+        if (options.differential) {
+            std::fprintf(
+                stderr,
+                "Reference: pc=0x%08x steps=%llu compares=%llu "
+                "diff_exceptions=%llu forced_irq=%llu\n",
+                reference.pc(),
+                static_cast<unsigned long long>(reference.steps()),
+                static_cast<unsigned long long>(diff_compares),
+                static_cast<unsigned long long>(diff_exceptions),
+                static_cast<unsigned long long>(diff_forced_irq));
+            if (!reference_stores.empty() || !rtl_stores.empty()) {
+                std::fprintf(
+                    stderr,
+                    "Pending stores: reference=%zu RTL=%zu\n",
+                    reference_stores.size(), rtl_stores.size());
+                if (!reference_stores.empty()) {
+                    const StoreEvent& event = reference_stores.front();
+                    std::fprintf(
+                        stderr,
+                        "  ref oldest: pc=%08x addr=%08x data=%08x "
+                        "size=%u\n",
+                        event.pc, event.address, event.data, event.size);
+                }
+                if (!rtl_stores.empty()) {
+                    const StoreEvent& event = rtl_stores.front();
+                    std::fprintf(
+                        stderr,
+                        "  rtl oldest: pc=%08x inst=%08x addr=%08x "
+                        "data=%08x size=%u mask=%x\n",
+                        event.pc, event.inst, event.address, event.data,
+                        event.size, event.mask);
+                }
+            }
+        }
         auto print_blocked_uop =
             [&](const char* label, uint32_t pc, unsigned busy,
                 unsigned psrc1, unsigned psrc2, unsigned pdst,

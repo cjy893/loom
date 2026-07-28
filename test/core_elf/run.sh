@@ -19,7 +19,8 @@ verilator --cc --build -j 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module core_elf_test_top \
   --exe "$TEST_DIR/test_core_elf.cpp" "$TEST_DIR/elf_image.cpp" \
-  -CFLAGS "-std=c++17 -I$TEST_DIR" \
+  "$ROOT/test/common/la32_ref.cpp" \
+  -CFLAGS "-std=c++17 -I$TEST_DIR -I$ROOT/test/common" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \

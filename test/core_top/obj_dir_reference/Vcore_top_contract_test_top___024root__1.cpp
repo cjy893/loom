@@ -35,6 +35,8 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
     core_top_contract_test_top__DOT__dut__DOT__core__DOT__dispatch_inst__DOT__alu_slot = 0;
     IData/*31:0*/ core_top_contract_test_top__DOT__dut__DOT__core__DOT__dispatch_inst__DOT__unq_slot;
     core_top_contract_test_top__DOT__dut__DOT__core__DOT__dispatch_inst__DOT__unq_slot = 0;
+    CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_8;
+    __VdfgRegularize_h6e95ff9d_0_8 = 0;
     VlWide<5>/*157:0*/ __VdfgRegularize_h6e95ff9d_0_144;
     VL_ZERO_W(158, __VdfgRegularize_h6e95ff9d_0_144);
     CData/*3:0*/ __VdfgRegularize_h6e95ff9d_0_204;
@@ -434,12 +436,10 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                   | (0x0000003fU & 
                                      (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__gen_alu__BRA__0__KET____DOT__alu_inst__DOT__exe_uop[4U] 
                                       >> 9U)))));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8 = (IData)(
-                                                       ((0U 
-                                                         == 
-                                                         (0x18000000U 
-                                                          & vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[0U])) 
-                                                        & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_load_wb_valid)));
+    __VdfgRegularize_h6e95ff9d_0_8 = (IData)(((0U == 
+                                               (0x18000000U 
+                                                & vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[0U])) 
+                                              & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__lsu_load_wb_valid)));
     core_top_contract_test_top__DOT__dut__DOT__core__DOT__rn2_uops_raw[0U] 
         = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rename__DOT__rn2_uops_q[0U];
     core_top_contract_test_top__DOT__dut__DOT__core__DOT__rn2_uops_raw[1U] 
@@ -1830,7 +1830,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
     core_top_contract_test_top__DOT__dut__DOT__core__DOT__rn2_uops_raw[25U] 
         = (0x003fffffU & ((0x000003ffU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rename__DOT__rn2_uops_q[25U]) 
                           | (0x003ffc00U & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rename__DOT__rn2_uops_q[25U])));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_164 = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_164 = ((IData)(__VdfgRegularize_h6e95ff9d_0_8) 
                                                   & ((0U 
                                                       != 
                                                       (0x0000003fU 
@@ -1847,7 +1847,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                         (0x0000003fU 
                                                          & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                             >> 9U)))));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_168 = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_168 = ((IData)(__VdfgRegularize_h6e95ff9d_0_8) 
                                                   & ((0U 
                                                       != 
                                                       (0x0000003fU 
@@ -1872,7 +1872,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_175 = ((0U 
                                                    != 
                                                    (0x0000003fU 
@@ -1885,7 +1885,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_178 = ((0U 
                                                    != 
                                                    (0x0000003fU 
@@ -1898,7 +1898,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_181 = ((0U 
                                                    != 
                                                    (0x0000003fU 
@@ -1915,7 +1915,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_184 = ((0U 
                                                    != 
                                                    (0x0000003fU 
@@ -1932,8 +1932,8 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_187 = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_187 = ((IData)(__VdfgRegularize_h6e95ff9d_0_8) 
                                                   & ((0U 
                                                       != 
                                                       (0x0000003fU 
@@ -1962,7 +1962,7 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_161 = ((0U 
                                                    != 
                                                    (0x0000003fU 
@@ -1975,10 +1975,10 @@ void Vcore_top_contract_test_top___024root___ico_comb__TOP__1(Vcore_top_contract
                                                       (0x0000003fU 
                                                        & (vlSelfRef.__VdfgRegularize_h6e95ff9d_0_51[4U] 
                                                           >> 9U))) 
-                                                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8)));
+                                                     & (IData)(__VdfgRegularize_h6e95ff9d_0_8)));
     vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en 
         = ((((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4) 
-             << 4U) | (((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
+             << 4U) | (((IData)(__VdfgRegularize_h6e95ff9d_0_8) 
                         << 3U) | ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_5) 
                                   << 2U))) | (((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_6) 
                                                << 1U) 
@@ -3984,10 +3984,235 @@ bool Vcore_top_contract_test_top___024root___trigger_anySet__act(const VlUnpacke
     return (0U);
 }
 
-extern const VlWide<13>/*415:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h9a1659ba_0;
-
 void Vcore_top_contract_test_top___024root___nba_sequent__TOP__0(Vcore_top_contract_test_top___024root* vlSelf) {
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vcore_top_contract_test_top___024root___nba_sequent__TOP__0\n"); );
+    Vcore_top_contract_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
+    auto& vlSelfRef = std::ref(*vlSelf).get();
+    // Body
+    if (vlSelfRef.rst_n) {
+        if (VL_UNLIKELY((((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                            & ((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                               >> 1U)) & (0U != (0x0000003fU 
+                                                 & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr))) 
+                          & ((0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr) 
+                             == (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 6U))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 0 and 1 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY((((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                            & ((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                               >> 2U)) & (0U != (0x0000003fU 
+                                                 & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr))) 
+                          & ((0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr) 
+                             == (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x0cU))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 0 and 2 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY((((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                            & ((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                               >> 3U)) & (0U != (0x0000003fU 
+                                                 & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr))) 
+                          & ((0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr) 
+                             == (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x12U))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 0 and 3 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY((((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                            & ((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+                               >> 4U)) & (0U != (0x0000003fU 
+                                                 & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr))) 
+                          & ((0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr) 
+                             == (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x18U))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 0 and 4 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((6U == (6U & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 6U))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 6U)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x0cU))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 1 and 2 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 6U)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((0x0aU == (0x0aU 
+                                             & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 6U))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 6U)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x12U))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 1 and 3 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 6U)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((0x12U == (0x12U 
+                                             & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 6U))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 6U)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x18U))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 1 and 4 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 6U)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((0x0cU == (0x0cU 
+                                             & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x0cU))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 0x0cU)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x12U))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 2 and 3 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 0x0cU)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((0x14U == (0x14U 
+                                             & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x0cU))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 0x0cU)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x18U))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 2 and 4 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 0x0cU)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+        if (VL_UNLIKELY(((IData)(((0x18U == (0x18U 
+                                             & (IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en))) 
+                                  & ((0U != (0x0000003fU 
+                                             & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                >> 0x12U))) 
+                                     & ((0x0000003fU 
+                                         & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                            >> 0x12U)) 
+                                        == (0x0000003fU 
+                                            & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                               >> 0x18U))))))))) {
+            VL_WRITEF_NX("[%0t] %%Fatal: loom_core.sv:811: Assertion failed in %m: Regfile write port conflict: ports 3 and 4 both write p%0d\n",4, 'M',vlSymsp->name(),"core_top_contract_test_top.dut.core.unnamedblk17.unnamedblk18", 'T',-12
+                         , '#',64,VL_TIME_UNITED_Q(1)
+                         , '#',6,(0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                                 >> 0x12U)));
+            VL_STOP_MT("/mnt/e/nscscc/chiplab/IP/myCPU/exu/loom_core.sv", 811, "", false);
+        }
+    }
+    vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 = 0U;
+    vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 = 0U;
+    vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 = 0U;
+    vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 = 0U;
+    vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 = 0U;
+    if (((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+         & (0U != (0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr)))) {
+        if ((0x2fU >= (0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr))) {
+            vlSelfRef.__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 
+                = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_data[0U];
+            vlSelfRef.__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 
+                = (0x0000003fU & vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr);
+            vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 = 1U;
+        }
+    }
+    if ((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+          >> 1U) & (0U != (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                          >> 6U))))) {
+        if ((0x2fU >= (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                      >> 6U)))) {
+            vlSelfRef.__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 
+                = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_data[1U];
+            vlSelfRef.__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 
+                = (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                  >> 6U));
+            vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 = 1U;
+        }
+    }
+    if ((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+          >> 2U) & (0U != (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                          >> 0x0cU))))) {
+        if ((0x2fU >= (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                      >> 0x0cU)))) {
+            vlSelfRef.__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 
+                = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_data[2U];
+            vlSelfRef.__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 
+                = (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                  >> 0x0cU));
+            vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 = 1U;
+        }
+    }
+    if ((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+          >> 3U) & (0U != (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                          >> 0x12U))))) {
+        if ((0x2fU >= (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                      >> 0x12U)))) {
+            vlSelfRef.__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 
+                = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_data[3U];
+            vlSelfRef.__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 
+                = (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                  >> 0x12U));
+            vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 = 1U;
+        }
+    }
+    if ((((IData)(vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_en) 
+          >> 4U) & (0U != (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                          >> 0x18U))))) {
+        if ((0x2fU >= (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                      >> 0x18U)))) {
+            vlSelfRef.__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 
+                = vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_data[4U];
+            vlSelfRef.__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 
+                = (0x0000003fU & (vlSelfRef.core_top_contract_test_top__DOT__dut__DOT__core__DOT__rf_write_addr 
+                                  >> 0x18U));
+            vlSelfRef.__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 = 1U;
+        }
+    }
+}
+
+extern const VlWide<13>/*415:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h9a1659ba_0;
+
+void Vcore_top_contract_test_top___024root___nba_sequent__TOP__1(Vcore_top_contract_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vcore_top_contract_test_top___024root___nba_sequent__TOP__1\n"); );
     Vcore_top_contract_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Locals

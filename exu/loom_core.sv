@@ -802,6 +802,20 @@ module loom_core #(
     assign rf_write_addr[ALU_WIDTH+1] = unq_res.uop.pdst;
     assign rf_write_data[ALU_WIDTH+1] = unq_res.data;
 
+    `ifndef SYNTHESIS
+        always_ff @(posedge clk) begin
+            if(rst_n) begin
+                for (int i = 0; i < NUM_REGF_WRITES; i++) begin
+                    for(int j = i+1; j < NUM_REGF_WRITES; j++) begin
+                        if(rf_write_en[i] && rf_write_en[j] && rf_write_addr[i] != '0 && rf_write_addr[i] == rf_write_addr[j]) begin
+                            $fatal(1, "Regfile write port conflict: ports %0d and %0d both write p%0d", i, j, rf_write_addr[i]);
+                        end
+                    end
+                end
+            end
+        end
+    `endif
+
     // ================================================================
     // ROB
     // ================================================================

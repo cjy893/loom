@@ -569,7 +569,6 @@ VL_ATTR_COLD void Vcore_top_contract_test_top___024root___ctor_var_reset(Vcore_t
     vlSelf->__VdfgRegularize_h6e95ff9d_0_5 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_6 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_7 = 0;
-    vlSelf->__VdfgRegularize_h6e95ff9d_0_8 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_38 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_39 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_43 = 0;
@@ -892,6 +891,21 @@ VL_ATTR_COLD void Vcore_top_contract_test_top___024root___ctor_var_reset(Vcore_t
     vlSelf->__VdlyLsb__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v4 = 0;
     vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v4 = 0;
     vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__rob_inst__DOT__rob_exc_cause__v5 = 0;
+    vlSelf->__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 = 0;
+    vlSelf->__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 = 0;
+    vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v0 = 0;
+    vlSelf->__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 = 0;
+    vlSelf->__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 = 0;
+    vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v1 = 0;
+    vlSelf->__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 = 0;
+    vlSelf->__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 = 0;
+    vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v2 = 0;
+    vlSelf->__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 = 0;
+    vlSelf->__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 = 0;
+    vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v3 = 0;
+    vlSelf->__VdlyVal__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 = 0;
+    vlSelf->__VdlyDim0__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 = 0;
+    vlSelf->__VdlySet__core_top_contract_test_top__DOT__dut__DOT__core__DOT__iregfile__DOT__rf__v4 = 0;
     for (int __Vi0 = 0; __Vi0 < 1; ++__Vi0) {
         vlSelf->__VstlTriggered[__Vi0] = 0;
     }

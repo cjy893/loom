@@ -16,8 +16,8 @@ extern const VlWide<241>/*7711:0*/ Vcore_top_contract_test_top__ConstPool__CONST
 extern const VlWide<13>/*415:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h9a1659ba_0;
 extern const VlWide<32>/*1023:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hd6b7ba52_0;
 
-void Vcore_top_contract_test_top___024root___nba_sequent__TOP__1(Vcore_top_contract_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vcore_top_contract_test_top___024root___nba_sequent__TOP__1\n"); );
+void Vcore_top_contract_test_top___024root___nba_sequent__TOP__2(Vcore_top_contract_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vcore_top_contract_test_top___024root___nba_sequent__TOP__2\n"); );
     Vcore_top_contract_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Locals
