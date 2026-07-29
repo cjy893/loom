@@ -141,6 +141,12 @@ module csr_file #(
             14'h040,
             14'h041,
             14'h043: write_mask = 32'hffff_ffff;
+            14'h0b1,
+            14'h0b2,
+            14'h0c0,
+            14'h0c1,
+            14'h0c2,
+            14'h0c3: write_mask = 32'h0000_0000;
             default: write_mask = 32'h0000_0000;
         endcase
     endfunction
@@ -314,7 +320,7 @@ module csr_file #(
                 pending_q <= 1'b0;
                 resp_valid_q <= 1'b0;
 
-                if (pending_cmd_q != CSR_READ) begin
+                if (pending_cmd_q != CSR_READ && pending_cmd_q != CSR_CPUCFG) begin
                     case (pending_addr_q)
                         14'h000:
                             crmd_q <= merge_write(

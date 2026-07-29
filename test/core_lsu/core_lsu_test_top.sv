@@ -34,6 +34,8 @@ module core_lsu_test_top (
     output logic                         stq_empty,
     output logic                         br_mispredict,
     output logic [1:0]                   rn2_mask,
+    output logic [1:0]                   rn2_uses_ldq,
+    output logic [1:0][4:0]              rn2_ldst,
     output logic [1:0]                   dis_fire,
     output logic                         lsu_dispatch_ready,
 
@@ -117,6 +119,8 @@ module core_lsu_test_top (
     assign commit_valids = core_commit.arch_valids;
 
     for (genvar w = 0; w < 2; w++) begin : gen_commit_debug
+        assign rn2_uses_ldq[w] = core.rn2_uops[w].uses_ldq;
+        assign rn2_ldst[w] = core.rn2_uops[w].ldst;
         assign commit_ldst[w] = core_commit.uops[w].ldst;
         assign commit_uses_stq[w] = core_commit.uops[w].uses_stq;
         assign commit_stq_idx[w] = core_commit.uops[w].stq_idx;

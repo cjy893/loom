@@ -19,7 +19,7 @@ module decode(
         INSTR_OP,           // R-type operator (add.w, sub.w, mul.w...)
         INSTR_USHIFT,       // variable shift (sll.w, srl.w, sra.w)
         INSTR_I20,          // lu12i.w, lu32i.d, pcaddu12i
-        INSTR_CSR,          // csrrd, csrwr, csrxchg
+        INSTR_CSR,          // csrrd, csrwr, csrxchg, cpucfg
         INSTR_CACHE,        // cacop, tlbsrch, tlbrd, tlbwr, tlbfill, ertn, idle, invtlb, dbar, ibar
         INSTR_RDCNT,        // rdcntvl.w, rdcntvh.w
         INSTR_EXCEPTION,    // syscall, break
@@ -58,6 +58,7 @@ module decode(
             32'b00111000011100101_???????????????: instr_type = INSTR_CACHE;
             // RDCNT                      : 000000_000000_00000110_xxxxxxxxxx
             32'b000000000000000001100_???????????: instr_type = INSTR_RDCNT;
+            32'b0000000000000000011011_??????????: instr_type = INSTR_CSR;
             default:                              instr_type = INSTR_ILLEGAL;
         endcase
     end
@@ -522,7 +523,19 @@ module decode(
             // CSR : inst[31:24] == 00000100
             // ============================================================
             INSTR_CSR: begin
-                if(status_prv != 2'b00) begin
+                if(inst[31:15] == 17'b0 && inst[14:10] == 5'h1b) begin
+                    uop.iq_type = IQ_UNQ;
+                    uop.fu_code[FC_CSR] = 1'b1;
+                    uop.is_unique = 1'b1;
+                    uop.flush_on_commit = 1'b1;
+                    uop.csr_cmd = CSR_CPUCFG;
+                    uop.ldst = rd;
+                    uop.dst_rtype = RT_FIX;
+                    uop.lsrc1 = rj;
+                    uop.lsrc1_rtype = RT_FIX;
+                    uop.imm_sel = IMM_U14;
+                    uop.imm_packed = {12'b0, 14'h00b0};
+                end else if(status_prv != 2'b00) begin
                     uop.exception = 1'b1;
                     uop.exc_cause = ECODE_IPE;
                 end else begin

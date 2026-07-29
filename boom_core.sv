@@ -129,6 +129,8 @@ module boom_core #(
     logic [CORE_WIDTH-1:0][3:0]  rn2_iq_type_q;
     logic [CORE_WIDTH-1:0]       rn2_exception_q;
     logic [CORE_WIDTH-1:0]       rn2_unique_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_ldq_q;
+    logic [CORE_WIDTH-1:0]       rn2_uses_stq_q;
     logic [CORE_WIDTH-1:0][31:0] rn2_pc_q;
 
     logic                        csr_req_ready_w;
@@ -146,6 +148,18 @@ module boom_core #(
     logic [31:0]                 csr_ertn_target_w;
     logic [63:0]                 csr_counter_value_w;
     logic [31:0]                 csr_tid_value_w;
+
+    logic [CORE_WIDTH-1:0]             rob_enq_valids;
+    uop_t [CORE_WIDTH-1:0]             rob_enq_uops;
+    logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
+    logic [ROB_ADDR_SZ-1:0]            rob_head_idx_w;
+    exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
+    commit_exception_signals_t          rob_com_xcpt_w;
+    commit_exception_signals_t          rob_flush_w;
+    logic                               rob_rollback_w;
+    logic                               rob_flush_frontend_w;
+    logic                               rob_ready_w;
+    logic [31:0]                        rob_interrupt_next_pc_w;
 
     // The frontend owns the packet until every valid lane has entered Decode.
     // Only a completion mask is retained here; instruction data stays at the
@@ -382,12 +396,16 @@ module boom_core #(
             rn2_iq_type_q <= '0;
             rn2_exception_q <= '0;
             rn2_unique_q <= '0;
+            rn2_uses_ldq_q <= '0;
+            rn2_uses_stq_q <= '0;
             rn2_pc_q <= '0;
         end else if (dis_ready_w) begin
             for (int w = 0; w < CORE_WIDTH; w++) begin
                 rn2_iq_type_q[w] <= dec_uops[w].iq_type;
                 rn2_exception_q[w] <= dec_uops[w].exception;
                 rn2_unique_q[w] <= dec_uops[w].is_unique;
+                rn2_uses_ldq_q[w] <= dec_uops[w].uses_ldq;
+                rn2_uses_stq_q[w] <= dec_uops[w].uses_stq;
                 rn2_pc_q[w] <= dec_uops[w].pc[31:0];
             end
         end else begin
@@ -396,6 +414,8 @@ module boom_core #(
                     rn2_iq_type_q[w] <= '0;
                     rn2_exception_q[w] <= 1'b0;
                     rn2_unique_q[w] <= 1'b0;
+                    rn2_uses_ldq_q[w] <= 1'b0;
+                    rn2_uses_stq_q[w] <= 1'b0;
                     rn2_pc_q[w] <= '0;
                 end
             end
@@ -613,8 +633,8 @@ module boom_core #(
 
         alu alu_inst (.clk(clk), .rst_n(rst_n),
             .iss_valid(alu_iss_valid[i]), .iss_uop(alu_iss_uop[i]),
-            .src1_data(bypass_mux(alu_iss_uop[i].psrc1, rf_read_data[i*2+0])),
-            .src2_data(bypass_mux(alu_iss_uop[i].psrc2, rf_read_data[i*2+1])),
+            .src1_data(bypass_mux(alu_iss_uop[i].psrc1, rf_read_data[i*2+0], bp_valid, bp_pdst, bp_data)),
+            .src2_data(bypass_mux(alu_iss_uop[i].psrc2, rf_read_data[i*2+1], bp_valid, bp_pdst, bp_data)),
             .imm_data(alu_imm_data),
             .res_valid(alu_res_valid[i]), .res(alu_res[i]),
             .wakeup_valid(alu_wakeup_valid[i]), .wakeup(alu_wakeup[i]),
@@ -644,9 +664,11 @@ module boom_core #(
         assign rf_read_addr[MEM_RF_BASE + i*2 + 1] = mem_iss_uop[i].psrc2;
 
         assign mem_src1_data = bypass_mux(mem_iss_uop[i].psrc1,
-                                         rf_read_data[MEM_RF_BASE + i*2]);
+                                         rf_read_data[MEM_RF_BASE + i*2],
+                                         bp_valid, bp_pdst, bp_data);
         assign mem_src2_data = bypass_mux(mem_iss_uop[i].psrc2,
-                                         rf_read_data[MEM_RF_BASE + i*2 + 1]);
+                                         rf_read_data[MEM_RF_BASE + i*2 + 1],
+                                         bp_valid, bp_pdst, bp_data);
         assign mem_imm_data = expand_imm(mem_iss_uop[i]);
 
         mem #(.HAS_AGEN(i == 0), .HAS_DGEN(i == 0)) mem_inst (
@@ -679,6 +701,8 @@ module boom_core #(
         .rst_n,
         .dis_valid(rn2_mask),
         .dis_uops(rn2_uops),
+        .dis_uses_ldq(rn2_uses_ldq_q),
+        .dis_uses_stq(rn2_uses_stq_q),
         .dis_lsq_ready(lsu_dis_ready),
         .dis_ldq_idx(lsu_dis_ldq_idx),
         .dis_stq_idx(lsu_dis_stq_idx),
@@ -730,8 +754,8 @@ module boom_core #(
     unq unq_inst (.clk(clk), .rst_n(rst_n),
         .iss_valid(unq_iss_valid), .iss_uop(unq_iss_uop),
         .iss_ready(unq_exec_ready),
-        .src1_data(bypass_mux(unq_iss_uop.psrc1, rf_read_data[UNQ_RF_BASE])),
-        .src2_data(bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE + 1])),
+        .src1_data(bypass_mux(unq_iss_uop.psrc1, rf_read_data[UNQ_RF_BASE], bp_valid, bp_pdst, bp_data)),
+        .src2_data(bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE + 1], bp_valid, bp_pdst, bp_data)),
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
         .csr_rdata(csr_rdata_w),
         .counter_value(csr_counter_value_w),
@@ -794,13 +818,16 @@ module boom_core #(
 
     // bypass 命中判断函数：prs 匹配任意 bypass 源 → 返回旁路数据，否则返回 regfile 数据
     function automatic logic [31:0] bypass_mux(
-        logic [$clog2(PHYSICAL_REGS)-1:0] prs,
-        logic [31:0] rf_data
+        input logic [$clog2(PHYSICAL_REGS)-1:0] prs,
+        input logic [31:0] rf_data,
+        input logic [NUM_BYPASS-1:0] valid,
+        input logic [NUM_BYPASS-1:0][$clog2(PHYSICAL_REGS)-1:0] pdst,
+        input logic [NUM_BYPASS-1:0][31:0] data
     );
         bypass_mux = rf_data;
         for (int j = NUM_BYPASS-1; j >= 0; j--) begin  // 高优先级源靠后覆盖
-            if (bp_valid[j] && (bp_pdst[j] == prs) && (prs != '0))
-                bypass_mux = bp_data[j];
+            if (valid[j] && (pdst[j] == prs) && (prs != '0))
+                bypass_mux = data[j];
         end
     endfunction
 
@@ -819,20 +846,23 @@ module boom_core #(
     assign rf_write_addr[ALU_WIDTH+1] = unq_res.uop.pdst;
     assign rf_write_data[ALU_WIDTH+1] = unq_res.data;
 
+    `ifndef SYNTHESIS
+        always_ff @(posedge clk) begin
+            if(rst_n) begin
+                for (int i = 0; i < NUM_REGF_WRITES; i++) begin
+                    for(int j = i+1; j < NUM_REGF_WRITES; j++) begin
+                        if(rf_write_en[i] && rf_write_en[j] && rf_write_addr[i] != '0 && rf_write_addr[i] == rf_write_addr[j]) begin
+                            $fatal(1, "Regfile write port conflict: ports %0d and %0d both write p%0d", i, j, rf_write_addr[i]);
+                        end
+                    end
+                end
+            end
+        end
+    `endif
+
     // ================================================================
     // ROB
     // ================================================================
-    logic [CORE_WIDTH-1:0]             rob_enq_valids;
-    uop_t [CORE_WIDTH-1:0]             rob_enq_uops;
-    logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
-    logic [ROB_ADDR_SZ-1:0]            rob_head_idx_w;
-    exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
-    commit_exception_signals_t          rob_com_xcpt_w;
-    commit_exception_signals_t          rob_flush_w;
-    logic                               rob_rollback_w;
-    logic                               rob_flush_frontend_w;
-    logic                               rob_ready_w;
-    logic [31:0]                        rob_interrupt_next_pc_w;
 
     assign rob_enq_valids = dis_fire;
     assign rob_enq_uops = dis_uops_w;

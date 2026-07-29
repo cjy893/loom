@@ -10,6 +10,8 @@ module dispatch_test_top (
     input  logic [5:0] rob_idx_1,
     input  logic       exception_0,
     input  logic       exception_1,
+    input  logic       dispatch_enable,
+    input  logic [1:0] lane_ready,
     input  logic [1:0] iq_mem_ready,
     input  logic [1:0] iq_alu_ready,
     input  logic [1:0] iq_unq_ready,
@@ -33,20 +35,32 @@ module dispatch_test_top (
     uop_t [1:0] iq_alu_dis_uop;
     uop_t [1:0] iq_unq_dis_uop;
     uop_t [1:0] dis_uops;
+    logic [1:0][3:0] rn2_iq_type;
+    logic [1:0] rn2_exception;
 
     always_comb begin
         rn2_uops = '0;
+        rn2_iq_type = '0;
+        rn2_exception = '0;
         rn2_uops[0].iq_type = iq_type_0;
         rn2_uops[0].rob_idx = rob_idx_0;
         rn2_uops[0].exception = exception_0;
+        rn2_iq_type[0] = iq_type_0;
+        rn2_exception[0] = exception_0;
         rn2_uops[1].iq_type = iq_type_1;
         rn2_uops[1].rob_idx = rob_idx_1;
         rn2_uops[1].exception = exception_1;
+        rn2_iq_type[1] = iq_type_1;
+        rn2_exception[1] = exception_1;
     end
 
     dispatch #(.CORE_WIDTH(2)) dut (
         .rn2_mask,
         .rn2_uops,
+        .dispatch_enable,
+        .lane_ready,
+        .rn2_iq_type,
+        .rn2_exception,
         .iq_mem_ready,
         .iq_alu_ready,
         .iq_unq_ready,

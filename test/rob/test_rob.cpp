@@ -4,6 +4,7 @@
 
 static void clear_inputs(Vrob_test_top* dut) {
     dut->enq_valid = 0;
+    dut->enq_partial_stall = 0;
     dut->enq_rob_idx_0 = 0;
     dut->enq_rob_idx_1 = 0;
     dut->enq_ldst_0 = 0;
@@ -80,6 +81,39 @@ int main(int argc, char** argv) {
     expect_eq("younger commit identity", dut->commit_ldst_1, 11);
     eval_cycle(dut);
     expect_eq("row retired", dut->empty, 1);
+
+    // A partially filled tail row remains owned by the pending packet. Bank 0
+    // may commit, but the head must wait until the delayed bank 1 arrives.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 1;
+    dut->enq_partial_stall = 1;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_ldst_0 = 28;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("partial enqueue reserves bank 1", dut->tail_idx, 1);
+    expect_eq("partial row bank 0 can commit", dut->commit_valid, 1);
+
+    eval_cycle(dut);
+    expect_eq("partial row head waits after bank 0 commit", dut->head_idx, 0);
+    expect_eq("partial row tail remains at bank 1", dut->tail_idx, 1);
+    expect_eq("reserved empty bank does not commit", dut->commit_valid, 0);
+    eval_cycle(dut);
+    expect_eq("partial row head remains stable while delayed", dut->head_idx, 0);
+
+    dut->enq_valid = 2;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_1 = 29;
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("delayed bank 1 completes the row", dut->tail_idx, 2);
+    expect_eq("delayed bank 1 remains committable", dut->commit_valid, 2);
+    expect_eq("delayed bank 1 identity", dut->commit_ldst_1, 29);
+    eval_cycle(dut);
+    expect_eq("partial row retires after delayed bank", dut->empty, 1);
 
     // The external trace has one GPR write port. Preserve both writes by
     // retiring two ready GPR-writing entries in program order over two cycles.

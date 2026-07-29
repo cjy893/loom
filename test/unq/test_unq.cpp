@@ -140,8 +140,11 @@ int main(int argc, char** argv) {
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_DIV_W, 5, uint32_t(-100), 7);
-    unsigned div_cycles = wait_for_result(dut, 8);
-    expect_eq("divide latency after issue", div_cycles, 5);
+    unsigned div_cycles = wait_for_result(dut, 32);
+    // The SRT-4 divider has operand-dependent latency: one request cycle,
+    // up to 17 radix-4 iterations, finalize and the response cycle.
+    expect_true("divide latency after issue",
+                div_cycles >= 2 && div_cycles <= 32);
     expect_eq("signed divide quotient", dut->res_data, uint32_t(-14));
     expect_eq("divide identity", dut->res_rob_idx, 5);
     finish_result(dut);
@@ -166,23 +169,23 @@ int main(int argc, char** argv) {
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_DIV_WU, 12, 0xffffff00, 16);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("unsigned divide quotient", dut->res_data, 0x0ffffff0);
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_MOD_W, 13, uint32_t(-100), 7);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("signed remainder follows dividend sign",
               dut->res_data, uint32_t(-2));
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_MOD_WU, 14, 0xffffff05, 16);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("unsigned remainder", dut->res_data, 5);
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_DIV_W, 15, 0x80000000, 0xffffffff);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("signed divide overflow wraps to INT_MIN",
               dut->res_data, 0x80000000);
     finish_result(dut);
@@ -190,13 +193,13 @@ int main(int argc, char** argv) {
     // LoongArch permits any result for a zero divisor, but no exception.
     // Keep the implementation deterministic: quotient=-1, remainder=dividend.
     start_op(dut, OP_DIV, MULDIV_DIV_WU, 16, 0x12345678, 0);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("zero-divisor quotient is deterministic",
               dut->res_data, 0xffffffff);
     finish_result(dut);
 
     start_op(dut, OP_DIV, MULDIV_MOD_W, 17, 0x87654321, 0);
-    wait_for_result(dut, 8);
+    wait_for_result(dut, 32);
     expect_eq("zero-divisor remainder preserves dividend",
               dut->res_data, 0x87654321);
     finish_result(dut);

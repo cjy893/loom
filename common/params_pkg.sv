@@ -106,6 +106,14 @@ package loom_params;
 
     localparam int NBANKS = (FETCH_WIDTH > 2) ? 2 : 1;
     localparam int BANK_BYTES = FETCH_WIDTH * 4 / NBANKS;
+    localparam int BANK_WIDTH = FETCH_WIDTH / NBANKS;
+
+    localparam int BIM_SETS = 2048;
+    localparam int BIM_COLS = 8;
+
+    localparam int BTB_SETS = 32;
+    localparam int BTB_WAYS = 2;
+    localparam int BTB_TAG_SZ = 22;
 
     localparam int PG_LEVELS = 2;
     localparam int PMP_ENTRIES = 8;

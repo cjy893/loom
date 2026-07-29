@@ -110,14 +110,14 @@ module unq(
         if(!rst_n) busy_cnt <= '0;
         else if(kill || pipe_br_killed) busy_cnt <= '0;
         else if(issue_fire) busy_cnt <= '0;
-        else if(state == S_MUL || state == S_DIV) busy_cnt <= busy_cnt + 1;
+        else if(state == S_MUL) busy_cnt <= busy_cnt + 1;
         else busy_cnt <= '0;
     end
 
-    assign busy_done = (state == S_MUL && busy_cnt == IMUL_LATENCY - 1) || (state == S_DIV && busy_cnt >= 5'd5);
+    assign busy_done = (state == S_MUL && busy_cnt == IMUL_LATENCY - 1) || (state == S_DIV && div_resp_valid);
 
     assign csr_req_valid = issue_fire && iss_uop.fu_code[FC_CSR];
-    assign csr_addr = iss_uop.imm_packed[13:0];
+    assign csr_addr = (iss_uop.csr_cmd == CSR_CPUCFG) ? (src1_data[13:0] + iss_uop.imm_packed[13:0]) :iss_uop.imm_packed[13:0];
     assign csr_cmd = iss_uop.csr_cmd;
     assign csr_wdata = src1_data;
     assign csr_wmask = (iss_uop.csr_cmd == CSR_XCHG) ? src2_data : 32'hffffffff;
@@ -141,42 +141,33 @@ module unq(
         endcase
     end
 
-    logic [31:0] div_signed_quotient;
-    logic [31:0] div_signed_remainder;
-    logic [31:0] div_unsigned_quotient;
-    logic [31:0] div_unsigned_remainder;
-    logic [31:0] div_result;
+    logic div_resp_valid;
+    logic div_resp_ready;
+    logic [31:0] div_resp_data;
+    logic div_req_valid;
+    logic div_req_ready;
+    logic div_req_signed;
+    logic div_req_remainder;
 
-    always_comb begin
-        if(pipe_src2 == '0) begin
-            // The ISA permits any result and no exception for a zero divisor.
-            div_signed_quotient = '1;
-            div_unsigned_quotient = '1;
-            div_signed_remainder = pipe_src1;
-            div_unsigned_remainder = pipe_src1;
-        end else begin
-            if(pipe_src1 == 32'h80000000 && pipe_src2 == 32'hffffffff) begin
-                div_signed_quotient = 32'h80000000;
-                div_signed_remainder = '0;
-            end else begin
-                div_signed_quotient =
-                    $signed(pipe_src1) / $signed(pipe_src2);
-                div_signed_remainder =
-                    $signed(pipe_src1) % $signed(pipe_src2);
-            end
 
-            div_unsigned_quotient = pipe_src1 / pipe_src2;
-            div_unsigned_remainder = pipe_src1 % pipe_src2;
-        end
+    divider divider_i(
+        .clk, .rst_n,
+        .req_valid(div_req_valid),
+        .req_ready(div_req_ready),
+        .req_signed(div_req_signed),
+        .req_remainder(div_req_remainder),
+        .req_dividend(pipe_src1),
+        .req_divisor(pipe_src2),
+        .kill(kill || pipe_br_killed),
+        .resp_valid(div_resp_valid),
+        .resp_ready(div_resp_ready),
+        .resp_data(div_resp_data)
+    );
 
-        unique case(pipe_uop.fcn_op)
-            MULDIV_DIV_W:  div_result = div_signed_quotient;
-            MULDIV_DIV_WU: div_result = div_unsigned_quotient;
-            MULDIV_MOD_W:  div_result = div_signed_remainder;
-            MULDIV_MOD_WU: div_result = div_unsigned_remainder;
-            default:       div_result = '0;
-        endcase
-    end
+    assign div_req_valid = (state == S_DIV);
+    assign div_req_signed = (pipe_uop.fcn_op == MULDIV_DIV_W || pipe_uop.fcn_op == MULDIV_MOD_W);
+    assign div_req_remainder = (pipe_uop.fcn_op == MULDIV_MOD_W || pipe_uop.fcn_op == MULDIV_MOD_WU);
+    assign div_resp_ready = (state == S_DIV);
 
     assign res_valid = !kill && !pipe_br_killed &&
                         ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) || (state == S_CNT) || (state == S_ERTN));
@@ -191,7 +182,7 @@ module unq(
         case(state)
             S_CSR: res.data = csr_rdata;
             S_MUL: res.data = mul_result;
-            S_DIV: res.data = div_result;
+            S_DIV: res.data = div_resp_data;
             S_CNT: begin
                 case(pipe_uop.fcn_op)
                     CNT_LOW: res.data = counter_value[31:0];

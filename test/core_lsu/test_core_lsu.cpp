@@ -818,6 +818,75 @@ static bool test_ldq_pressure(Vcore_lsu_test_top* dut) {
     return passed;
 }
 
+static bool test_partial_dispatch_with_full_ldq(
+    Vcore_lsu_test_top* dut) {
+    constexpr int LDQ_CAPACITY = 16;
+    constexpr unsigned ALU_LDST = 20;
+    constexpr unsigned LOAD_LDST = 21;
+
+    std::vector<uint32_t> program;
+    for (int i = 0; i < LDQ_CAPACITY; ++i)
+        program.push_back(ld_w(0, 0, 4 * i));
+    program.push_back(addi_w(ALU_LDST, 0, 1));
+    program.push_back(ld_w(LOAD_LDST, 0, 0x80));
+
+    reset(dut);
+    bool saw_blocked_mixed_packet = false;
+    unsigned mixed_dis_fire = 0;
+    unsigned retained_mask = 0;
+
+    for (int cycle = 0; cycle < 500; ++cycle) {
+        dut->dmem_req_ready = 0;
+        dut->dmem_resp_valid = 0;
+        dut->dmem_resp_is_store = 0;
+        dut->dmem_resp_data = 0;
+        dut->dmem_resp_idx = 0;
+        drive_fetch(dut, program);
+
+        bool is_mixed_packet =
+            dut->rn2_mask == 0x3 &&
+            dut->rn2_uses_ldq == 0x2 &&
+            packed_field(dut->rn2_ldst, 0, 5) == ALU_LDST &&
+            packed_field(dut->rn2_ldst, 1, 5) == LOAD_LDST;
+        if (is_mixed_packet && !dut->lsu_dispatch_ready) {
+            saw_blocked_mixed_packet = true;
+            mixed_dis_fire = dut->dis_fire;
+
+            dut->clk = 1;
+            dut->eval();
+            dut->clk = 0;
+            dut->eval();
+            retained_mask = dut->rn2_mask;
+            break;
+        }
+
+        dut->clk = 1;
+        dut->eval();
+        dut->clk = 0;
+        dut->eval();
+    }
+
+    if (saw_blocked_mixed_packet &&
+        (mixed_dis_fire != 0x1 || retained_mask != 0x2)) {
+        std::fprintf(
+            stderr,
+            "partial dispatch detail: dis_fire=0x%x retained_mask=0x%x\n",
+            mixed_dis_fire, retained_mask);
+    }
+
+    bool passed = true;
+    passed &= check("full LDQ exposes ALU/load mixed Rename2 packet",
+                    saw_blocked_mixed_packet);
+    passed &= check("older ALU fires while younger load is blocked",
+                    mixed_dis_fire == 0x1);
+    passed &= check("partial dispatch retains only the blocked load",
+                    retained_mask == 0x2);
+
+    if (passed)
+        std::printf("PASS: core partial dispatch under LDQ pressure\n");
+    return passed;
+}
+
 static bool test_stq_pressure(Vcore_lsu_test_top* dut) {
     DmemModel memory;
     memory.clear();
@@ -897,6 +966,13 @@ static bool test_stq_pressure(Vcore_lsu_test_top* dut) {
                          request.addr, request.idx, request.rob_idx,
                          request.accepted_cycle);
         }
+        for (int tag = 0; tag < 2 * STORE_COUNT; ++tag) {
+            if (result.observed.committed_store_tags[tag] != 0) {
+                std::fprintf(
+                    stderr, "  committed STQ tag=%d count=%u\n", tag,
+                    result.observed.committed_store_tags[tag]);
+            }
+        }
     }
 
     bool passed = true;
@@ -930,6 +1006,7 @@ int main(int argc, char** argv) {
     passed &= test_wrong_path_store(dut);
     passed &= test_older_store_survives_recovery(dut);
     passed &= test_ldq_pressure(dut);
+    passed &= test_partial_dispatch_with_full_ldq(dut);
     passed &= test_stq_pressure(dut);
 
     dut->final();

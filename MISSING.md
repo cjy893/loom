@@ -8,7 +8,7 @@
 | 常量编码 | `common/consts_pkg.sv` | 完成 |
 | 类型定义 | `common/types_pkg.sv` | 完成 |
 | 译码器 | `exu/decode.sv` | 指令分类完成，CACHE/TLB 子指令细节待补 |
-| ROB | `exu/rob.sv` | 基本提交、静态异常和 flush 完成，动态异常待补 |
+| ROB | `exu/rob.sv` | 提交、静态异常、ALE 动态异常（lxcpt）、精确异常 flush 完成；TLB 类动态异常待 TLB 引入 |
 | Map Table | `exu/rename/rename_maptable.sv` | 完成 |
 | Free List | `exu/rename/rename_freelist.sv` | 完成 |
 | Busy Table | `exu/rename/rename_busytable.sv` | 完成 |
@@ -18,6 +18,7 @@
 | IFU | `ifu/ifu.sv` | 单 outstanding 基础版本，完整前端功能待补 |
 | Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换完成 |
 | 乱序内核 | `exu/loom_core.sv` | Fetch Buffer 直连 Decode 边界已验证，由 `core_top.sv` 负责 SoC 接口 |
+| SRT-4 除法器 | `exu/exe/div/`（`srt4_core` + `divider` 符号包装层） | 完成，接入 `unq.sv`，`test/div` 契约测试通过 |
 
 ---
 
@@ -35,27 +36,16 @@
 
 ## ROB 缺口
 
-### 1. 异常处理输出
+### 1. 已实现（2026-07-27 审计确认）
 
-| 端口 | 说明 | 需要做什么 |
-|------|------|-----------|
-| `com_xcpt` | 已生成静态译码异常的 PC、cause 和 flush 类型 | 后续接入 CSR 文件 |
-| `flush` | 已覆盖异常、flush_on_commit 和 ERTN 类型 | 异常入口和 ERTN 目标仍需真实前端/CSR 提供 |
-| `flush_frontend` | 已连接到临时顶层并阻止继续分发 | 后续接入真实前端 |
+- 异常按项存储：`rob_exception` / `rob_exc_cause` / `rob_exc_badvaddr` 随 uop 入队记录静态异常，动态 ALE 经 `lxcpt` 写入对应项（带分支 kill、S_ROLLBACK 屏蔽和 rob_idx 回绕别名检查）——替代了原计划的 `r_xcpt_val/r_xcpt_uop/r_xcpt_badvaddr` 单寄存器方案
+- 异常只在 head 抛出，同周期只抛一个且年长 commit 优先
+- `com_xcpt`/`flush` 已接 CSR（FT_XCPT/FT_ERTN/FT_REFETCH），重定向目标由 `loom_core` 选择（异常入口/ERTN/pc+4），`flush_frontend` 已接正式前端
 
-### 2. LSU/CSR 异常输入未使用
+### 2. 仍未实现：mini-exception / CSR replay
 
-| 端口 | 说明 | 需要做什么 |
-|------|------|-----------|
-| `lxcpt` | LSU 发来的 load/store 异常 | 在 always_ff 中标记 `rob_exception[bank][row] <= 1'b1`，记录最老的异常 uop |
-| `csr_replay` | CSR 指令需要重放 | 同上，CSR 读-修改-写冲突时需要 flush 并重试 |
-
-### 3. 异常跟踪机制
-
-- 需要寄存器 `r_xcpt_val`, `r_xcpt_uop`, `r_xcpt_badvaddr` 存储最老的未决异常
-- 异常只能从 head 抛出（最老的在最前面）
-- mini-exception（mem ordering/CSR replay）触发 flush 但不写 CSR
-- 异常和 flush_on_commit 不能同时发生（同一周期只抛一个）
+- `csr_replay` 是死端口（两个 core 均 tie '0）；CSR 目前靠 `is_unique` 全串行化 + `flush_on_commit` refetch 规避 RMW 冲突，功能正确但有性能代价
+- 仅当解除 CSR 串行化后才需要：冲突检测源（csr_file 有未提交写与读同地址）→ ROB mini-exception（标记后**不写 CSR**、到 head 触发 flush）→ 从自身 PC refetch（现有 FT_REFETCH 是 pc+4，需新增类型区分）
 
 ### 4. 小缺口
 
@@ -199,9 +189,9 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 | 项目 | 说明 | 何时需要 |
 |------|------|---------|
-| DIV 组合除法器 | 当前 `$signed(a) / $signed(b)` 综合出巨大的组合除法器，面积和时序均不可接受 | 替换为迭代除法器 |
+| ~~DIV 组合除法器~~ | 已替换为 `exu/exe/div/` 的 SRT-4 迭代除法器（无符号内核 + 符号包装层），可 kill、经 `test/div` 契约验证 | 完成 |
 | MUL/DIV 串行化 | 七种 LA32 乘除法语义已完成，但当前仍标记为 `is_unique`，会等待 ROB 清空后串行执行 | 完成长延迟并行执行和回滚验证后解除 |
-| DIV 拍数固定 | 当前固定 5 拍，实际应随操作数宽度动态变化 | 迭代除法器自带变长 |
+| ~~DIV 拍数固定~~ | SRT-4 迭代除法器延迟随操作数变化（约 2–21 拍） | 完成 |
 | 无 fast wakeup | 多周期操作不拉快速 bypass，MUL/DIV 结果多等一拍 | 性能优化 |
 | `pipe_uop` 在 `kill` 时未刷新 | 多周期执行中发生 flush，`pipe_uop` 不会清。`res_valid` 已被 `state` 归零挡住 | 无害，可优化 |
 
@@ -215,7 +205,7 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 
 | 项目 | 当前问题 | 影响 |
 |------|---------|------|
-| 正式 LSU 集成 | 已实例化 LDQ/STQ 并连接查询、阻塞、转发、commit 和恢复接口 | 基础集成完成，仍缺动态访存异常和 cache replay |
+| 正式 LSU 集成 | 已实例化 LDQ/STQ 并连接查询、阻塞、转发、commit 和恢复接口 | 基础集成完成，ALE 动态异常已接 ROB `lxcpt`；仍缺 TLB 类访存异常和 cache replay |
 | 共享内存端口 | 已实现锁定式轮询仲裁，握手后在 load/store 间翻转优先级 | `test_lsu_formal.cpp` 已覆盖反压稳定性和后到请求不抢占 |
 | 迟到响应恢复 | 正式 LSU 按响应类型路由 tag，LDQ 按 generation 和 flush 拒绝迟到响应 | 正式 LSU 和 `branch_recovery` 集成测试均已通过 |
 
@@ -244,4 +234,4 @@ store 提交、双队列并发反压、flush 迟到响应，以及正式 LSU 仲
 
 ---
 
-*最后更新: 2026-07-25*
+*最后更新: 2026-07-27*

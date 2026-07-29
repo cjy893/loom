@@ -93,6 +93,7 @@ module core_elf_test_top (
     output logic [1:0][31:0]             commit_pc,
     output logic [1:0][31:0]             commit_inst,
     output logic [1:0][4:0]              commit_ldst,
+    output logic [1:0][31:0]             commit_wdata,
     output logic [1:0][ROB_ADDR_SZ-1:0]  commit_rob_idx,
 
     output logic                         exception_valid,
@@ -477,11 +478,13 @@ module core_elf_test_top (
         commit_pc = '0;
         commit_inst = '0;
         commit_ldst = '0;
+        commit_wdata = '0;
         commit_rob_idx = '0;
         for (int lane = 0; lane < 2; lane++) begin
             commit_pc[lane] = core_commit.uops[lane].pc[31:0];
             commit_inst[lane] = core_commit.uops[lane].inst;
             commit_ldst[lane] = core_commit.uops[lane].ldst;
+            commit_wdata[lane] = core_commit.debug_wdata[lane*32 +: 32];
             commit_rob_idx[lane] = core_commit.uops[lane].rob_idx;
         end
     end

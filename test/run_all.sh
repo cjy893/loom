@@ -14,6 +14,7 @@ suites=(
   br_mask
   regfile
   mem
+  div
   unq
   lsu
   fetch_buffer

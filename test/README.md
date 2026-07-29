@@ -13,6 +13,7 @@ Run every suite:
 Run one suite:
 
 ```bash
+./test/div/run.sh
 ./test/rename/run.sh
 ./test/issue/run.sh
 ./test/rob/run.sh
@@ -65,6 +66,9 @@ external functional-test ELF.
 `test/csr/run.sh` is the standalone contract suite for the CSR file and is
 included in `run_all.sh`.
 
+`test/div/run.sh` defines the standalone signed/unsigned quotient and remainder
+contract for the SRT divider and is included in `run_all.sh`.
+
 `test/core_exception/run.sh` is the precise exception and ERTN integration
 suite and is included in `run_all.sh`.
 
@@ -82,6 +86,10 @@ exceptions and is included in `run_all.sh`.
 
 Current coverage:
 
+- `divider`: signed and unsigned quotient and remainder operations, directed
+  edge cases, deterministic divide-by-zero results, signed overflow, request
+  and response backpressure, response stability, kill, and deterministic
+  randomized arithmetic comparison.
 - `rename`: initial allocation, read-after-write dependency, same-bundle map
   bypass, busy tracking, and release of a committed stale mapping.
 - `issue`: dispatch, ready issue, wakeup, full-queue backpressure, flush,

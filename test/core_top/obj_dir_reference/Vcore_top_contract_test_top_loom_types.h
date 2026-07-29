@@ -14,7 +14,7 @@ struct Vcore_top_contract_test_top_commit_signal_t__struct__0 {
     CData/*1:0*/ __PVT__valids;
     CData/*1:0*/ __PVT__arch_valids;
     VlWide<26>/*821:0*/ __PVT__uops;
-    CData/*5:0*/ __PVT__fflags;
+    CData/*5:0*/ __PVT__fp_flags;
     QData/*63:0*/ __PVT__debug_insts;
     QData/*63:0*/ __PVT__debug_wdata;
 
@@ -22,7 +22,7 @@ struct Vcore_top_contract_test_top_commit_signal_t__struct__0 {
         return __PVT__valids == rhs.__PVT__valids
             && __PVT__arch_valids == rhs.__PVT__arch_valids
             && __PVT__uops == rhs.__PVT__uops
-            && __PVT__fflags == rhs.__PVT__fflags
+            && __PVT__fp_flags == rhs.__PVT__fp_flags
             && __PVT__debug_insts == rhs.__PVT__debug_insts
             && __PVT__debug_wdata == rhs.__PVT__debug_wdata;
     }
@@ -37,8 +37,8 @@ struct Vcore_top_contract_test_top_commit_signal_t__struct__0 {
         if (rhs.__PVT__arch_valids < __PVT__arch_valids) return false;
         if (__PVT__uops < rhs.__PVT__uops) return true;
         if (rhs.__PVT__uops < __PVT__uops) return false;
-        if (__PVT__fflags < rhs.__PVT__fflags) return true;
-        if (rhs.__PVT__fflags < __PVT__fflags) return false;
+        if (__PVT__fp_flags < rhs.__PVT__fp_flags) return true;
+        if (rhs.__PVT__fp_flags < __PVT__fp_flags) return false;
         if (__PVT__debug_insts < rhs.__PVT__debug_insts) return true;
         if (rhs.__PVT__debug_insts < __PVT__debug_insts) return false;
         if (__PVT__debug_wdata < rhs.__PVT__debug_wdata) return true;

@@ -180,9 +180,9 @@
 ## 阶段 4：优先补齐影响正确性的功能
 
 - [x] 将 Dispatch 扩展为真正的多端口，支持同周期多条同类型 uop。
-- [ ] 完成完整的分支恢复，包括 Rename 状态和所有年轻 uop 的清除。
-- [ ] 完成 ROB 异常跟踪、精确异常、flush 和重定向输出。
-- [ ] 完成 LSU 的 load/store 执行、访存响应和异常返回。
+- [x] 完成完整的分支恢复，包括 Rename 状态和所有年轻 uop 的清除。
+- [x] 完成 ROB 异常跟踪、精确异常、flush 和重定向输出。
+- [x] 完成 LSU 的 load/store 执行、访存响应和异常返回。
 - [x] 建立 LSU 非对齐访存 ALE、BADV/BADI 和无副作用的红阶段集成测试。
 - [x] 增加 LDQ/STQ 顺序、非重叠访问和 store-to-load forwarding 定向测试。
 - [x] 连接 LDQ/STQ，处理未解析旧 store、同地址等待和数据转发。
@@ -190,9 +190,9 @@
 - [x] 完成硬件中断屏蔽、ROB 精确边界、回滚、EENTRY 跳转和 ERTN 返回。
 - [x] 覆盖中断与 LSU 未提交/已提交项、迟到 load 响应及分支误预测的恢复边界。
 - [ ] 完成 CSR replay，并接入 ROB 的 mini-exception/refetch 路径。
-- [ ] 完成寄存器文件旁路和多写端口冲突规则。
+- [x] 完成寄存器文件旁路和多写端口冲突规则。
 - [x] 完成 UNQ 的全部 LA32 乘除法操作。
-- [ ] 将组合除法器替换为可暂停、可 kill 的迭代除法器。
+- [x] 将组合除法器替换为可暂停、可 kill 的迭代除法器。
 
 ### Issue Queue 实现顺序
 

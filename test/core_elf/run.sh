@@ -19,7 +19,8 @@ verilator --cc --build -j 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module core_elf_test_top \
   --exe "$TEST_DIR/test_core_elf.cpp" "$TEST_DIR/elf_image.cpp" \
-  -CFLAGS "-std=c++17 -I$TEST_DIR" \
+  "$ROOT/test/common/la32_ref.cpp" \
+  -CFLAGS "-std=c++17 -I$TEST_DIR -I$ROOT/test/common" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
@@ -37,6 +38,11 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/exu/regfile.sv" \
   "$ROOT/exu/exe/alu.sv" \
   "$ROOT/exu/exe/mem.sv" \
+  "$ROOT/exu/exe/div/srt4_qselect.sv" \
+  "$ROOT/exu/exe/div/srt4_preprocess.sv" \
+  "$ROOT/exu/exe/div/srt4_otfc.sv" \
+  "$ROOT/exu/exe/div/srt4_core.sv" \
+  "$ROOT/exu/exe/div/divider.sv" \
   "$ROOT/exu/exe/unq.sv" \
   "$ROOT/exu/rob.sv" \
   "$ROOT/csr/csr_file.sv" \

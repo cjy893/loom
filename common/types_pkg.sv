@@ -259,4 +259,65 @@ package loom_types;
         logic [3:0] iq_type;
         logic use_matrix_issue;
     } issue_params_t;
+
+        typedef struct packed {
+        logic taken;
+        logic is_br;
+        logic is_b_bl;
+        logic [31:0] predicted_pc;
+    } branch_prediction_t;
+
+    typedef struct packed {
+        logic [31:0] pc;
+        branch_prediction_t [FETCH_WIDTH-1:0] preds;
+        logic [NBANKS-1:0] [BPD_MAX_META_LENGTH-1:0] meta;
+        logic [NBANKS-1:0] [LOCAL_HISTORY_LENGTH-1:0] lhist;
+    } branch_prediction_bundle_t;
+
+    typedef struct packed {
+        logic [31:0] pc;
+        global_history_t ghist;
+    } bpd_request_t;
+
+    typedef struct packed {
+        logic is_mispredict_update;
+        logic is_repair_update;
+        logic [FETCH_WIDTH/NBANKS-1:0] btb_mispredicts;
+
+        logic [31:0] pc;
+        logic [FETCH_WIDTH/NBANKS-1:0] br_mask;
+        logic cfi_valid;
+        logic [$clog2(FETCH_WIDTH/NBANKS)-1:0] cfi_idx;
+        logic cfi_taken;
+        logic cfi_mispredicted;
+        logic cfi_is_br;
+        logic cfi_is_b_bl;
+        logic cfi_is_jirl;
+
+        logic [GLOBAL_HISTORY_LENGTH-1:0] ghist;
+        logic [LOCAL_HISTORY_LENGTH-1:0] lhist;
+        logic [31:0] target;
+        logic [BPD_MAX_META_LENGTH-1:0] meta;
+    } bpd_bank_update_t;
+
+    typedef struct packed {
+        logic is_mispredict_update;
+        logic is_repair_update;
+        logic [FETCH_WIDTH-1:0] btb_mispredicts;
+
+        logic [31:0] pc;
+        logic [FETCH_WIDTH-1:0] br_mask;
+        logic cfi_valid;
+        logic [$clog2(FETCH_WIDTH)-1:0] cfi_idx;
+        logic cfi_taken;
+        logic cfi_mispredicted;
+        logic cfi_is_br;
+        logic cfi_is_b_bl;
+        logic cfi_is_jirl;
+
+        global_history_t ghist;
+        logic [NBANKS-1:0] [LOCAL_HISTORY_LENGTH-1:0] lhist;
+        logic [31:0] target;
+        logic [NBANKS-1:0] [BPD_MAX_META_LENGTH-1:0] meta;
+    } bpd_update_t;
 endpackage

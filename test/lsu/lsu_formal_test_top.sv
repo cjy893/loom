@@ -75,6 +75,8 @@ module lsu_formal_test_top (
 );
     logic [1:0] dis_valid;
     logic [1:0] dis_fire;
+    logic [1:0] dis_uses_ldq;
+    logic [1:0] dis_uses_stq;
     uop_t [1:0] dis_uops;
     logic [1:0] dis_lsq_ready;
     logic [1:0][LDQ_ADDR_SZ+1:0] dis_ldq_idx;
@@ -102,6 +104,10 @@ module lsu_formal_test_top (
         dis_valid[1] = dis1_valid;
         dis_fire[0] = dis0_fire;
         dis_fire[1] = dis1_fire;
+        dis_uses_ldq[0] = dis0_is_load;
+        dis_uses_ldq[1] = dis1_is_load;
+        dis_uses_stq[0] = dis0_is_store;
+        dis_uses_stq[1] = dis1_is_store;
         dis_uops = '0;
 
         dis_uops[0].uses_ldq = dis0_is_load;
@@ -166,6 +172,8 @@ module lsu_formal_test_top (
         .rst_n,
         .dis_valid,
         .dis_uops,
+        .dis_uses_ldq,
+        .dis_uses_stq,
         .dis_lsq_ready,
         .dis_ldq_idx,
         .dis_stq_idx,
