@@ -117,7 +117,7 @@ module unq(
     assign busy_done = (state == S_MUL && busy_cnt == IMUL_LATENCY - 1) || (state == S_DIV && div_resp_valid);
 
     assign csr_req_valid = issue_fire && iss_uop.fu_code[FC_CSR];
-    assign csr_addr = iss_uop.imm_packed[13:0];
+    assign csr_addr = (iss_uop.csr_cmd == CSR_CPUCFG) ? (src1_data[13:0] + iss_uop.imm_packed[13:0]) :iss_uop.imm_packed[13:0];
     assign csr_cmd = iss_uop.csr_cmd;
     assign csr_wdata = src1_data;
     assign csr_wmask = (iss_uop.csr_cmd == CSR_XCHG) ? src2_data : 32'hffffffff;
