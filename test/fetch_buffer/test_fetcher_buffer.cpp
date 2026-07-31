@@ -17,9 +17,13 @@ constexpr int kEntries = 8;
 struct Entry {
     uint32_t pc = 0;
     uint32_t inst = 0;
+    bool xcpt_valid = false;
+    uint8_t xcpt_code = 0;
 
     bool operator==(const Entry& rhs) const {
-        return pc == rhs.pc && inst == rhs.inst;
+        return pc == rhs.pc && inst == rhs.inst &&
+               xcpt_valid == rhs.xcpt_valid &&
+               xcpt_code == rhs.xcpt_code;
     }
 };
 
@@ -58,6 +62,8 @@ void clear_enqueue(Vfetcher_buffer_test_top* dut) {
     dut->enq_inst1 = 0;
     dut->enq_inst2 = 0;
     dut->enq_inst3 = 0;
+    dut->enq_xcpt_valid = 0;
+    dut->enq_xcpt_code = 0;
 }
 
 void reset(Vfetcher_buffer_test_top* dut) {
@@ -73,12 +79,19 @@ void reset(Vfetcher_buffer_test_top* dut) {
 }
 
 Packet make_packet(unsigned valid, uint32_t pc_base,
-                   uint32_t inst_base) {
+                   uint32_t inst_base, unsigned xcpt_mask = 0,
+                   uint8_t xcpt_code_base = 0) {
     Packet packet;
     packet.valid = valid;
     for (int lane = 0; lane < kFetchWidth; ++lane) {
         packet.lanes[lane].pc = pc_base + lane * 4U;
         packet.lanes[lane].inst = inst_base + lane;
+        packet.lanes[lane].xcpt_valid =
+            (xcpt_mask & (1U << lane)) != 0;
+        packet.lanes[lane].xcpt_code =
+            packet.lanes[lane].xcpt_valid
+                ? static_cast<uint8_t>(xcpt_code_base + lane)
+                : 0;
     }
     return packet;
 }
@@ -103,14 +116,31 @@ void drive_packet(Vfetcher_buffer_test_top* dut,
     dut->enq_inst1 = packet.lanes[1].inst;
     dut->enq_inst2 = packet.lanes[2].inst;
     dut->enq_inst3 = packet.lanes[3].inst;
+    dut->enq_xcpt_valid = 0;
+    dut->enq_xcpt_code = 0;
+    for (int lane = 0; lane < kFetchWidth; ++lane) {
+        if (packet.lanes[lane].xcpt_valid)
+            dut->enq_xcpt_valid |= 1U << lane;
+        dut->enq_xcpt_code |=
+            static_cast<uint32_t>(packet.lanes[lane].xcpt_code)
+            << (lane * 6);
+    }
 }
 
 Output output_of(Vfetcher_buffer_test_top* dut) {
     dut->eval();
     Output output;
     output.valid = dut->deq_valid;
-    output.lanes[0] = {dut->deq_pc0, dut->deq_inst0};
-    output.lanes[1] = {dut->deq_pc1, dut->deq_inst1};
+    output.lanes[0] = {
+        dut->deq_pc0, dut->deq_inst0,
+        static_cast<bool>(dut->deq_xcpt_valid & 0x1U),
+        static_cast<uint8_t>(dut->deq_xcpt_code & 0x3fU),
+    };
+    output.lanes[1] = {
+        dut->deq_pc1, dut->deq_inst1,
+        static_cast<bool>(dut->deq_xcpt_valid & 0x2U),
+        static_cast<uint8_t>((dut->deq_xcpt_code >> 6) & 0x3fU),
+    };
     return output;
 }
 
@@ -197,6 +227,25 @@ bool test_hole_compaction(Vfetcher_buffer_test_top* dut) {
 
     if (passed)
         std::printf("PASS: fetch buffer hole compaction\n");
+    return passed;
+}
+
+bool test_exception_metadata(Vfetcher_buffer_test_top* dut) {
+    reset(dut);
+    const Packet packet = make_packet(
+        0xdU, 0x1c001800U, 0x28000000U, 0x4U, 1U);
+    const std::vector<Entry> expected = packed_entries(packet);
+
+    bool passed = enqueue(dut, packet, "exception sparse enqueue");
+    passed &= check("exception sparse packet has three entries",
+                    expected.size() == 3);
+    passed &= check("exception metadata follows compacted lane",
+                    expected[1].xcpt_valid &&
+                    expected[1].xcpt_code == 3);
+    passed &= drain(dut, expected, "exception metadata FIFO order");
+
+    if (passed)
+        std::printf("PASS: fetch buffer exception metadata compaction\n");
     return passed;
 }
 
@@ -347,6 +396,14 @@ bool test_random_reference(Vfetcher_buffer_test_top* dut) {
                     0x1c100000U + sequence * 4U;
                 pending.lanes[lane].inst =
                     0xb0000000U ^ sequence;
+                pending.lanes[lane].xcpt_valid =
+                    (pending.valid & (1U << lane)) &&
+                    ((random >> (4 + lane)) & 1U);
+                pending.lanes[lane].xcpt_code =
+                    pending.lanes[lane].xcpt_valid
+                        ? static_cast<uint8_t>(
+                              (random >> (16 + lane * 3)) & 0x3fU)
+                        : 0;
                 if (pending.valid & (1U << lane))
                     ++sequence;
             }
@@ -443,6 +500,7 @@ int main(int argc, char** argv) {
     bool passed = true;
     passed &= test_width_conversion(dut);
     passed &= test_hole_compaction(dut);
+    passed &= test_exception_metadata(dut);
     passed &= test_backpressure_stability(dut);
     passed &= test_full_simultaneous_wrap(dut);
     passed &= test_flush_priority(dut);

@@ -8,6 +8,10 @@ suites=(
   issue
   rob
   csr
+  tlb
+  tlb_ctrl
+  mmu
+  mmu_integration
   alu
   decode
   dispatch
@@ -17,6 +21,7 @@ suites=(
   div
   unq
   lsu
+  lsu_dmmu
   fetch_buffer
   ifu
   ifu_fetch_buffer
@@ -24,6 +29,7 @@ suites=(
   core_ifu
   core_lsu
   core_lsu_exception
+  core_tlb
   core_program
   core_exception
   core_interrupt

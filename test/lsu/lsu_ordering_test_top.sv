@@ -110,6 +110,20 @@ module lsu_ordering_test_top (
     uop_t [0:0] st_commit_uops;
     uop_t store_req_uop;
 
+    logic ld_xlate_req_valid, ld_xlate_req_ready;
+    logic [LDQ_TAG_WIDTH-1:0] ld_xlate_req_tag, ld_xlate_resp_tag;
+    logic [XLEN-1:0] ld_xlate_req_vaddr, ld_xlate_resp_paddr;
+    logic ld_xlate_resp_valid;
+    logic [1:0] ld_xlate_resp_mat;
+    logic ld_xlate_resp_cacheable;
+
+    logic st_xlate_req_valid, st_xlate_req_ready;
+    logic [STQ_TAG_WIDTH-1:0] st_xlate_req_tag, st_xlate_resp_tag;
+    logic [XLEN-1:0] st_xlate_req_vaddr, st_xlate_resp_paddr;
+    logic st_xlate_resp_valid;
+    logic [1:0] st_xlate_resp_mat;
+    logic st_xlate_resp_cacheable;
+
     br_update_info_t brupdate;
 
     always_comb begin
@@ -173,6 +187,28 @@ module lsu_ordering_test_top (
     assign st_clr_bsy_rob_idx = st_clr_bsy_rob_idx_vec[0];
     assign store_req_rob_idx = store_req_uop.rob_idx;
 
+    lsq_identity_xlate #(.TAG_WIDTH(LDQ_TAG_WIDTH)) ld_xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(ld_xlate_req_valid), .req_ready(ld_xlate_req_ready),
+        .req_tag(ld_xlate_req_tag), .req_vaddr(ld_xlate_req_vaddr),
+        .req_access(ACCESS_LOAD),
+        .resp_valid(ld_xlate_resp_valid), .resp_ready(1'b1),
+        .resp_tag(ld_xlate_resp_tag), .resp_paddr(ld_xlate_resp_paddr),
+        .resp_access(), .resp_mat(ld_xlate_resp_mat),
+        .resp_cacheable(ld_xlate_resp_cacheable)
+    );
+
+    lsq_identity_xlate #(.TAG_WIDTH(STQ_TAG_WIDTH)) st_xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(st_xlate_req_valid), .req_ready(st_xlate_req_ready),
+        .req_tag(st_xlate_req_tag), .req_vaddr(st_xlate_req_vaddr),
+        .req_access(ACCESS_STORE),
+        .resp_valid(st_xlate_resp_valid), .resp_ready(1'b1),
+        .resp_tag(st_xlate_resp_tag), .resp_paddr(st_xlate_resp_paddr),
+        .resp_access(), .resp_mat(st_xlate_resp_mat),
+        .resp_cacheable(st_xlate_resp_cacheable)
+    );
+
     load_queue #(
         .NUM_ENTRIES(LDQ_ENTRIES),
         .ENQ_WIDTH(1),
@@ -207,6 +243,19 @@ module lsu_ordering_test_top (
         .dmem_resp_valid(load_resp_valid),
         .dmem_resp_idx(load_resp_idx),
         .dmem_resp_data(load_resp_data),
+        .xlate_req_valid(ld_xlate_req_valid),
+        .xlate_req_ready(ld_xlate_req_ready),
+        .xlate_req_vaddr(ld_xlate_req_vaddr),
+        .xlate_req_tag(ld_xlate_req_tag),
+        .xlate_resp_valid(ld_xlate_resp_valid),
+        .xlate_resp_accept(ld_xlate_resp_valid),
+        .xlate_resp_tag(ld_xlate_resp_tag),
+        .xlate_resp_paddr(ld_xlate_resp_paddr),
+        .xlate_resp_mat(ld_xlate_resp_mat),
+        .xlate_resp_cacheable(ld_xlate_resp_cacheable),
+        .xlate_resp_xcpt(1'b0),
+        .xlate_resp_match(),
+        .xlate_resp_uop(),
         .load_wb_valid,
         .load_wb_resp,
         .commit_valid(ld_commit_valid_vec),
@@ -251,6 +300,19 @@ module lsu_ordering_test_top (
         .store_req_mask,
         .store_req_idx,
         .store_req_uop,
+        .xlate_req_valid(st_xlate_req_valid),
+        .xlate_req_ready(st_xlate_req_ready),
+        .xlate_req_vaddr(st_xlate_req_vaddr),
+        .xlate_req_tag(st_xlate_req_tag),
+        .xlate_resp_valid(st_xlate_resp_valid),
+        .xlate_resp_accept(st_xlate_resp_valid),
+        .xlate_resp_tag(st_xlate_resp_tag),
+        .xlate_resp_paddr(st_xlate_resp_paddr),
+        .xlate_resp_mat(st_xlate_resp_mat),
+        .xlate_resp_cacheable(st_xlate_resp_cacheable),
+        .xlate_resp_xcpt(1'b0),
+        .xlate_resp_match(),
+        .xlate_resp_uop(),
         .store_ack_valid,
         .store_ack_idx,
         .commit_valid(st_commit_valid_vec),

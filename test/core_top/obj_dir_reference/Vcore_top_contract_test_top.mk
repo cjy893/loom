@@ -37,7 +37,7 @@ VM_PREFIX = Vcore_top_contract_test_top
 VM_MODPREFIX = Vcore_top_contract_test_top
 # User CFLAGS (from -CFLAGS on Verilator command line)
 VM_USER_CFLAGS = \
-  -std=c++17 \
+  -std=c++17 -O0 \
 
 # User LDLIBS (from -LDFLAGS on Verilator command line)
 VM_USER_LDLIBS = \
@@ -49,7 +49,7 @@ VM_USER_CLASSES = \
 # User .cpp directories (from .cpp's on Verilator command line)
 VM_USER_DIR = \
   .. \
-  ../../.. \
+  ../../../../../ip/mycpu \
 
 ### Default rules...
 # Include list of all generated classes

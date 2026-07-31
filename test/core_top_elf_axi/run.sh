@@ -51,6 +51,11 @@ rtl=(
   "$ROOT/lsu/load_queue.sv"
   "$ROOT/lsu/store_queue.sv"
   "$ROOT/lsu/lsu.sv"
+  "$ROOT/mmu/addr_trans.sv"
+  "$ROOT/mmu/dmmu.sv"
+  "$ROOT/mmu/immu.sv"
+  "$ROOT/mmu/tlb.sv"
+  "$ROOT/mmu/tlb_ctrl.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
   "$TEST_DIR/core_top_elf_axi_test_top.sv"
@@ -63,7 +68,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   -GENABLE_SINGLE_DEBUG_COMMIT="$SINGLE_DEBUG_COMMIT" \
   --exe "$TEST_DIR/test_core_top_elf_axi.cpp" \
   "$ELF_DIR/elf_image.cpp" \
-  -CFLAGS "-std=c++17 -I$ELF_DIR" \
+  -CFLAGS "-std=c++17 -O0 -I$ELF_DIR" \
   "${rtl[@]}"
 
 args=(--elf "$ELF_PATH")

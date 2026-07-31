@@ -30,6 +30,8 @@ enum {
     MULDIV_DIV_W = 3, MULDIV_DIV_WU = 4,
     MULDIV_MOD_W = 5, MULDIV_MOD_WU = 6,
     CNT_LOW = 0, CNT_HIGH = 1, CNT_ID = 2,
+    TLB_CMD_NONE = 0, TLB_CMD_SEARCH = 1, TLB_CMD_READ = 2,
+    TLB_CMD_WRITE = 3, TLB_CMD_FILL = 4, TLB_CMD_INV = 5,
 };
 
 static void decode_at_plv(Vdecode_test_top* dut, uint32_t inst,
@@ -48,9 +50,10 @@ static void expect_fu(const char* name, Vdecode_test_top* dut, unsigned bit) {
     expect_true(name, (dut->fu_code & (1U << bit)) != 0);
 }
 
-static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
-                                       const char* instruction_name) {
-    decode_at_plv(dut, inst, 3);
+static void expect_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
+                                   unsigned status_prv,
+                                   const char* instruction_name) {
+    decode_at_plv(dut, inst, status_prv);
 
     const bool is_clean_ipe =
         dut->exception == 1 &&
@@ -61,23 +64,119 @@ static void expect_csr_privilege_fault(Vdecode_test_top* dut, uint32_t inst,
         dut->lsrc1 == 0 &&
         dut->lsrc2 == 0 &&
         dut->dst_rtype == RT_X &&
+        dut->lsrc1_rtype == RT_X &&
+        dut->lsrc2_rtype == RT_X &&
+        dut->tlb_cmd == TLB_CMD_NONE &&
         dut->is_unique == 0 &&
         dut->flush_on_commit == 0;
 
     if (!is_clean_ipe) {
         std::fprintf(
             stderr,
-            "FAIL: %s in PLV3: exception=%u cause=%u iq=%u fu=0x%x "
-            "ldst=%u lsrc1=%u lsrc2=%u dst_rtype=%u unique=%u flush=%u\n",
+            "FAIL: %s in PLV%u: exception=%u cause=%u iq=%u fu=0x%x "
+            "ldst=%u lsrc1=%u/%u lsrc2=%u/%u dst_rtype=%u "
+            "tlb_cmd=%u unique=%u flush=%u\n",
             instruction_name,
+            status_prv,
             dut->exception,
             dut->exc_cause,
             dut->iq_type,
             dut->fu_code,
             dut->ldst,
             dut->lsrc1,
+            dut->lsrc1_rtype,
             dut->lsrc2,
+            dut->lsrc2_rtype,
             dut->dst_rtype,
+            dut->tlb_cmd,
+            dut->is_unique,
+            dut->flush_on_commit);
+        ++failures;
+    }
+}
+
+static void expect_tlb_decode(Vdecode_test_top* dut, uint32_t inst,
+                              unsigned expected_cmd,
+                              unsigned expected_src1,
+                              unsigned expected_src2,
+                              bool has_register_sources,
+                              const char* instruction_name) {
+    decode(dut, inst);
+
+    const unsigned expected_source_type = has_register_sources ? RT_FIX : RT_X;
+    const bool is_clean_tlb_uop =
+        dut->exception == 0 &&
+        dut->iq_type == IQ_UNQ &&
+        dut->fu_code == 0 &&
+        dut->tlb_cmd == expected_cmd &&
+        dut->ldst == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->lsrc1 == expected_src1 &&
+        dut->lsrc2 == expected_src2 &&
+        dut->lsrc1_rtype == expected_source_type &&
+        dut->lsrc2_rtype == expected_source_type &&
+        dut->is_unique == 1 &&
+        dut->flush_on_commit == 1;
+
+    if (!is_clean_tlb_uop) {
+        std::fprintf(
+            stderr,
+            "FAIL: %s decode: exception=%u cause=%u iq=%u fu=0x%x "
+            "tlb_cmd=%u ldst=%u/%u lsrc1=%u/%u lsrc2=%u/%u "
+            "unique=%u flush=%u\n",
+            instruction_name,
+            dut->exception,
+            dut->exc_cause,
+            dut->iq_type,
+            dut->fu_code,
+            dut->tlb_cmd,
+            dut->ldst,
+            dut->dst_rtype,
+            dut->lsrc1,
+            dut->lsrc1_rtype,
+            dut->lsrc2,
+            dut->lsrc2_rtype,
+            dut->is_unique,
+            dut->flush_on_commit);
+        ++failures;
+    }
+}
+
+static void expect_illegal_invtlb(Vdecode_test_top* dut, uint32_t inst,
+                                  unsigned op) {
+    decode(dut, inst);
+
+    const bool is_clean_ine =
+        dut->exception == 1 &&
+        dut->exc_cause == 13 &&
+        dut->iq_type == 0 &&
+        dut->fu_code == 0 &&
+        dut->tlb_cmd == TLB_CMD_NONE &&
+        dut->ldst == 0 &&
+        dut->lsrc1 == 0 &&
+        dut->lsrc2 == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->lsrc1_rtype == RT_X &&
+        dut->lsrc2_rtype == RT_X &&
+        dut->is_unique == 0 &&
+        dut->flush_on_commit == 0;
+
+    if (!is_clean_ine) {
+        std::fprintf(
+            stderr,
+            "FAIL: INVTLB op %u was not a clean INE: exception=%u cause=%u "
+            "iq=%u fu=0x%x tlb_cmd=%u lsrc1=%u/%u lsrc2=%u/%u "
+            "unique=%u flush=%u\n",
+            op,
+            dut->exception,
+            dut->exc_cause,
+            dut->iq_type,
+            dut->fu_code,
+            dut->tlb_cmd,
+            dut->lsrc1,
+            dut->lsrc1_rtype,
+            dut->lsrc2,
+            dut->lsrc2_rtype,
             dut->is_unique,
             dut->flush_on_commit);
         ++failures;
@@ -231,9 +330,67 @@ int main(int argc, char** argv) {
 
     // Every CSR instruction is privileged. A faulting CSR uop must enter only
     // the precise exception path and must not retain issue/serialization state.
-    expect_csr_privilege_fault(dut, 0x0400180c, "csrrd");
-    expect_csr_privilege_fault(dut, 0x0401102d, "csrwr");
-    expect_csr_privilege_fault(dut, 0x0400158d, "csrxchg");
+    expect_privilege_fault(dut, 0x0400180c, 3, "csrrd");
+    expect_privilege_fault(dut, 0x0401102d, 3, "csrwr");
+    expect_privilege_fault(dut, 0x0400158d, 3, "csrxchg");
+
+    // TLB management operations use the serialized UNQ path but are distinct
+    // from CSR execution. Only INVTLB reads GPR operands: rj supplies ASID and
+    // rk supplies the virtual address.
+    expect_tlb_decode(dut, 0x06482800, TLB_CMD_SEARCH, 0, 0, false,
+                      "TLBSRCH");
+    expect_tlb_decode(dut, 0x06482c00, TLB_CMD_READ, 0, 0, false,
+                      "TLBRD");
+    expect_tlb_decode(dut, 0x06483000, TLB_CMD_WRITE, 0, 0, false,
+                      "TLBWR");
+    expect_tlb_decode(dut, 0x06483400, TLB_CMD_FILL, 0, 0, false,
+                      "TLBFILL");
+
+    constexpr uint32_t invtlb_base =
+        0x06498000U | (13U << 10) | (12U << 5);
+    for (unsigned op = 0; op <= 6; ++op) {
+        char instruction_name[32];
+        std::snprintf(instruction_name, sizeof(instruction_name),
+                      "INVTLB op %u", op);
+        expect_tlb_decode(dut, invtlb_base | op, TLB_CMD_INV, 12, 13, true,
+                          instruction_name);
+    }
+
+    expect_illegal_invtlb(dut, invtlb_base | 7U, 7);
+    expect_illegal_invtlb(dut, invtlb_base | 31U, 31);
+
+    // Every legal TLB management operation is privileged. Exercise every
+    // implemented branch and all nonzero LA32 privilege levels.
+    constexpr uint32_t privileged_tlb_insts[] = {
+        0x06482800U,
+        0x06482c00U,
+        0x06483000U,
+        0x06483400U,
+        invtlb_base | 6U,
+    };
+    constexpr const char* privileged_tlb_names[] = {
+        "TLBSRCH",
+        "TLBRD",
+        "TLBWR",
+        "TLBFILL",
+        "INVTLB",
+    };
+    for (unsigned i = 0;
+         i < sizeof(privileged_tlb_insts) / sizeof(privileged_tlb_insts[0]);
+         ++i) {
+        for (unsigned plv = 1; plv <= 3; ++plv) {
+            expect_privilege_fault(dut, privileged_tlb_insts[i], plv,
+                                   privileged_tlb_names[i]);
+        }
+    }
+
+    // An undefined INVTLB op is an illegal instruction even outside PLV0;
+    // it must not be reclassified as a legal privileged operation.
+    decode_at_plv(dut, invtlb_base | 7U, 3);
+    expect_eq("illegal INVTLB in PLV3 raises exception", dut->exception, 1);
+    expect_eq("illegal INVTLB in PLV3 remains INE", dut->exc_cause, 13);
+    expect_eq("illegal INVTLB in PLV3 has no command",
+              dut->tlb_cmd, TLB_CMD_NONE);
 
     // ERTN is a serialized UNQ operation in PLV0. Its redirect is performed
     // only when the uop commits from the ROB.

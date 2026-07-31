@@ -4,46 +4,6 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-bool Vmem_issue_test_top___024root___trigger_anySet__act(const VlUnpacked<QData/*63:0*/, 1> &in);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__0(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__1(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__2(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__3(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__5(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__7(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___trigger_clear__act(VlUnpacked<QData/*63:0*/, 1> &out);
-
-bool Vmem_issue_test_top___024root___eval_phase__nba(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_phase__nba\n"); );
-    Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
-    auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    CData/*0:0*/ __VnbaExecute;
-    // Body
-    __VnbaExecute = Vmem_issue_test_top___024root___trigger_anySet__act(vlSelfRef.__VnbaTriggered);
-    if (__VnbaExecute) {
-        {
-            // Inlined CFunc: _eval_nba
-            if ((3ULL & vlSelfRef.__VnbaTriggered[0U])) {
-                Vmem_issue_test_top___024root___nba_sequent__TOP__0(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__1(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__2(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__3(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__4(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__5(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__6(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__7(vlSelf);
-                Vmem_issue_test_top___024root___nba_sequent__TOP__8(vlSelf);
-            }
-        }
-        Vmem_issue_test_top___024root___trigger_clear__act(vlSelfRef.__VnbaTriggered);
-    }
-    return (__VnbaExecute);
-}
-
 #ifdef VL_DEBUG
 VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
 #endif  // VL_DEBUG
@@ -52,6 +12,7 @@ bool Vmem_issue_test_top___024root___eval_phase__ico(Vmem_issue_test_top___024ro
 VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__act(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
 #endif  // VL_DEBUG
 bool Vmem_issue_test_top___024root___eval_phase__act(Vmem_issue_test_top___024root* vlSelf);
+bool Vmem_issue_test_top___024root___eval_phase__nba(Vmem_issue_test_top___024root* vlSelf);
 
 void Vmem_issue_test_top___024root___eval(Vmem_issue_test_top___024root* vlSelf) {
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval\n"); );
@@ -96,3 +57,66 @@ void Vmem_issue_test_top___024root___eval(Vmem_issue_test_top___024root* vlSelf)
         vlSelfRef.__VnbaPhaseResult = Vmem_issue_test_top___024root___eval_phase__nba(vlSelf);
     } while (vlSelfRef.__VnbaPhaseResult);
 }
+
+#ifdef VL_DEBUG
+void Vmem_issue_test_top___024root___eval_debug_assertions(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_debug_assertions\n"); );
+    Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
+    auto& vlSelfRef = std::ref(*vlSelf).get();
+    // Body
+    if (VL_UNLIKELY(((vlSelfRef.clk & 0xfeU)))) {
+        Verilated::overWidthError("clk");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.rst_n & 0xfeU)))) {
+        Verilated::overWidthError("rst_n");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_valid & 0xfeU)))) {
+        Verilated::overWidthError("dis_valid");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_rob_idx & 0xc0U)))) {
+        Verilated::overWidthError("dis_rob_idx");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1 & 0xc0U)))) {
+        Verilated::overWidthError("dis_psrc1");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2 & 0xc0U)))) {
+        Verilated::overWidthError("dis_psrc2");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1_busy & 0xfeU)))) {
+        Verilated::overWidthError("dis_psrc1_busy");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2_busy & 0xfeU)))) {
+        Verilated::overWidthError("dis_psrc2_busy");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_use_agen & 0xfeU)))) {
+        Verilated::overWidthError("dis_use_agen");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.dis_use_dgen & 0xfeU)))) {
+        Verilated::overWidthError("dis_use_dgen");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_0 & 0xfeU)))) {
+        Verilated::overWidthError("wakeup_valid_0");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_0 & 0xc0U)))) {
+        Verilated::overWidthError("wakeup_pdst_0");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_1 & 0xfeU)))) {
+        Verilated::overWidthError("wakeup_valid_1");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_1 & 0xc0U)))) {
+        Verilated::overWidthError("wakeup_pdst_1");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.resolve_mask & 0xf0U)))) {
+        Verilated::overWidthError("resolve_mask");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.mispredict_mask & 0xf0U)))) {
+        Verilated::overWidthError("mispredict_mask");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.br_mispredict & 0xfeU)))) {
+        Verilated::overWidthError("br_mispredict");
+    }
+    if (VL_UNLIKELY(((vlSelfRef.flush_pipeline & 0xfeU)))) {
+        Verilated::overWidthError("flush_pipeline");
+    }
+}
+#endif  // VL_DEBUG

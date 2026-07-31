@@ -45,11 +45,16 @@ module core_top_reference #(
     logic [3:0] ifu_fetch_valid;
     logic [3:0][31:0] ifu_fetch_pc;
     logic [3:0][31:0] ifu_fetch_insts;
+    logic [3:0] ifu_fetch_xcpt_valid;
+    logic [3:0][5:0] ifu_fetch_xcpt_code;
     logic ifu_fetch_ready;
+    logic [31:0] ifu_xlate_req_vaddr;
 
     logic [1:0] buffer_deq_valid;
     logic [1:0][31:0] buffer_deq_pc;
     logic [1:0][31:0] buffer_deq_insts;
+    logic [1:0] buffer_deq_xcpt_valid;
+    logic [1:0][5:0] buffer_deq_xcpt_code;
     logic buffer_deq_ready;
 
     logic core_fe_ready;
@@ -66,12 +71,27 @@ module core_top_reference #(
         .rst_n,
         .redirect_valid(core_redirect_valid),
         .redirect_pc(core_redirect_pc),
+        .xlate_req_valid(),
+        .xlate_req_ready(1'b1),
+        .xlate_req_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_valid(1'b1),
+        .xlate_resp_ready(),
+        .xlate_resp_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_paddr(ifu_xlate_req_vaddr),
+        .xlate_resp_mat(2'b01),
+        .xlate_resp_cacheable(1'b1),
+        .xlate_resp_xcpt_valid(1'b0),
+        .xlate_resp_xcpt_code('0),
         .imem_req_valid,
         .imem_req_ready,
         .imem_req_addr,
+        .imem_req_mat(),
+        .imem_req_cacheable(),
         .imem_resp_valid,
         .imem_resp_ready,
         .imem_resp_insts,
+        .fetch_xcpt_valid(ifu_fetch_xcpt_valid),
+        .fetch_xcpt_code(ifu_fetch_xcpt_code),
         .fetch_valid(ifu_fetch_valid),
         .fetch_insts(ifu_fetch_insts),
         .fetch_pc(ifu_fetch_pc),
@@ -89,6 +109,10 @@ module core_top_reference #(
         .enq_valid(ifu_fetch_valid),
         .enq_pcs(ifu_fetch_pc),
         .enq_insts(ifu_fetch_insts),
+        .enq_xcpt_valid(ifu_fetch_xcpt_valid),
+        .enq_xcpt_code(ifu_fetch_xcpt_code),
+        .deq_xcpt_valid(buffer_deq_xcpt_valid),
+        .deq_xcpt_code(buffer_deq_xcpt_code),
         .enq_ready(ifu_fetch_ready),
         .deq_valid(buffer_deq_valid),
         .deq_pcs(buffer_deq_pc),
@@ -109,9 +133,23 @@ module core_top_reference #(
         .fe_valid(buffer_deq_valid),
         .fe_insts(buffer_deq_insts),
         .fe_pcs(buffer_deq_pc),
+        .fe_xcpt_valid(buffer_deq_xcpt_valid),
+        .fe_xcpt_code(buffer_deq_xcpt_code),
         .fe_ready(core_fe_ready),
         .fe_redirect_valid(core_redirect_valid),
         .fe_redirect_pc(core_redirect_pc),
+        .ifu_xlate_req_valid(1'b0),
+        .ifu_xlate_req_ready(),
+        .ifu_xlate_req_vaddr('0),
+        .ifu_xlate_resp_valid(),
+        .ifu_xlate_resp_ready(1'b1),
+        .ifu_xlate_resp_vaddr(),
+        .ifu_xlate_resp_paddr(),
+        .ifu_xlate_resp_mat(),
+        .ifu_xlate_resp_cacheable(),
+        .ifu_xlate_resp_xcpt_valid(),
+        .ifu_xlate_resp_xcpt_code(),
+        .ifu_xlate_resp_badvaddr(),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,

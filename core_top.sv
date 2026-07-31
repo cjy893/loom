@@ -104,6 +104,28 @@ module core_top #(
     logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx;
     commit_signal_t               core_commit;
 
+    logic                         ifu_xlate_req_valid;
+    logic                         ifu_xlate_req_ready;
+    logic [31:0]                  ifu_xlate_req_vaddr;
+
+    logic                         ifu_xlate_resp_valid;
+    logic                         ifu_xlate_resp_ready;
+    logic [31:0]                  ifu_xlate_resp_vaddr;
+    logic [31:0]                  ifu_xlate_resp_paddr;
+    logic [1:0]                   ifu_xlate_resp_mat;
+    logic                         ifu_xlate_resp_cacheable;
+    logic                         ifu_xlate_resp_xcpt_valid;
+    logic [5:0]                   ifu_xlate_resp_xcpt_code;
+
+    logic [1:0]                   imem_req_mat;
+    logic                         imem_req_cacheable;
+
+    logic [FETCH_WIDTH-1:0]       ifu_fetch_xcpt_valid;
+    logic [FETCH_WIDTH-1:0][5:0]  ifu_fetch_xcpt_code;
+
+    logic [CORE_WIDTH-1:0]        buffer_deq_xcpt_valid;
+    logic [CORE_WIDTH-1:0][5:0]   buffer_deq_xcpt_code;
+
     ifu #(
         .FETCH_WIDTH(FETCH_WIDTH),
         .RESET_PC(RESET_PC)
@@ -112,6 +134,24 @@ module core_top #(
         .rst_n(aresetn),
         .redirect_valid(core_redirect_valid),
         .redirect_pc(core_redirect_pc),
+        .xlate_req_valid       (ifu_xlate_req_valid),
+        .xlate_req_ready       (ifu_xlate_req_ready),
+        .xlate_req_vaddr       (ifu_xlate_req_vaddr),
+
+        .xlate_resp_valid      (ifu_xlate_resp_valid),
+        .xlate_resp_ready      (ifu_xlate_resp_ready),
+        .xlate_resp_vaddr      (ifu_xlate_resp_vaddr),
+        .xlate_resp_paddr      (ifu_xlate_resp_paddr),
+        .xlate_resp_mat        (ifu_xlate_resp_mat),
+        .xlate_resp_cacheable  (ifu_xlate_resp_cacheable),
+        .xlate_resp_xcpt_valid (ifu_xlate_resp_xcpt_valid),
+        .xlate_resp_xcpt_code  (ifu_xlate_resp_xcpt_code),
+
+        .imem_req_mat          (imem_req_mat),
+        .imem_req_cacheable    (imem_req_cacheable),
+
+        .fetch_xcpt_valid      (ifu_fetch_xcpt_valid),
+        .fetch_xcpt_code       (ifu_fetch_xcpt_code),
         .imem_req_valid,
         .imem_req_ready,
         .imem_req_addr,
@@ -133,6 +173,10 @@ module core_top #(
         .rst_n(aresetn),
         .flush(core_redirect_valid),
         .enq_valid(ifu_fetch_valid),
+        .enq_xcpt_valid (ifu_fetch_xcpt_valid),
+        .enq_xcpt_code  (ifu_fetch_xcpt_code),
+        .deq_xcpt_valid (buffer_deq_xcpt_valid),
+        .deq_xcpt_code  (buffer_deq_xcpt_code),
         .enq_pcs(ifu_fetch_pcs),
         .enq_insts(ifu_fetch_insts),
         .enq_ready(ifu_fetch_ready),
@@ -148,7 +192,7 @@ module core_top #(
         .CORE_WIDTH(CORE_WIDTH),
         .FETCH_WIDTH(CORE_WIDTH),
         .CORE_ID(CORE_ID),
-        .ENABLE_SINGLE_DEBUG_COMMIT(ENABLE_SINGLE_DEBUG_COMMIT)
+        .ENABLE_SINGLE_DEBUG_COMMIT(1'b0)
     ) core_inst (
         .clk(aclk),
         .rst_n(aresetn),
@@ -158,6 +202,21 @@ module core_top #(
         .fe_ready(buffer_deq_ready),
         .fe_redirect_valid(core_redirect_valid),
         .fe_redirect_pc(core_redirect_pc),
+        .fe_xcpt_valid (buffer_deq_xcpt_valid),
+        .fe_xcpt_code  (buffer_deq_xcpt_code),
+        .ifu_xlate_req_valid       (ifu_xlate_req_valid),
+        .ifu_xlate_req_ready       (ifu_xlate_req_ready),
+        .ifu_xlate_req_vaddr       (ifu_xlate_req_vaddr),
+
+        .ifu_xlate_resp_valid      (ifu_xlate_resp_valid),
+        .ifu_xlate_resp_ready      (ifu_xlate_resp_ready),
+        .ifu_xlate_resp_vaddr      (ifu_xlate_resp_vaddr),
+        .ifu_xlate_resp_paddr      (ifu_xlate_resp_paddr),
+        .ifu_xlate_resp_mat        (ifu_xlate_resp_mat),
+        .ifu_xlate_resp_cacheable  (ifu_xlate_resp_cacheable),
+        .ifu_xlate_resp_xcpt_valid (ifu_xlate_resp_xcpt_valid),
+        .ifu_xlate_resp_xcpt_code  (ifu_xlate_resp_xcpt_code),
+        .ifu_xlate_resp_badvaddr   (),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
@@ -279,7 +338,7 @@ module core_top #(
                         read_addr_q <= dmem_req_addr;
                         read_dmem_idx_q <= dmem_req_idx;
                         read_state_q <= RD_ADDR;
-                    end else if (imem_req_valid) begin
+                    end else if (imem_req_valid && imem_req_ready) begin
                         read_is_data_q <= 1'b0;
                         read_addr_q <= imem_req_addr;
                         read_beat_q <= '0;
@@ -330,10 +389,7 @@ module core_top #(
         end
     end
 
-    assign imem_req_ready =
-        read_state_q == RD_ADDR &&
-        !read_is_data_q &&
-        arready;
+    assign imem_req_ready = read_state_q == RD_IDLE && !(!dmem_outstanding_q && dmem_req_valid && !dmem_req_is_store && (prefer_data_q || !imem_req_valid));
     assign imem_resp_valid = read_state_q == RD_IFU_RESP;
     assign imem_resp_insts = imem_resp_insts_q;
 

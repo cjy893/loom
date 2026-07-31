@@ -26,12 +26,15 @@ Run one suite:
 ./test/mem/run.sh
 ./test/unq/run.sh
 ./test/lsu/run.sh
+./test/lsu_dmmu/run.sh
 ./test/fetch_buffer/run.sh
+./test/fetch_metadata/run.sh
 ./test/ifu/run.sh
 ./test/ifu_fetch_buffer/run.sh
 ./test/core_fetch_buffer/run.sh
 ./test/core_ifu/run.sh
 ./test/core_lsu/run.sh
+./test/core_tlb/run.sh
 ./test/core_program/run.sh
 ./test/core_exception/run.sh
 ./test/core_interrupt/run.sh
@@ -40,6 +43,23 @@ Run one suite:
 ./test/core_top_axi/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
+```
+
+Frontend branch-prediction contracts that do not yet have production modules
+can be validated against their test-only references:
+
+```bash
+./test/f3_predecode/run.sh --reference
+./test/bpd_update_router/run.sh --reference
+./test/bpd_banked/run.sh
+```
+
+LA32 TLB and translation contracts can be validated independently:
+
+```bash
+./test/tlb/run.sh
+./test/mmu/run.sh
+./test/mmu_integration/run.sh
 ```
 
 Run the real NSCSCC ELF milestone separately:
@@ -82,7 +102,8 @@ with the LSU and branch unit and is included in `run_all.sh`.
 production `cpu_core` top and is included in `run_all.sh` in reference mode.
 
 `test/core_lsu_exception/run.sh` covers precise misaligned load/store `ALE`
-exceptions and is included in `run_all.sh`.
+exceptions plus end-to-end load/store `TLBR`, `PIL`, `PIS`, `PPI`, and `PME`
+delivery through DMMU, LSU, ROB, and CSR state. It is included in `run_all.sh`.
 
 Current coverage:
 
@@ -101,7 +122,26 @@ Current coverage:
   ROB identity propagation, early wakeup, and branch resolution.
 - `decode`: real LA32 encodings from `test.s` for integer ALU, immediate,
   load/store, branch, all seven multiply/divide variants, CSR, syscall,
-  CSR/ERTN privilege checks, and illegal instructions.
+  TLB management commands, all legal and representative illegal `INVTLB`
+  operations, privilege checks, and illegal instructions.
+- `f3_predecode`: frontend classification of all LA32 conditional branches,
+  `B`, `BL`, and `JIRL`, direct-target formation, call/return recognition,
+  and fixed-width return addresses.
+- `bpd_update_router`: v4-style fetch-wide update splitting across two
+  physical predictor banks, including start-bank rotation, local CFI indices,
+  metadata/history routing, first-bank CFI truncation, and cache-line ends.
+- `bpd_banked`: two physical Composer banks connected in logical fetch order,
+  including bank-aligned requests, bank-1 wrap, physical metadata identity,
+  BIM training, first-bank CFI truncation, and cache-line ends.
+- `tlb`: production unified dual-port LA32 TLB coverage for 4KB and 4MB
+  pages, even/odd selection, ASID/global matching, indexed read/write,
+  parameterization, and all `INVTLB` operations.
+- `mmu`: production LA32 address-translation coverage for direct mode, DMW0/DMW1,
+  TLB physical-address composition, MAT/cacheability, BADV, and paging
+  exception priority.
+- `mmu_integration`: production TLB and address-translator integration,
+  including one-cycle request/response context alignment, direct/DMW bypass,
+  mapped 4KB/4MB requests, paging exceptions, INVTLB, and continuous traffic.
 - `dispatch`: IQ routing, program-order backpressure, inactive lanes, uop
   identity, and same-IQ dual-dispatch loss detection.
 - `br_mask`: nested allocation, resolution, exhaustion, pipeline flush, and
@@ -123,15 +163,22 @@ Current coverage:
   ordering groups cover unresolved older stores, non-alias and byte-mask
   non-overlap, exact-match forwarding, waiting for late store data, store
   commit/drain behavior, ROB-index wraparound, simultaneous LDQ/STQ requests,
-  and rejection of load responses arriving after a flush.
-- `ifu`: reset and sequential bundle fetch, instruction-memory and backend
-  backpressure stability, bundle compaction for unaligned redirect targets,
-  latest-redirect priority, buffered wrong-path invalidation, and rejection of
-  responses from stale requests.
+  and rejection of load responses arriving after a flush. These queue-focused
+  harnesses use a registered identity translator so every address still passes
+  through the translation handshake; `lsu_dmmu` covers real DMMU translation,
+  TLB stalls, translation exceptions, and flush recovery.
+- `ifu`: reset and sequential bundle fetch, translation, instruction-memory,
+  and backend backpressure stability, translated physical addresses and memory
+  attributes, `ADEF`/`PIF`/`TLBR`, latest-redirect priority, buffered
+  wrong-path invalidation, and rejection of stale memory responses.
 - `fetch_buffer`: four-wide enqueue to two-wide dequeue conversion, sparse-lane
-  compaction, partial output, backpressure stability, full-capacity handling,
-  simultaneous dequeue/enqueue, circular wraparound, flush priority, and a
-  deterministic software queue comparison.
+  compaction, exception-metadata identity, partial output, backpressure
+  stability, full-capacity handling, simultaneous dequeue/enqueue, circular
+  wraparound, flush priority, and a deterministic software queue comparison.
+- `fetch_metadata`: test-only v4-style frontend transport contract for keeping
+  each instruction's FTQ index and predicted-taken bit associated with its PC
+  and instruction across sparse-lane compaction, adjacent FTQ packets,
+  backpressure, pointer wraparound, flush, and randomized traffic.
 - `ifu_fetch_buffer`: production IFU and Fetch Buffer integration, covering
   four-to-two draining, full-buffer backpressure, stalled output stability,
   unaligned redirects, stale instruction-memory responses, and clearing both
@@ -151,14 +198,22 @@ Current coverage:
   load formatting, stalled-request stability, store-to-load forwarding,
   wrong-path store suppression, older committed stores with delayed
   acknowledgements, and 20-operation LDQ/STQ pressure recovery.
+- `core_tlb`: real LA32 `TLBWR`, `TLBRD`, `TLBSRCH`, `TLBFILL`, and `INVTLB`
+  instructions through Decode, Rename, UNQ, ROB commit, CSR state, and the
+  unified TLB. It checks command/response completion, CSR snapshot/readback,
+  fill-index advancement, forwarded invalidation operands, commit-only side
+  effects, wrong-path invalidation suppression, integrated IMMU translation,
+  and same-cycle IMMU/`TLBSRCH` q0 arbitration with refetch cancellation.
 - `core_program`: continuous real-PC instruction streams through the temporary
   core, including an ALU block copied from `test.s`, conditional branches,
   direct `b`/`bl` redirects, `jirl`, link-register writeback, frontend
   backpressure stability, and suppression of wrong-path stores.
 - `core_exception`: precise `syscall`, `break`, and illegal-instruction
   exceptions through Decode, ROB, CSR state update, and EENTRY redirection. It
-  also covers older commit ordering, younger commit suppression, wrong-path
-  exception cancellation, handler CSR reads, and an ERTN return contract.
+  also injects frontend ADEF, PIF, PPI, and TLBR metadata into both decode
+  lanes, checking ROB BADV propagation, ERA/BADV/TLBEHI state, EENTRY versus
+  TLBRENTRY selection, older commit ordering, younger commit suppression,
+  wrong-path exception cancellation, handler CSR reads, and ERTN return.
 - `core_interrupt`: global and per-source interrupt masking, CSR pending
   propagation, precise interrupt boundaries, EENTRY/ERA/CRMD/PRMD state, source
   deassertion, ERTN return, exact-once resumed commits, and level-sensitive
@@ -181,7 +236,8 @@ Current coverage:
   checks for all seven multiply/divide variants.
 
 These are directed module tests. The passing portions include dynamic LSU
-alignment exceptions, but do not yet include dynamic IFU exceptions,
+alignment exceptions and frontend exception metadata through the backend, but
+do not yet include a complete IFU+IMMU-to-Fetch-Buffer-to-core exception path,
 full-width dispatch, or memory partial issue.
 
 The runner continues after a failed suite so one RTL failure does not hide
@@ -207,8 +263,9 @@ Current status:
 - `dispatch` now packs each IQ independently and preserves program order.
 - `dispatch` covers per-slot Issue Queue backpressure for same-IQ dual dispatch.
 - `dispatch` verifies that static exceptions enter the ROB path and bypass IQs.
-- `core_exception` passes precise synchronous exception handling, wrong-path
-  cancellation, CSR state updates, and the complete exception/ERTN round trip.
+- `core_exception` passes precise synchronous and injected frontend exception
+  handling, wrong-path cancellation, CSR state updates, handler selection, and
+  the complete exception/ERTN round trip.
 - `core_interrupt` passes masking, delayed hardware interrupt delivery, precise
   ROB-boundary rollback, CSR state updates, and the complete interrupt/ERTN
   round trip. Held-high interrupt input also retriggers after ERTN.

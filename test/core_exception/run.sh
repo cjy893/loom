@@ -6,6 +6,7 @@ TEST_DIR="$ROOT/test/core_exception"
 
 verilator --cc --build -j 1 -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
+  -CFLAGS "-O0" \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module core_exception_test_top \
   --exe "$TEST_DIR/test_core_exception.cpp" \
@@ -35,6 +36,11 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
+  "$ROOT/mmu/addr_trans.sv" \
+  "$ROOT/mmu/dmmu.sv" \
+  "$ROOT/mmu/immu.sv" \
+  "$ROOT/mmu/tlb.sv" \
+  "$ROOT/mmu/tlb_ctrl.sv" \
   "$ROOT/exu/loom_core.sv" \
   "$TEST_DIR/core_exception_test_top.sv"
 

@@ -8,6 +8,8 @@
 static constexpr int FETCH_WIDTH = 4;
 static constexpr uint32_t RESET_PC = 0x1c000000U;
 static constexpr uint32_t FETCH_BYTES = FETCH_WIDTH * sizeof(uint32_t);
+static constexpr uint32_t ECODE_PIF = 0x03U;
+static constexpr uint32_t ECODE_TLBR = 0x3fU;
 
 using Bundle = std::array<uint32_t, FETCH_WIDTH>;
 
@@ -25,6 +27,14 @@ static void reset(Vifu_test_top* dut) {
     dut->rst_n = 0;
     dut->redirect_valid = 0;
     dut->redirect_pc = 0;
+    dut->xlate_req_ready = 0;
+    dut->xlate_resp_valid = 0;
+    dut->xlate_resp_vaddr = 0;
+    dut->xlate_resp_paddr = 0;
+    dut->xlate_resp_mat = 0;
+    dut->xlate_resp_cacheable = 0;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->xlate_resp_xcpt_code = 0;
     dut->imem_req_ready = 0;
     dut->imem_resp_valid = 0;
     dut->fetch_ready = 0;
@@ -42,6 +52,65 @@ static bool check(const char* name, bool condition) {
     if (!condition)
         std::fprintf(stderr, "FAIL: %s\n", name);
     return condition;
+}
+
+static bool expect_xlate_request(Vifu_test_top* dut,
+                                 uint32_t expected_vaddr,
+                                 int max_cycles = 8) {
+    for (int cycle = 0; cycle < max_cycles; ++cycle) {
+        dut->eval();
+        if (dut->xlate_req_valid)
+            return check("translation request virtual address",
+                         dut->xlate_req_vaddr == expected_vaddr);
+        tick(dut);
+    }
+    return check("translation request appears", false);
+}
+
+static bool accept_xlate_request(Vifu_test_top* dut,
+                                 uint32_t expected_vaddr) {
+    dut->xlate_req_ready = 1;
+    dut->eval();
+    bool passed = check("translation request is valid when accepted",
+                        dut->xlate_req_valid);
+    passed &= check("accepted translation virtual address",
+                    dut->xlate_req_vaddr == expected_vaddr);
+    tick(dut);
+    dut->xlate_req_ready = 0;
+    dut->eval();
+    return passed;
+}
+
+static bool send_xlate_response(Vifu_test_top* dut, uint32_t vaddr,
+                                uint32_t paddr, uint32_t mat = 1,
+                                bool cacheable = true,
+                                bool xcpt_valid = false,
+                                uint32_t xcpt_code = 0) {
+    dut->xlate_resp_vaddr = vaddr;
+    dut->xlate_resp_paddr = paddr;
+    dut->xlate_resp_mat = mat;
+    dut->xlate_resp_cacheable = cacheable;
+    dut->xlate_resp_xcpt_valid = xcpt_valid;
+    dut->xlate_resp_xcpt_code = xcpt_code;
+    dut->xlate_resp_valid = 1;
+    dut->eval();
+
+    bool passed = check("IFU accepts outstanding translation response",
+                        dut->xlate_resp_ready);
+    tick(dut);
+    dut->xlate_resp_valid = 0;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->eval();
+    return passed;
+}
+
+static bool complete_translation(Vifu_test_top* dut, uint32_t vaddr,
+                                 uint32_t paddr, uint32_t mat = 1,
+                                 bool cacheable = true) {
+    bool passed = expect_xlate_request(dut, vaddr);
+    passed &= accept_xlate_request(dut, vaddr);
+    passed &= send_xlate_response(dut, vaddr, paddr, mat, cacheable);
+    return passed;
 }
 
 static bool expect_request(Vifu_test_top* dut, uint32_t expected_addr,
@@ -117,6 +186,8 @@ static void pulse_redirect(Vifu_test_top* dut, uint32_t target) {
 
 struct FetchSnapshot {
     uint32_t valid = 0;
+    uint32_t xcpt_valid = 0;
+    uint32_t xcpt_code = 0;
     std::array<uint32_t, FETCH_WIDTH> pc{};
     std::array<uint32_t, FETCH_WIDTH> inst{};
 };
@@ -125,6 +196,8 @@ static FetchSnapshot snapshot_fetch(Vifu_test_top* dut) {
     dut->eval();
     FetchSnapshot snapshot;
     snapshot.valid = dut->fetch_valid;
+    snapshot.xcpt_valid = dut->fetch_xcpt_valid;
+    snapshot.xcpt_code = dut->fetch_xcpt_code;
     for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
         snapshot.pc[lane] = dut->fetch_pc[lane];
         snapshot.inst[lane] = dut->fetch_insts[lane];
@@ -134,7 +207,9 @@ static FetchSnapshot snapshot_fetch(Vifu_test_top* dut) {
 
 static bool same_fetch(const FetchSnapshot& lhs,
                        const FetchSnapshot& rhs) {
-    if (lhs.valid != rhs.valid)
+    if (lhs.valid != rhs.valid ||
+        lhs.xcpt_valid != rhs.xcpt_valid ||
+        lhs.xcpt_code != rhs.xcpt_code)
         return false;
     for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
         if ((lhs.valid & (1U << lane)) == 0)
@@ -157,6 +232,8 @@ static bool expect_fetch(Vifu_test_top* dut, uint32_t expected_valid,
                      dut->fetch_valid, expected_valid);
         passed = false;
     }
+    passed &= check("normal fetch has no exception metadata",
+                    dut->fetch_xcpt_valid == 0);
 
     for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
         if ((expected_valid & (1U << lane)) == 0)
@@ -195,17 +272,29 @@ static bool run_reset_and_sequential(Vifu_test_top* dut) {
 
     reset(dut);
     bool passed = true;
+    passed &= expect_xlate_request(dut, RESET_PC);
+
+    const uint32_t held_vaddr = dut->xlate_req_vaddr;
+    for (int cycle = 0; cycle < 4; ++cycle) {
+        tick(dut);
+        passed &= check("translation request holds under backpressure",
+                        dut->xlate_req_valid);
+        passed &= check("translation virtual address remains stable",
+                        dut->xlate_req_vaddr == held_vaddr);
+    }
+
+    passed &= accept_xlate_request(dut, RESET_PC);
+    passed &= send_xlate_response(dut, RESET_PC, RESET_PC);
     passed &= expect_request(dut, RESET_PC);
 
     const uint32_t held_addr = dut->imem_req_addr;
     for (int cycle = 0; cycle < 4; ++cycle) {
         tick(dut);
-        passed &= check("request valid is held during backpressure",
+        passed &= check("memory request holds under backpressure",
                         dut->imem_req_valid);
-        passed &= check("request address is stable during backpressure",
+        passed &= check("memory request address remains stable",
                         dut->imem_req_addr == held_addr);
     }
-
     passed &= accept_request(dut, RESET_PC);
     passed &= send_response(dut, FIRST);
     passed &= expect_fetch(dut, 0xfU, RESET_PC, FIRST, 0);
@@ -218,6 +307,8 @@ static bool run_reset_and_sequential(Vifu_test_top* dut) {
     }
 
     accept_fetch(dut);
+    passed &= complete_translation(
+        dut, RESET_PC + FETCH_BYTES, RESET_PC + FETCH_BYTES);
     passed &= expect_request(dut, RESET_PC + FETCH_BYTES);
 
     if (passed)
@@ -229,43 +320,38 @@ static bool run_redirect_while_request_stalled(Vifu_test_top* dut) {
     static constexpr uint32_t FIRST_TARGET = RESET_PC + 0x44U;
     static constexpr uint32_t FINAL_TARGET = RESET_PC + 0x88U;
     static constexpr uint32_t FINAL_BASE = RESET_PC + 0x80U;
-    static constexpr Bundle STALE = {
-        0x11111111U, 0x22222222U, 0x33333333U, 0x44444444U
-    };
     static constexpr Bundle TARGET = {
         0xaaaaaaaaU, 0xbbbbbbbbU, 0x02801c0aU, 0x03400000U
     };
 
     reset(dut);
     bool passed = true;
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
     passed &= expect_request(dut, RESET_PC);
 
     pulse_redirect(dut, FIRST_TARGET);
-    passed &= check("stalled request remains valid across redirect",
-                    dut->imem_req_valid);
-    passed &= check("stalled request payload remains stable across redirect",
-                    dut->imem_req_addr == RESET_PC);
+    passed &= check("unaccepted memory request is canceled by redirect",
+                    !dut->imem_req_valid);
+    passed &= expect_xlate_request(dut, FIRST_TARGET);
 
     pulse_redirect(dut, FINAL_TARGET);
-    passed &= check("second redirect does not mutate stalled request",
-                    dut->imem_req_valid &&
-                    dut->imem_req_addr == RESET_PC);
+    passed &= check("second redirect replaces stalled translation",
+                    dut->xlate_req_valid &&
+                    dut->xlate_req_vaddr == FINAL_TARGET);
 
-    passed &= accept_request(dut, RESET_PC);
-    passed &= send_response(dut, STALE);
-    passed &= check("response from pre-redirect request is discarded",
-                    dut->fetch_valid == 0);
-
+    passed &= complete_translation(dut, FINAL_TARGET, FINAL_TARGET);
     passed &= expect_request(dut, FINAL_BASE);
     passed &= accept_request(dut, FINAL_BASE);
     passed &= send_response(dut, TARGET);
     passed &= expect_fetch(dut, 0x3U, FINAL_TARGET, TARGET, 2);
 
     accept_fetch(dut);
+    passed &= complete_translation(
+        dut, FINAL_BASE + FETCH_BYTES, FINAL_BASE + FETCH_BYTES);
     passed &= expect_request(dut, FINAL_BASE + FETCH_BYTES);
 
     if (passed)
-        std::printf("PASS: IFU stalled request and latest redirect\n");
+        std::printf("PASS: IFU cancels unaccepted request and keeps latest redirect\n");
     return passed;
 }
 
@@ -280,6 +366,7 @@ static bool run_redirect_with_pending_response(Vifu_test_top* dut) {
 
     reset(dut);
     bool passed = true;
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
     passed &= expect_request(dut, RESET_PC);
     passed &= accept_request(dut, RESET_PC);
 
@@ -291,6 +378,7 @@ static bool run_redirect_with_pending_response(Vifu_test_top* dut) {
     passed &= check("pending stale response never reaches backend",
                     dut->fetch_valid == 0);
 
+    passed &= complete_translation(dut, TARGET_PC, TARGET_PC);
     passed &= expect_request(dut, TARGET_PC);
     passed &= accept_request(dut, TARGET_PC);
     passed &= send_response(dut, TARGET);
@@ -313,6 +401,7 @@ static bool run_redirect_flushes_fetch_buffer(Vifu_test_top* dut) {
 
     reset(dut);
     bool passed = true;
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
     passed &= accept_request(dut, RESET_PC);
     passed &= send_response(dut, WRONG_PATH);
     passed &= expect_fetch(dut, 0xfU, RESET_PC, WRONG_PATH, 0);
@@ -321,6 +410,7 @@ static bool run_redirect_flushes_fetch_buffer(Vifu_test_top* dut) {
     passed &= check("redirect invalidates stalled wrong-path fetch packet",
                     dut->fetch_valid == 0);
 
+    passed &= complete_translation(dut, TARGET_PC, TARGET_PC);
     passed &= expect_request(dut, TARGET_BASE);
     passed &= accept_request(dut, TARGET_BASE);
     passed &= send_response(dut, TARGET);
@@ -340,6 +430,7 @@ static bool run_adef_fault_hold(Vifu_test_top* dut) {
 
     reset(dut);
     bool passed = true;
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
     passed &= accept_request(dut, RESET_PC);
     passed &= send_response(dut, WRONG_PATH);
 
@@ -355,6 +446,9 @@ static bool run_adef_fault_hold(Vifu_test_top* dut) {
                     dut->fetch_pc[0] == ADEF_PC);
     passed &= check("ADEF synthetic instruction is zero",
                     dut->fetch_insts[0] == 0);
+    passed &= check("ADEF carries exception metadata",
+                    dut->fetch_xcpt_valid == 0x1U &&
+                    (dut->fetch_xcpt_code & 0x3fU) == 0x08U);
 
     const FetchSnapshot stalled = snapshot_fetch(dut);
     for (int cycle = 0; cycle < 3; ++cycle) {
@@ -375,10 +469,62 @@ static bool run_adef_fault_hold(Vifu_test_top* dut) {
     }
 
     pulse_redirect(dut, HANDLER_PC);
+    passed &= complete_translation(dut, HANDLER_PC, HANDLER_PC);
     passed &= expect_request(dut, HANDLER_PC);
 
     if (passed)
         std::printf("PASS: IFU ADEF synthesis and fault hold\n");
+    return passed;
+}
+
+static bool run_translation_result_and_faults(Vifu_test_top* dut) {
+    static constexpr uint32_t PHYSICAL_BASE = 0x12345000U;
+    static constexpr uint32_t HANDLER_PC = 0x1c009000U;
+
+    reset(dut);
+    bool passed = complete_translation(
+        dut, RESET_PC, PHYSICAL_BASE, 2, false);
+    passed &= expect_request(dut, PHYSICAL_BASE);
+    passed &= check("translated memory request preserves MAT",
+                    dut->imem_req_mat == 2);
+    passed &= check("translated non-cacheable attribute is preserved",
+                    !dut->imem_req_cacheable);
+
+    for (uint32_t code : {ECODE_PIF, ECODE_TLBR}) {
+        reset(dut);
+        passed &= expect_xlate_request(dut, RESET_PC);
+        passed &= accept_xlate_request(dut, RESET_PC);
+        passed &= send_xlate_response(
+            dut, RESET_PC, 0, 0, false, true, code);
+        passed &= check("translation fault suppresses memory request",
+                        !dut->imem_req_valid);
+        passed &= check("translation fault emits one fetch lane",
+                        dut->fetch_valid == 0x1U);
+        passed &= check("translation fault preserves virtual PC",
+                        dut->fetch_pc[0] == RESET_PC);
+        passed &= check("translation fault emits synthetic instruction",
+                        dut->fetch_insts[0] == 0);
+        passed &= check("translation fault metadata matches cause",
+                        dut->fetch_xcpt_valid == 0x1U &&
+                        (dut->fetch_xcpt_code & 0x3fU) == code);
+
+        const FetchSnapshot stalled = snapshot_fetch(dut);
+        tick(dut);
+        tick(dut);
+        passed &= check("translation fault holds under backpressure",
+                        same_fetch(stalled, snapshot_fetch(dut)));
+
+        accept_fetch(dut);
+        passed &= check("accepted translation fault is not repeated",
+                        dut->fetch_valid == 0 &&
+                        !dut->xlate_req_valid &&
+                        !dut->imem_req_valid);
+        pulse_redirect(dut, HANDLER_PC);
+        passed &= expect_xlate_request(dut, HANDLER_PC);
+    }
+
+    if (passed)
+        std::printf("PASS: IFU physical translation and fetch faults\n");
     return passed;
 }
 
@@ -392,6 +538,7 @@ int main(int argc, char** argv) {
     passed &= run_redirect_with_pending_response(dut);
     passed &= run_redirect_flushes_fetch_buffer(dut);
     passed &= run_adef_fault_hold(dut);
+    passed &= run_translation_result_and_faults(dut);
 
     dut->final();
     delete dut;

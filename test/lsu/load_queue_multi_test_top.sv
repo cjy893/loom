@@ -76,6 +76,13 @@ module load_queue_multi_test_top (
     exe_unit_resp_t load_wb_resp;
     br_update_info_t brupdate;
 
+    logic xlate_req_valid, xlate_req_ready;
+    logic [TAG_WIDTH-1:0] xlate_req_tag, xlate_resp_tag;
+    logic [XLEN-1:0] xlate_req_vaddr, xlate_resp_paddr;
+    logic xlate_resp_valid;
+    logic [1:0] xlate_resp_mat;
+    logic xlate_resp_cacheable;
+
     always_comb begin
         enq_valid[0] = enq0_valid;
         enq_valid[1] = enq1_valid;
@@ -127,6 +134,17 @@ module load_queue_multi_test_top (
     assign load_wb_pdst = load_wb_resp.uop.pdst;
     assign load_wb_ldq_idx = load_wb_resp.uop.ldq_idx;
 
+    lsq_identity_xlate #(.TAG_WIDTH(TAG_WIDTH)) xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(xlate_req_valid), .req_ready(xlate_req_ready),
+        .req_tag(xlate_req_tag), .req_vaddr(xlate_req_vaddr),
+        .req_access(ACCESS_LOAD),
+        .resp_valid(xlate_resp_valid), .resp_ready(1'b1),
+        .resp_tag(xlate_resp_tag), .resp_paddr(xlate_resp_paddr),
+        .resp_access(), .resp_mat(xlate_resp_mat),
+        .resp_cacheable(xlate_resp_cacheable)
+    );
+
     load_queue #(
         .NUM_ENTRIES(LDQ_ENTRIES),
         .ENQ_WIDTH(2),
@@ -161,6 +179,19 @@ module load_queue_multi_test_top (
         .dmem_resp_valid,
         .dmem_resp_idx,
         .dmem_resp_data,
+        .xlate_req_valid,
+        .xlate_req_ready,
+        .xlate_req_vaddr,
+        .xlate_req_tag,
+        .xlate_resp_valid,
+        .xlate_resp_accept(xlate_resp_valid),
+        .xlate_resp_tag,
+        .xlate_resp_paddr,
+        .xlate_resp_mat,
+        .xlate_resp_cacheable,
+        .xlate_resp_xcpt(1'b0),
+        .xlate_resp_match(),
+        .xlate_resp_uop(),
         .load_wb_valid,
         .load_wb_resp,
         .commit_valid,

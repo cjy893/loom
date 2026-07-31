@@ -6,3 +6,4 @@
 #include "Vcore_top_contract_test_top___024root__3.cpp"
 #include "Vcore_top_contract_test_top___024root__4.cpp"
 #include "Vcore_top_contract_test_top___024root__5.cpp"
+#include "Vcore_top_contract_test_top___024root__6.cpp"

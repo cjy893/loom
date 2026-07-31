@@ -39,12 +39,12 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__4(Vmem_issue
                                                       == 
                                                       (3U 
                                                        & (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U] 
-                                                          >> 1U)))
+                                                          >> 4U)))
                                                       ? vlSelfRef.agen_addr
                                                       : (IData)(
-                                                                ((4U 
+                                                                ((0x00000020U 
                                                                   == 
-                                                                  (6U 
+                                                                  (0x00000030U 
                                                                    & vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U])) 
                                                                  & (0U 
                                                                     != 
@@ -53,12 +53,9 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__4(Vmem_issue
                                                     & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid))));
     vlSelfRef.iss_valid = vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec;
     vlSelfRef.dis_ready = vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec;
-    vlSelfRef.iss_rob_idx = (0x0000003fU & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U] 
-                                             << 3U) 
-                                            | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U] 
-                                               >> 0x0000001dU)));
+    vlSelfRef.iss_rob_idx = (0x0000003fU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U]);
     vlSelfRef.iss_use_agen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x0000000cU));
+                                    >> 0x0000000fU));
     vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x0000000dU));
+                                    >> 0x00000010U));
 }

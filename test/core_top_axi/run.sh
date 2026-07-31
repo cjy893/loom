@@ -33,6 +33,11 @@ rtl=(
   "$ROOT/lsu/load_queue.sv"
   "$ROOT/lsu/store_queue.sv"
   "$ROOT/lsu/lsu.sv"
+  "$ROOT/mmu/addr_trans.sv"
+  "$ROOT/mmu/dmmu.sv"
+  "$ROOT/mmu/immu.sv"
+  "$ROOT/mmu/tlb.sv"
+  "$ROOT/mmu/tlb_ctrl.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
 )
@@ -42,7 +47,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module core_top \
   --exe "$TEST_DIR/test_core_top_axi.cpp" \
-  -CFLAGS "-std=c++17" \
+  -CFLAGS "-std=c++17 -O0" \
   "${rtl[@]}"
 
 "$TEST_DIR/obj_dir/Vcore_top"

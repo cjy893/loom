@@ -33,6 +33,14 @@ module csr_file #(
 
     input logic csr_flush_pending,
 
+    input logic tlb_update_valid,
+    input logic [4:0] tlb_update_mask,
+    input logic [31:0] tlb_update_tlbidx,
+    input logic [31:0] tlb_update_tlbehi,
+    input logic [31:0] tlb_update_tlbelo0,
+    input logic [31:0] tlb_update_tlbelo1,
+    input logic [31:0] tlb_update_asid,
+
     input logic xcpt_valid,
     input logic [31:0] xcpt_inst,
     input logic [31:0] xcpt_pc,
@@ -58,6 +66,10 @@ module csr_file #(
     output logic [31:0] asid_value,
     output logic [31:0] dmw0_value,
     output logic [31:0] dmw1_value,
+    output logic [31:0] tlbidx_value,
+    output logic [31:0] tlbehi_value,
+    output logic [31:0] tlbelo0_value,
+    output logic [31:0] tlbelo1_value,
 
     output logic [31:0] era_value,
     output logic [31:0] eentry_value,
@@ -243,6 +255,10 @@ module csr_file #(
     assign era_value = era_q;
     assign eentry_value = eentry_q;
     assign tlbrentry_value = tlbrentry_q;
+    assign tlbidx_value  = tlbidx_q;
+    assign tlbehi_value  = tlbehi_q;
+    assign tlbelo0_value = tlbelo0_q;
+    assign tlbelo1_value = tlbelo1_q;
 
     assign counter_value = stable_counter_q + {{32{cntc_q[31]}}, cntc_q};
     assign tid_value = tid_q;
@@ -438,7 +454,39 @@ module csr_file #(
                         default: begin end
                     endcase
                 end
-            end else if (csr_flush_pending) begin
+            end else if(tlb_update_valid) begin
+                if(tlb_update_mask[0]) begin
+                    tlbidx_q <= merge_write(
+                        tlbidx_q, tlb_update_tlbidx,
+                        32'hffff_ffff, write_mask(14'h010)
+                    );
+                end
+                if(tlb_update_mask[1]) begin
+                    tlbehi_q <= merge_write(
+                        tlbehi_q, tlb_update_tlbehi,
+                        32'hffff_ffff, write_mask(14'h011)
+                    );
+                end
+                if(tlb_update_mask[2]) begin
+                    tlbelo0_q <= merge_write(
+                        tlbelo0_q, tlb_update_tlbelo0,
+                        32'hffff_ffff, write_mask(14'h012)
+                    );
+                end
+                if(tlb_update_mask[3]) begin
+                    tlbelo1_q <= merge_write(
+                        tlbelo1_q, tlb_update_tlbelo1,
+                        32'hffff_ffff, write_mask(14'h013)
+                    );
+                end
+                if(tlb_update_mask[4]) begin
+                    asid_q <= merge_write(
+                        asid_q, tlb_update_asid,
+                        32'hffff_ffff, write_mask(14'h018)
+                    );
+                end
+            end
+            if (csr_flush_pending) begin
                 pending_q <= 1'b0;
                 resp_valid_q <= 1'b0;
             end

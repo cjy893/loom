@@ -40,6 +40,11 @@ case "$MODE" in
       "$ROOT/lsu/load_queue.sv"
       "$ROOT/lsu/store_queue.sv"
       "$ROOT/lsu/lsu.sv"
+      "$ROOT/mmu/addr_trans.sv"
+      "$ROOT/mmu/dmmu.sv"
+      "$ROOT/mmu/immu.sv"
+      "$ROOT/mmu/tlb.sv"
+      "$ROOT/mmu/tlb_ctrl.sv"
       "$ROOT/exu/loom_core.sv"
       "$TEST_DIR/core_top_reference.sv"
     )
@@ -67,7 +72,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir_$MODE" \
   --top-module core_top_contract_test_top \
   --exe "$TEST_DIR/test_core_top.cpp" \
-  -CFLAGS "-std=c++17" \
+  -CFLAGS "-std=c++17 -O0" \
   "${defines[@]}" \
   "${rtl[@]}" \
   "$TEST_DIR/core_top_contract_test_top.sv"

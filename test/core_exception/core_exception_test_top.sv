@@ -8,6 +8,8 @@ module core_exception_test_top (
 
     input  logic [3:0]                   fe_valid,
     input  logic [3:0][31:0]             fe_insts,
+    input  logic [3:0]                   fe_xcpt_valid,
+    input  logic [3:0][5:0]              fe_xcpt_code,
     output logic                         fe_ready,
     output logic [31:0]                  debug_pc,
     output logic                         redirect_valid,
@@ -28,6 +30,7 @@ module core_exception_test_top (
     output logic [31:0]                  exception_pc,
     output logic [31:0]                  exception_inst,
     output logic [31:0]                  exception_cause,
+    output logic [31:0]                  exception_badvaddr,
 
     output logic [1:0]                   csr_current_plv,
     output logic                         csr_current_ie,
@@ -46,9 +49,23 @@ module core_exception_test_top (
         .fe_valid,
         .fe_insts,
         .fe_pcs('0),
+        .fe_xcpt_valid,
+        .fe_xcpt_code,
         .fe_ready,
         .fe_redirect_valid(redirect_valid),
         .fe_redirect_pc(redirect_pc),
+        .ifu_xlate_req_valid(1'b0),
+        .ifu_xlate_req_ready(),
+        .ifu_xlate_req_vaddr('0),
+        .ifu_xlate_resp_valid(),
+        .ifu_xlate_resp_ready(1'b1),
+        .ifu_xlate_resp_vaddr(),
+        .ifu_xlate_resp_paddr(),
+        .ifu_xlate_resp_mat(),
+        .ifu_xlate_resp_cacheable(),
+        .ifu_xlate_resp_xcpt_valid(),
+        .ifu_xlate_resp_xcpt_code(),
+        .ifu_xlate_resp_badvaddr(),
         .dmem_req_valid(),
         .dmem_req_ready(1'b1),
         .dmem_req_is_store(),
@@ -116,6 +133,7 @@ module core_exception_test_top (
     assign exception_pc = core.rob_com_xcpt_w.pc;
     assign exception_inst = core.rob_com_xcpt_w.inst;
     assign exception_cause = core.rob_com_xcpt_w.cause;
+    assign exception_badvaddr = core.rob_com_xcpt_w.badvaddr;
 
     assign redirect_flush_typ =
         core.rob_flush_w.valid ? core.rob_flush_w.flush_typ : FT_NONE;

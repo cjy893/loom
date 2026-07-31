@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -177,6 +178,8 @@ public:
         bool b_fire = dut->bvalid && dut->bready;
 
         if (r_fire) {
+            append_trace(cycle, "R", dut->rid, dut->rdata,
+                         dut->rlast);
             if (!read_pending_) {
                 protocol_ok_ = false;
             } else if (read_beat_ == read_len_) {
@@ -188,6 +191,7 @@ public:
         }
 
         if (b_fire) {
+            append_trace(cycle, "B", dut->bid, dut->bresp, 0);
             if (!write_response_pending_)
                 protocol_ok_ = false;
             write_response_pending_ = false;
@@ -195,6 +199,8 @@ public:
         }
 
         if (ar_fire) {
+            append_trace(cycle, "AR", dut->arid, dut->araddr,
+                         dut->arlen);
             protocol_ok_ &= !read_pending_;
             protocol_ok_ &= dut->arsize == 2;
             protocol_ok_ &= dut->arburst == 1;
@@ -220,6 +226,8 @@ public:
         }
 
         if (aw_fire) {
+            append_trace(cycle, "AW", dut->awid, dut->awaddr,
+                         dut->awlen);
             protocol_ok_ &= !aw_seen_;
             protocol_ok_ &= dut->awid == 1;
             protocol_ok_ &= dut->awlen == 0;
@@ -231,6 +239,8 @@ public:
         }
 
         if (w_fire) {
+            append_trace(cycle, "W", dut->wid, dut->wdata,
+                         dut->wstrb);
             protocol_ok_ &= !w_seen_;
             protocol_ok_ &= dut->wid == 1;
             protocol_ok_ &= dut->wlast;
@@ -274,8 +284,18 @@ public:
     unsigned data_reads() const { return data_reads_; }
     unsigned writes() const { return writes_; }
     unsigned completed_writes() const { return completed_writes_; }
+    const std::vector<std::string>& trace() const { return trace_; }
 
 private:
+    void append_trace(int cycle, const char* channel, unsigned id,
+                      uint32_t value, unsigned extra) {
+        char line[96];
+        std::snprintf(line, sizeof(line),
+                      "cycle=%4d %-2s id=%u value=%08x extra=%x",
+                      cycle, channel, id, value, extra);
+        trace_.emplace_back(line);
+    }
+
     void write_word(uint32_t addr, uint32_t data) {
         write_strobed(addr, data, 0xf);
     }
@@ -324,16 +344,27 @@ private:
     unsigned data_reads_ = 0;
     unsigned writes_ = 0;
     unsigned completed_writes_ = 0;
+    std::vector<std::string> trace_;
 };
 
 bool run_case(Vcore_top* dut, bool stress) {
     reset(dut);
     AxiMemory memory(stress);
     bool finished = false;
+    std::vector<std::string> commits;
 
     for (int cycle = 0; cycle < 4000; ++cycle) {
         memory.drive(dut, cycle);
         dut->eval();
+        if (dut->debug0_wb_rf_wen != 0) {
+            char line[128];
+            std::snprintf(
+                line, sizeof(line),
+                "cycle=%4d pc=%08x rd=%u data=%08x wen=%x",
+                cycle, dut->debug0_wb_pc, dut->debug0_wb_rf_wnum,
+                dut->debug0_wb_rf_wdata, dut->debug0_wb_rf_wen);
+            commits.emplace_back(line);
+        }
         memory.observe_stability(dut);
         memory.advance(dut, cycle);
         tick(dut);
@@ -362,6 +393,21 @@ bool run_case(Vcore_top* dut, bool stress) {
         memory.instruction_reads(),
         memory.data_reads(),
         memory.writes());
+    if (!ok) {
+        std::printf(
+            "  finished=%d protocol_ok=%d backpressure=%d "
+            "data[0]=%08x data[4]=%08x completed=%u\n",
+            finished, memory.protocol_ok(), memory.saw_backpressure(),
+            memory.read_word(DATA_BASE),
+            memory.read_word(DATA_BASE + 4),
+            memory.completed_writes());
+        std::puts("  AXI handshakes:");
+        for (const auto& line : memory.trace())
+            std::printf("    %s\n", line.c_str());
+        std::puts("  visible GPR commits:");
+        for (const auto& line : commits)
+            std::printf("    %s\n", line.c_str());
+    }
     return ok;
 }
 

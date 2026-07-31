@@ -59,6 +59,13 @@ static constexpr uint32_t b(int byte_offset) {
     return branch_i26(0x50000000U, byte_offset);
 }
 
+static constexpr uint32_t beq(unsigned rj, unsigned rd,
+                              int byte_offset) {
+    return 0x58000000U |
+           ((static_cast<unsigned>(byte_offset >> 2) & 0xffffU) << 10) |
+           ((rj & 0x1fU) << 5) | (rd & 0x1fU);
+}
+
 static unsigned packed_field(uint32_t value, int index, int width) {
     return (value >> (index * width)) & ((1U << width) - 1U);
 }
@@ -529,9 +536,9 @@ static bool test_redirect_and_stale_response(
     Vcore_ifu_test_top* dut) {
     const std::vector<Instruction> program = {
         {addi_w(1, 0, 0x100), "addi.w r1, r0, 0x100"},
-        {b(24), "b +24"},
+        {ld_w(2, 1, 0), "ld.w r2, r1, 0"},
+        {beq(2, 2, 20), "beq r2, r2, +20"},
         {st_w(0, 1, 0), "st.w r0, r1, 0 (wrong path)"},
-        {addi_w(5, 0, 1), "addi.w r5, r0, 1 (wrong path)"},
         {addi_w(5, 0, 2), "addi.w r5, r0, 2 (wrong path)"},
         {addi_w(5, 0, 3), "addi.w r5, r0, 3 (wrong path)"},
         {addi_w(5, 0, 4), "addi.w r5, r0, 4 (wrong path)"},
@@ -556,7 +563,7 @@ static bool test_redirect_and_stale_response(
     passed &= check(
         "core IFU redirect commit trace",
         check_commit_trace("core IFU redirect", result, program,
-                           {0, 1, 7, 8, 9, 10, 11}));
+                           {0, 1, 2, 7, 8, 9, 10, 11}));
     passed &= check("core IFU observes one redirect",
                     result.redirects == 1);
     passed &= check("core IFU re-requests stale target bundle",
@@ -567,7 +574,7 @@ static bool test_redirect_and_stale_response(
     passed &= check("core IFU executes compacted target lane",
                     result.last_write[10] == 7);
     bool load_passed =
-        dmem.load_requests == 1 &&
+        dmem.load_requests == 2 &&
         result.last_write[11] == 0x12345678U;
     if (!load_passed) {
         std::fprintf(stderr,

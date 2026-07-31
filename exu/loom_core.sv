@@ -15,11 +15,12 @@ module loom_core #(
     parameter int ALU_IQ_ENTRIES = 16,
     parameter int MEM_IQ_ENTRIES = 16,
     parameter int UNQ_IQ_ENTRIES = 12,
+    parameter int TLB_ENTRIES    = 32,
     parameter int NUM_WAKEUPS    = 6,   // ALU(3)+LSU(1)+UNQ(1)+FP(0)+extra(1)=6
     parameter int NUM_REGF_READS = ALU_WIDTH * 2 + MEM_WIDTH * 2 + 2,
     parameter int NUM_REGF_WRITES= 5,   // ALU(3)+LSU(1)+UNQ(1)=5
     parameter logic [31:0] CORE_ID = 32'd0,
-    parameter bit ENABLE_SINGLE_DEBUG_COMMIT = 1'b1
+    parameter bit ENABLE_SINGLE_DEBUG_COMMIT = 1'b0
 )(
     input  logic clk,
     input  logic rst_n,
@@ -31,6 +32,21 @@ module loom_core #(
     output logic                         fe_ready,
     output logic                         fe_redirect_valid,
     output logic [31:0]                  fe_redirect_pc,
+    input logic [FETCH_WIDTH-1:0]      fe_xcpt_valid,
+    input logic [FETCH_WIDTH-1:0][5:0] fe_xcpt_code,
+    input  logic        ifu_xlate_req_valid,
+    output logic        ifu_xlate_req_ready,
+    input  logic [31:0] ifu_xlate_req_vaddr,
+
+    output logic        ifu_xlate_resp_valid,
+    input  logic        ifu_xlate_resp_ready,
+    output logic [31:0] ifu_xlate_resp_vaddr,
+    output logic [31:0] ifu_xlate_resp_paddr,
+    output logic [1:0]  ifu_xlate_resp_mat,
+    output logic        ifu_xlate_resp_cacheable,
+    output logic        ifu_xlate_resp_xcpt_valid,
+    output logic [5:0]  ifu_xlate_resp_xcpt_code,
+    output logic [31:0] ifu_xlate_resp_badvaddr,
 
     // ── 测试存储器接口 ──
     output logic                         dmem_req_valid,
@@ -84,16 +100,17 @@ module loom_core #(
     output logic [ALU_WIDTH-1:0]         alu_res_valid_dbg,
     output logic [NUM_WAKEUPS-1:0]       rob_wb_valid_dbg
 );
+    localparam int TLB_IDX_WIDTH = (TLB_ENTRIES <= 1) ? 1 : $clog2(TLB_ENTRIES);
 
     // ================================================================
     // Decode
     // ================================================================
     logic [CORE_WIDTH-1:0]       dec_fire;
     uop_t [CORE_WIDTH-1:0]       dec_uops_raw;
+    uop_t [CORE_WIDTH-1:0] dec_uops_pre_bm;
     uop_t [CORE_WIDTH-1:0]       dec_uops;
     logic [CORE_WIDTH-1:0]       dec_valids;
     logic                        dec_ready;
-    logic [CORE_WIDTH-1:0]       dec_xcpts;
     logic [31:0]                 fetch_pc;
     logic [31:0]                 next_decode_pc_q;
     logic [31:0]                 next_decode_pc_d;
@@ -102,8 +119,7 @@ module loom_core #(
     logic                        dispatch_enable;
     logic                        unique_dispatch_ready;
     logic                        branch_alloc_ready;
-    localparam int FE_IDX_WIDTH =
-        (FETCH_WIDTH > 1) ? $clog2(FETCH_WIDTH) : 1;
+    localparam int FE_IDX_WIDTH = (FETCH_WIDTH > 1) ? $clog2(FETCH_WIDTH) : 1;
     logic [CORE_WIDTH-1:0][31:0] dec_insts;
     logic [CORE_WIDTH-1:0][FE_IDX_WIDTH-1:0] dec_fe_idx;
     logic [FETCH_WIDTH-1:0]       fe_finished_q;
@@ -111,6 +127,8 @@ module loom_core #(
     logic [$clog2(FETCH_WIDTH+1)-1:0] fe_count;
     logic                        fe_packet_done;
     logic                        fe_accept;
+    logic [CORE_WIDTH-1:0]      dec_xcpt_valid;
+    logic [CORE_WIDTH-1:0][5:0] dec_xcpt_code;
 
     logic [CORE_WIDTH-1:0] iq_mem_dis_valid;
     logic [CORE_WIDTH-1:0] iq_alu_dis_valid;
@@ -149,6 +167,80 @@ module loom_core #(
     logic [31:0]                 csr_ertn_target_w;
     logic [63:0]                 csr_counter_value_w;
     logic [31:0]                 csr_tid_value_w;
+    logic [31:0]                 csr_tlbidx_value_w;
+    logic [31:0]                 csr_tlbehi_value_w;
+    logic [31:0]                 csr_tlbelo0_value_w;
+    logic [31:0]                 csr_tlbelo1_value_w;
+    logic [31:0]                 csr_asid_value_w;
+    logic [31:0]                 csr_crmd_value_w;
+    logic [31:0]                 csr_dmw0_value_w;
+    logic [31:0]                 csr_dmw1_value_w;
+
+    logic                        tlb_commit_valid_w;
+    logic [ROB_ADDR_SZ-1:0]      tlb_commit_rob_idx_w;
+    logic                        tlb_csr_update_valid_w;
+    logic [4:0]                  tlb_csr_update_mask_w;
+    logic [31:0]                 tlb_csr_tlbidx_wdata_w;
+    logic [31:0]                 tlb_csr_tlbehi_wdata_w;
+    logic [31:0]                 tlb_csr_tlbelo0_wdata_w;
+    logic [31:0]                 tlb_csr_tlbelo1_wdata_w;
+    logic [31:0]                 tlb_csr_asid_wdata_w;
+
+    logic                        tlb_search_active_w;
+    logic                        tlb_search_req_valid_w;
+    logic [31:0]                 tlb_search_req_vaddr_w;
+    logic [ASID_BITS-1:0]        tlb_search_req_asid_w;
+    logic                        tlb_search_resp_valid_w;
+    logic                        tlb_search_found_w;
+    logic [TLB_IDX_WIDTH-1:0]    tlb_search_idx_w;
+
+    logic                         itlb_req_valid_w;
+    logic                         itlb_req_ready_w;
+    logic [31:0]                  itlb_req_vaddr_w;
+    logic [ASID_BITS-1:0]         itlb_req_asid_w;
+    logic                         itlb_resp_valid_w;
+
+    logic                         q0_req_valid_w;
+    logic [31:0]                  q0_req_vaddr_w;
+    logic [ASID_BITS-1:0]         q0_req_asid_w;
+    logic                         q0_resp_valid_w;
+    logic                         q0_found_w;
+    logic [TLB_IDX_WIDTH-1:0]     q0_idx_w;
+    logic [5:0]                   q0_ps_w;
+    logic [19:0]                  q0_ppn_w;
+    logic                         q0_v_w, q0_d_w;
+    logic [1:0]                   q0_mat_w, q0_plv_w;
+    logic                         q0_owner_search_q;
+
+    logic [TLB_IDX_WIDTH-1:0]    tlb_rd_idx_w;
+    logic                        tlb_rd_e_w;
+    logic [18:0]                 tlb_rd_vppn_w;
+    logic [ASID_BITS-1:0]        tlb_rd_asid_w;
+    logic                        tlb_rd_g_w;
+    logic [5:0]                  tlb_rd_ps_w;
+    logic [19:0]                 tlb_rd_ppn0_w, tlb_rd_ppn1_w;
+    logic [1:0]                  tlb_rd_mat0_w, tlb_rd_mat1_w;
+    logic [1:0]                  tlb_rd_plv0_w, tlb_rd_plv1_w;
+    logic                        tlb_rd_d0_w, tlb_rd_d1_w;
+    logic                        tlb_rd_v0_w, tlb_rd_v1_w;
+
+    logic                        tlb_wr_valid_w;
+    logic [TLB_IDX_WIDTH-1:0]    tlb_wr_idx_w;
+    logic                        tlb_wr_e_w;
+    logic [18:0]                 tlb_wr_vppn_w;
+    logic [ASID_BITS-1:0]        tlb_wr_asid_w;
+    logic                        tlb_wr_g_w;
+    logic [5:0]                  tlb_wr_ps_w;
+    logic [19:0]                 tlb_wr_ppn0_w, tlb_wr_ppn1_w;
+    logic [1:0]                  tlb_wr_mat0_w, tlb_wr_mat1_w;
+    logic [1:0]                  tlb_wr_plv0_w, tlb_wr_plv1_w;
+    logic                        tlb_wr_d0_w, tlb_wr_d1_w;
+    logic                        tlb_wr_v0_w, tlb_wr_v1_w;
+
+    logic                        tlb_inv_valid_w;
+    logic [4:0]                  tlb_inv_op_w;
+    logic [ASID_BITS-1:0]        tlb_inv_asid_w;
+    logic [31:0]                 tlb_inv_vaddr_w;
 
     // The frontend owns the packet until every valid lane has entered Decode.
     // Only a completion mask is retained here; instruction data stays at the
@@ -161,6 +253,8 @@ module loom_core #(
         dec_valids = '0;
         dec_insts = '0;
         dec_pcs = '0;
+        dec_xcpt_valid = '0;
+        dec_xcpt_code = '0;
         dec_fe_idx = '0;
         fe_count = '0;
         dec_slot = 0;
@@ -173,6 +267,8 @@ module loom_core #(
                     dec_valids[dec_slot] = 1'b1;
                     dec_insts[dec_slot] = fe_insts[w];
                     dec_fe_idx[dec_slot] = FE_IDX_WIDTH'(w);
+                    dec_xcpt_valid[dec_slot] = fe_xcpt_valid[w];
+                    dec_xcpt_code[dec_slot] = fe_xcpt_code[w];
                     if (USE_EXTERNAL_FE_PCS)
                         dec_pcs[dec_slot] = fe_pcs[w];
                     else
@@ -258,12 +354,12 @@ module loom_core #(
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (dec_valids[w]) begin
                 if (!prior_unique &&
-                    (!dec_uops_raw[w].is_unique ||
+                    (!dec_uops_pre_bm[w].is_unique ||
                      (rob_empty && !prior_valid)))
                     dec_lane_eligible[w] = 1'b1;
 
                 prior_valid |= dec_valids[w];
-                prior_unique |= dec_uops_raw[w].is_unique;
+                prior_unique |= dec_uops_pre_bm[w].is_unique;
             end
         end
     end
@@ -273,6 +369,29 @@ module loom_core #(
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (dec_valids[w] && dec_lane_eligible[w] && bm_is_full[w])
                 branch_alloc_ready = 1'b0;
+        end
+    end
+
+    always_comb begin
+        dec_uops_pre_bm = dec_uops_raw;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (dec_xcpt_valid[w]) begin
+                dec_uops_pre_bm[w] = '0;
+                dec_uops_pre_bm[w].inst       = dec_insts[w];
+                dec_uops_pre_bm[w].debug_inst = dec_insts[w];
+                dec_uops_pre_bm[w].pc         = dec_pcs[w];
+                dec_uops_pre_bm[w].debug_pc   = dec_pcs[w];
+
+                dec_uops_pre_bm[w].exception = 1'b1;
+                dec_uops_pre_bm[w].exc_cause =
+                    {{(XLEN-6){1'b0}}, dec_xcpt_code[w]};
+
+                dec_uops_pre_bm[w].exc_pif =
+                    dec_xcpt_code[w] == ECODE_PIF;
+                dec_uops_pre_bm[w].exc_adef =
+                    dec_xcpt_code[w] == ECODE_ADE;
+            end
         end
     end
 
@@ -291,8 +410,8 @@ module loom_core #(
     logic                                bm_flush;
 
     for (genvar w = 0; w < CORE_WIDTH; w++) begin : gen_branch_inputs
-        assign bm_is_branch[w] = dec_valids[w] && dec_uops_raw[w].allocate_brtag;
-        assign bm_will_fire[w] = dec_fire[w] && dec_uops_raw[w].allocate_brtag;
+        assign bm_is_branch[w] = dec_valids[w] && dec_uops_pre_bm[w].allocate_brtag;
+        assign bm_will_fire[w] = dec_fire[w] && dec_uops_pre_bm[w].allocate_brtag;
     end
 
     br_mask #(.CORE_WIDTH(CORE_WIDTH), .MAX_BR_COUNT(MAX_BR_COUNT)) brmask (
@@ -339,7 +458,7 @@ module loom_core #(
 
     // ── 灌入 dec_uops ──
     always_comb begin
-        dec_uops = dec_uops_raw;
+        dec_uops = dec_uops_pre_bm;
         for (int w = 0; w < CORE_WIDTH; w++) begin
             dec_uops[w].br_tag  = bm_br_tag[w];
             dec_uops[w].br_mask = bm_br_mask[w];
@@ -666,6 +785,147 @@ module loom_core #(
     logic lsu_ldq_empty;
     logic lsu_stq_empty;
 
+    logic dmmu_req_valid, dmmu_req_ready;
+    logic [LSU_ADDR_SZ+1:0] dmmu_req_tag;
+    logic [31:0] dmmu_req_vaddr;
+    logic [1:0] dmmu_req_access;
+
+    logic dmmu_resp_valid, dmmu_resp_ready;
+    logic [LSU_ADDR_SZ+1:0] dmmu_resp_tag;
+    logic [1:0] dmmu_resp_access;
+    logic [31:0] dmmu_resp_paddr;
+    logic [1:0] dmmu_resp_mat;
+    logic dmmu_resp_cacheable;
+    logic dmmu_resp_xcpt_valid;
+    logic [5:0] dmmu_resp_xcpt_code;
+    logic [31:0] dmmu_resp_badvaddr;
+
+    logic dtlb_req_valid, dtlb_resp_valid, dtlb_found;
+    logic [31:0] dtlb_req_vaddr;
+    logic [ASID_BITS-1:0] dtlb_req_asid;
+    logic [5:0] dtlb_ps;
+    logic [19:0] dtlb_ppn;
+    logic dtlb_v, dtlb_d;
+    logic [1:0] dtlb_mat, dtlb_plv;
+
+    exception_t lsu_xlate_xcpt;
+    exception_t lsu_xlate_xcpt_q;
+    exception_t rob_lxcpt_w;
+    logic lsu_xlate_xcpt_ready;
+
+    assign lsu_xlate_xcpt_ready = !lsu_xlate_xcpt_q.valid;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            lsu_xlate_xcpt_q <= '0;
+        end else if(bm_flush) begin
+            lsu_xlate_xcpt_q <= '0;
+        end else if(lsu_xlate_xcpt_q.valid) begin
+            if(!mem_xcpt[0].valid) lsu_xlate_xcpt_q <= '0;
+        end else if(lsu_xlate_xcpt.valid) begin
+            lsu_xlate_xcpt_q <= lsu_xlate_xcpt;
+        end
+    end
+
+    always_comb begin
+        rob_lxcpt_w = '0;
+
+        if(mem_xcpt[0].valid) rob_lxcpt_w = mem_xcpt[0];
+        else if(lsu_xlate_xcpt_q.valid) rob_lxcpt_w = lsu_xlate_xcpt_q;
+    end
+
+    assign q0_req_valid_w = tlb_search_req_valid_w || itlb_req_valid_w;
+    assign q0_req_vaddr_w = tlb_search_req_valid_w ? tlb_search_req_vaddr_w : itlb_req_vaddr_w;
+    assign q0_req_asid_w = tlb_search_req_valid_w ? tlb_search_req_asid_w : itlb_req_asid_w;
+
+    assign itlb_req_ready_w = !tlb_search_req_valid_w;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q0_owner_search_q <= 1'b0;
+        else if (q0_req_valid_w)
+            q0_owner_search_q <= tlb_search_req_valid_w;
+    end
+
+    assign tlb_search_resp_valid_w = q0_resp_valid_w && q0_owner_search_q;
+    assign itlb_resp_valid_w = q0_resp_valid_w && !q0_owner_search_q;
+
+    assign tlb_search_found_w = q0_found_w;
+    assign tlb_search_idx_w = q0_idx_w;
+
+    immu #(
+        .ASID_WIDTH(ASID_BITS)
+    ) immu_inst (
+        .clk, .rst_n,
+        .flush(fe_redirect_valid),
+
+        .req_valid(ifu_xlate_req_valid),
+        .req_ready(ifu_xlate_req_ready),
+        .req_vaddr(ifu_xlate_req_vaddr),
+
+        .csr_crmd(csr_crmd_value_w),
+        .csr_asid(csr_asid_value_w),
+        .csr_dmw0(csr_dmw0_value_w),
+        .csr_dmw1(csr_dmw1_value_w),
+
+        .tlb_req_valid(itlb_req_valid_w),
+        .tlb_req_ready(itlb_req_ready_w),
+        .tlb_req_vaddr(itlb_req_vaddr_w),
+        .tlb_req_asid(itlb_req_asid_w),
+        .tlb_resp_valid(itlb_resp_valid_w),
+        .tlb_found(q0_found_w),
+        .tlb_ps(q0_ps_w),
+        .tlb_ppn(q0_ppn_w),
+        .tlb_v(q0_v_w),
+        .tlb_d(q0_d_w),
+        .tlb_mat(q0_mat_w),
+        .tlb_plv(q0_plv_w),
+
+        .resp_valid(ifu_xlate_resp_valid),
+        .resp_ready(ifu_xlate_resp_ready),
+        .resp_vaddr(ifu_xlate_resp_vaddr),
+        .resp_paddr(ifu_xlate_resp_paddr),
+        .resp_mat(ifu_xlate_resp_mat),
+        .resp_cacheable(ifu_xlate_resp_cacheable),
+        .resp_xcpt_valid(ifu_xlate_resp_xcpt_valid),
+        .resp_xcpt_code(ifu_xlate_resp_xcpt_code),
+        .resp_badvaddr(ifu_xlate_resp_badvaddr)
+    );
+
+    dmmu #(
+        .ASID_WIDTH(ASID_BITS),
+        .TAG_WIDTH (LSU_ADDR_SZ + 2)
+    ) dmmu_inst (
+        .clk, .rst_n, .flush(bm_flush),
+
+        .req_valid(dmmu_req_valid), .req_ready(dmmu_req_ready),
+        .req_tag(dmmu_req_tag), .req_vaddr(dmmu_req_vaddr),
+        .req_access(dmmu_req_access),
+
+        .csr_crmd(csr_crmd_value_w),
+        .csr_asid(csr_asid_value_w),
+        .csr_dmw0(csr_dmw0_value_w),
+        .csr_dmw1(csr_dmw1_value_w),
+
+        .tlb_req_valid(dtlb_req_valid),
+        .tlb_req_vaddr(dtlb_req_vaddr),
+        .tlb_req_asid(dtlb_req_asid),
+        .tlb_resp_valid(dtlb_resp_valid),
+        .tlb_found(dtlb_found), .tlb_ps(dtlb_ps), .tlb_ppn(dtlb_ppn),
+        .tlb_v(dtlb_v), .tlb_d(dtlb_d),
+        .tlb_mat(dtlb_mat), .tlb_plv(dtlb_plv),
+
+        .resp_valid(dmmu_resp_valid), .resp_ready(dmmu_resp_ready),
+        .resp_tag(dmmu_resp_tag), .resp_vaddr(),
+        .resp_access(dmmu_resp_access),
+        .resp_paddr(dmmu_resp_paddr),
+        .resp_mat(dmmu_resp_mat),
+        .resp_cacheable(dmmu_resp_cacheable),
+        .resp_xcpt_valid(dmmu_resp_xcpt_valid),
+        .resp_xcpt_code(dmmu_resp_xcpt_code),
+        .resp_badvaddr(dmmu_resp_badvaddr)
+    );
+
     lsu #(
         .DISPATCH_WIDTH(CORE_WIDTH),
         .AGEN_WIDTH(MEM_WIDTH),
@@ -689,6 +949,25 @@ module loom_core #(
         .dgen_valid(mem_dgen_valid),
         .dgen_uops(mem_dgen_uop),
         .dgen_data(mem_dgen_data),
+        .xlate_req_valid(dmmu_req_valid),
+        .xlate_req_ready(dmmu_req_ready),
+        .xlate_req_tag(dmmu_req_tag),
+        .xlate_req_vaddr(dmmu_req_vaddr),
+        .xlate_req_access(dmmu_req_access),
+
+        .xlate_resp_valid(dmmu_resp_valid),
+        .xlate_resp_ready(dmmu_resp_ready),
+        .xlate_resp_tag(dmmu_resp_tag),
+        .xlate_resp_access(dmmu_resp_access),
+        .xlate_resp_paddr(dmmu_resp_paddr),
+        .xlate_resp_mat(dmmu_resp_mat),
+        .xlate_resp_cacheable(dmmu_resp_cacheable),
+        .xlate_resp_xcpt_valid(dmmu_resp_xcpt_valid),
+        .xlate_resp_xcpt_code(dmmu_resp_xcpt_code),
+        .xlate_resp_badvaddr(dmmu_resp_badvaddr),
+
+        .xlate_xcpt(lsu_xlate_xcpt),
+        .xlate_xcpt_ready(lsu_xlate_xcpt_ready),
         .commit_valid(commit.valids),
         .commit_uops(commit.uops),
         .rob_head_idx(rob_head_idx_w),
@@ -718,25 +997,63 @@ module loom_core #(
     // ================================================================
     // 执行单元——UNQ
     // ================================================================
-    logic unq_res_valid;
     logic unq_exec_ready;
+    logic unq_res_valid;
     exe_unit_resp_t unq_res;
+
+    logic unq_native_ready;
+    logic unq_native_res_valid;
+    exe_unit_resp_t unq_native_res;
+
+    logic tlb_req_valid, tlb_req_ready, tlb_req_fire;
+    logic tlb_resp_valid;
+    logic [ROB_ADDR_SZ-1:0] tlb_resp_rob_idx;
+    uop_t tlb_uop_q;
+    exe_unit_resp_t tlb_res;
+
+    logic [31:0] unq_src1, unq_src2;
+
+    assign unq_src1 = bypass_mux(unq_iss_uop.psrc1, rf_read_data[UNQ_RF_BASE], bp_valid, bp_pdst, bp_data);
+    assign unq_src2 = bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE+1], bp_valid, bp_pdst, bp_data);
+
+    logic tlb_selected;
+
+    assign tlb_selected = unq_iss_uop.tlb_cmd != TLB_CMD_NONE;
+    assign tlb_req_valid = tlb_selected && unq_iss_valid;
+    assign tlb_req_fire = tlb_req_valid && tlb_req_ready;
+    assign unq_exec_ready = unq_native_ready && tlb_req_ready;
 
     assign rf_read_en[UNQ_RF_BASE] = unq_iss_valid;
     assign rf_read_addr[UNQ_RF_BASE] = unq_iss_uop.psrc1;
     assign rf_read_en[UNQ_RF_BASE + 1] = unq_iss_valid;
     assign rf_read_addr[UNQ_RF_BASE + 1] = unq_iss_uop.psrc2;
 
+    always_ff @(posedge clk or negedge rst_n) begin
+        if(!rst_n) tlb_uop_q <= '0;
+        else if(bm_flush) tlb_uop_q <= '0;
+        else if(tlb_req_fire) tlb_uop_q <= unq_iss_uop;
+    end
+
+    always_comb begin
+        tlb_res = '0;
+        tlb_res.valid = tlb_resp_valid;
+        tlb_res.uop = tlb_uop_q;
+        tlb_res.uop.rob_idx = tlb_resp_rob_idx;
+
+        unq_res_valid = unq_native_res_valid || tlb_resp_valid;
+        unq_res = tlb_resp_valid ? tlb_res : unq_native_res;
+    end
+
     unq unq_inst (.clk(clk), .rst_n(rst_n),
-        .iss_valid(unq_iss_valid), .iss_uop(unq_iss_uop),
-        .iss_ready(unq_exec_ready),
-        .src1_data(bypass_mux(unq_iss_uop.psrc1, rf_read_data[UNQ_RF_BASE], bp_valid, bp_pdst, bp_data)),
-        .src2_data(bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE + 1], bp_valid, bp_pdst, bp_data)),
+        .iss_valid(unq_iss_valid && !tlb_selected), .iss_uop(unq_iss_uop),
+        .iss_ready(unq_native_ready),
+        .src1_data(unq_src1),
+        .src2_data(unq_src2),
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
         .csr_rdata(csr_rdata_w),
         .counter_value(csr_counter_value_w),
         .counter_id_value(csr_tid_value_w),
-        .res_valid(unq_res_valid), .res(unq_res),
+        .res_valid(unq_native_res_valid), .res(unq_native_res),
         .brupdate(brupdate_w), .kill(bm_flush));
 
     // ================================================================
@@ -874,7 +1191,7 @@ module loom_core #(
         .interrupt_pending(csr_interrupt_pending_w),
         .interrupt_next_pc(rob_interrupt_next_pc_w),
         .interrupt_taken(),
-        .lxcpt      (mem_xcpt[0]),
+        .lxcpt      (rob_lxcpt_w),
         .csr_replay ('0),
         .csr_stall  (1'b0),
         .commit     (commit),
@@ -897,6 +1214,8 @@ module loom_core #(
         csr_commit_valid_w = 1'b0;
         csr_commit_rob_idx_w = '0;
         csr_ertn_valid_w = 1'b0;
+        tlb_commit_valid_w = 1'b0;
+        tlb_commit_rob_idx_w = '0;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (!csr_commit_valid_w &&
@@ -904,6 +1223,13 @@ module loom_core #(
                 commit.uops[w].fu_code[FC_CSR]) begin
                 csr_commit_valid_w = 1'b1;
                 csr_commit_rob_idx_w = commit.uops[w].rob_idx;
+            end
+
+            if (!tlb_commit_valid_w &&
+                commit.valids[w] &&
+                commit.uops[w].tlb_cmd != TLB_CMD_NONE) begin
+                tlb_commit_valid_w = 1'b1;
+                tlb_commit_rob_idx_w = commit.uops[w].rob_idx;
             end
 
             csr_ertn_valid_w |=
@@ -933,6 +1259,13 @@ module loom_core #(
         .csr_commit_valid(csr_commit_valid_w),
         .csr_commit_rob_idx(csr_commit_rob_idx_w),
         .csr_flush_pending(bm_flush),
+        .tlb_update_valid(tlb_csr_update_valid_w),
+        .tlb_update_mask(tlb_csr_update_mask_w),
+        .tlb_update_tlbidx(tlb_csr_tlbidx_wdata_w),
+        .tlb_update_tlbehi(tlb_csr_tlbehi_wdata_w),
+        .tlb_update_tlbelo0(tlb_csr_tlbelo0_wdata_w),
+        .tlb_update_tlbelo1(tlb_csr_tlbelo1_wdata_w),
+        .tlb_update_asid(tlb_csr_asid_wdata_w),
         .xcpt_valid(rob_com_xcpt_w.valid),
         .xcpt_inst(rob_com_xcpt_w.inst),
         .xcpt_pc(rob_com_xcpt_w.pc),
@@ -948,15 +1281,171 @@ module loom_core #(
         .current_ie(csr_current_ie_w),
         .xcpt_target(csr_xcpt_target_w),
         .ertn_target(csr_ertn_target_w),
-        .crmd_value(),
-        .asid_value(),
-        .dmw0_value(),
-        .dmw1_value(),
+        .crmd_value(csr_crmd_value_w),
+        .asid_value(csr_asid_value_w),
+        .dmw0_value(csr_dmw0_value_w),
+        .dmw1_value(csr_dmw1_value_w),
+        .tlbidx_value(csr_tlbidx_value_w),
+        .tlbehi_value(csr_tlbehi_value_w),
+        .tlbelo0_value(csr_tlbelo0_value_w),
+        .tlbelo1_value(csr_tlbelo1_value_w),
         .era_value(),
         .eentry_value(),
         .tlbrentry_value(),
         .counter_value(csr_counter_value_w),
         .tid_value(csr_tid_value_w)
+    );
+
+    // ================================================================
+    // TLB management
+    // ================================================================
+    tlb_ctrl #(
+        .NUM_ENTRIES(TLB_ENTRIES),
+        .TLB_IDX_WIDTH(TLB_IDX_WIDTH),
+        .ASID_WIDTH(ASID_BITS),
+        .ROB_IDX_WIDTH(ROB_ADDR_SZ)
+    ) tlb_ctrl_inst (
+        .clk,
+        .rst_n,
+        .req_valid(tlb_req_valid),
+        .req_ready(tlb_req_ready),
+        .req_rob_idx(unq_iss_uop.rob_idx),
+        .req_cmd(unq_iss_uop.tlb_cmd),
+        .req_inv_op(unq_iss_uop.inst[4:0]),
+        .req_inv_asid(unq_src1[ASID_BITS-1:0]),
+        .req_inv_vaddr(unq_src2),
+        .resp_valid(tlb_resp_valid),
+        .resp_ready(1'b1),
+        .resp_rob_idx(tlb_resp_rob_idx),
+        .commit_valid(tlb_commit_valid_w),
+        .commit_rob_idx(tlb_commit_rob_idx_w),
+        .flush_pending(bm_flush),
+        .csr_tlbidx(csr_tlbidx_value_w),
+        .csr_tlbehi(csr_tlbehi_value_w),
+        .csr_tlbelo0(csr_tlbelo0_value_w),
+        .csr_tlbelo1(csr_tlbelo1_value_w),
+        .csr_asid(csr_asid_value_w),
+        .csr_update_valid(tlb_csr_update_valid_w),
+        .csr_update_mask(tlb_csr_update_mask_w),
+        .csr_tlbidx_wdata(tlb_csr_tlbidx_wdata_w),
+        .csr_tlbehi_wdata(tlb_csr_tlbehi_wdata_w),
+        .csr_tlbelo0_wdata(tlb_csr_tlbelo0_wdata_w),
+        .csr_tlbelo1_wdata(tlb_csr_tlbelo1_wdata_w),
+        .csr_asid_wdata(tlb_csr_asid_wdata_w),
+        .search_active(tlb_search_active_w),
+        .search_req_valid(tlb_search_req_valid_w),
+        .search_req_vaddr(tlb_search_req_vaddr_w),
+        .search_req_asid(tlb_search_req_asid_w),
+        .search_resp_valid(tlb_search_resp_valid_w),
+        .search_resp_found(tlb_search_found_w),
+        .search_idx(tlb_search_idx_w),
+        .rd_idx(tlb_rd_idx_w),
+        .rd_e(tlb_rd_e_w),
+        .rd_vppn(tlb_rd_vppn_w),
+        .rd_asid(tlb_rd_asid_w),
+        .rd_g(tlb_rd_g_w),
+        .rd_ps(tlb_rd_ps_w),
+        .rd_ppn0(tlb_rd_ppn0_w),
+        .rd_ppn1(tlb_rd_ppn1_w),
+        .rd_mat0(tlb_rd_mat0_w),
+        .rd_mat1(tlb_rd_mat1_w),
+        .rd_plv0(tlb_rd_plv0_w),
+        .rd_plv1(tlb_rd_plv1_w),
+        .rd_d0(tlb_rd_d0_w),
+        .rd_d1(tlb_rd_d1_w),
+        .rd_v0(tlb_rd_v0_w),
+        .rd_v1(tlb_rd_v1_w),
+        .wr_valid(tlb_wr_valid_w),
+        .wr_idx(tlb_wr_idx_w),
+        .wr_e(tlb_wr_e_w),
+        .wr_vppn(tlb_wr_vppn_w),
+        .wr_asid(tlb_wr_asid_w),
+        .wr_g(tlb_wr_g_w),
+        .wr_ps(tlb_wr_ps_w),
+        .wr_ppn0(tlb_wr_ppn0_w),
+        .wr_ppn1(tlb_wr_ppn1_w),
+        .wr_mat0(tlb_wr_mat0_w),
+        .wr_mat1(tlb_wr_mat1_w),
+        .wr_plv0(tlb_wr_plv0_w),
+        .wr_plv1(tlb_wr_plv1_w),
+        .wr_d0(tlb_wr_d0_w),
+        .wr_d1(tlb_wr_d1_w),
+        .wr_v0(tlb_wr_v0_w),
+        .wr_v1(tlb_wr_v1_w),
+        .inv_valid(tlb_inv_valid_w),
+        .inv_op(tlb_inv_op_w),
+        .inv_asid(tlb_inv_asid_w),
+        .inv_vaddr(tlb_inv_vaddr_w)
+    );
+
+    tlb #(
+        .NUM_ENTRIES(TLB_ENTRIES),
+        .TLB_IDX_WIDTH(TLB_IDX_WIDTH),
+        .ASID_WIDTH(ASID_BITS)
+    ) tlb_inst (
+        .clk,
+        .rst_n,
+        .q0_valid(q0_req_valid_w),
+        .q0_vaddr(q0_req_vaddr_w),
+        .q0_asid(q0_req_asid_w),
+        .q0_resp_valid(q0_resp_valid_w),
+        .q0_found(q0_found_w),
+        .q0_idx(q0_idx_w),
+        .q0_ps(q0_ps_w),
+        .q0_ppn(q0_ppn_w),
+        .q0_v(q0_v_w),
+        .q0_d(q0_d_w),
+        .q0_mat(q0_mat_w),
+        .q0_plv(q0_plv_w),
+        .q1_valid(dtlb_req_valid),
+        .q1_vaddr(dtlb_req_vaddr),
+        .q1_asid(dtlb_req_asid),
+        .q1_resp_valid(dtlb_resp_valid),
+        .q1_found(dtlb_found),
+        .q1_idx(),
+        .q1_ps(dtlb_ps),
+        .q1_ppn(dtlb_ppn),
+        .q1_v(dtlb_v),
+        .q1_d(dtlb_d),
+        .q1_mat(dtlb_mat),
+        .q1_plv(dtlb_plv),
+        .wr_valid(tlb_wr_valid_w),
+        .wr_idx(tlb_wr_idx_w),
+        .wr_e(tlb_wr_e_w),
+        .wr_vppn(tlb_wr_vppn_w),
+        .wr_asid(tlb_wr_asid_w),
+        .wr_g(tlb_wr_g_w),
+        .wr_ps(tlb_wr_ps_w),
+        .wr_ppn0(tlb_wr_ppn0_w),
+        .wr_ppn1(tlb_wr_ppn1_w),
+        .wr_mat0(tlb_wr_mat0_w),
+        .wr_mat1(tlb_wr_mat1_w),
+        .wr_plv0(tlb_wr_plv0_w),
+        .wr_plv1(tlb_wr_plv1_w),
+        .wr_d0(tlb_wr_d0_w),
+        .wr_d1(tlb_wr_d1_w),
+        .wr_v0(tlb_wr_v0_w),
+        .wr_v1(tlb_wr_v1_w),
+        .rd_idx(tlb_rd_idx_w),
+        .rd_e(tlb_rd_e_w),
+        .rd_vppn(tlb_rd_vppn_w),
+        .rd_asid(tlb_rd_asid_w),
+        .rd_g(tlb_rd_g_w),
+        .rd_ps(tlb_rd_ps_w),
+        .rd_ppn0(tlb_rd_ppn0_w),
+        .rd_ppn1(tlb_rd_ppn1_w),
+        .rd_mat0(tlb_rd_mat0_w),
+        .rd_mat1(tlb_rd_mat1_w),
+        .rd_plv0(tlb_rd_plv0_w),
+        .rd_plv1(tlb_rd_plv1_w),
+        .rd_d0(tlb_rd_d0_w),
+        .rd_d1(tlb_rd_d1_w),
+        .rd_v0(tlb_rd_v0_w),
+        .rd_v1(tlb_rd_v1_w),
+        .inv_valid(tlb_inv_valid_w),
+        .inv_op(tlb_inv_op_w),
+        .inv_asid(tlb_inv_asid_w),
+        .inv_vaddr(tlb_inv_vaddr_w)
     );
 
     // ================================================================

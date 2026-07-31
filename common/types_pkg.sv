@@ -99,6 +99,7 @@ package loom_types;
         logic predicated;
 
         logic [2:0] csr_cmd;
+        logic [2:0] tlb_cmd;
 
         logic ldst_is_src1;
 
@@ -239,6 +240,11 @@ package loom_types;
         logic start_bank;
         logic [RAS_IDX_SZ-1:0] ras_idx;
         global_history_t ghist;
+
+        logic cfi_taken;
+        logic cfi_mispredicted;
+        logic cfi_npc_plus4;
+        logic [31:0] ras_top;
     } ftq_entry_t;
 
     typedef struct {
@@ -260,10 +266,11 @@ package loom_types;
         logic use_matrix_issue;
     } issue_params_t;
 
-        typedef struct packed {
+    typedef struct packed {
         logic taken;
         logic is_br;
         logic is_b_bl;
+        logic is_jirl;
         logic [31:0] predicted_pc;
     } branch_prediction_t;
 

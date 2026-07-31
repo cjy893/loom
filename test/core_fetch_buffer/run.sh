@@ -9,6 +9,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   --Mdir "$TEST_DIR/obj_dir" \
   --top-module core_fetch_buffer_test_top \
   --exe "$TEST_DIR/test_core_fetch_buffer.cpp" \
+  -CFLAGS "-O0" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
@@ -37,6 +38,11 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
+  "$ROOT/mmu/addr_trans.sv" \
+  "$ROOT/mmu/dmmu.sv" \
+  "$ROOT/mmu/immu.sv" \
+  "$ROOT/mmu/tlb.sv" \
+  "$ROOT/mmu/tlb_ctrl.sv" \
   "$ROOT/exu/loom_core.sv" \
   "$TEST_DIR/core_fetch_buffer_test_top.sv"
 

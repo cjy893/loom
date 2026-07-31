@@ -21,12 +21,19 @@ static constexpr unsigned CSR_CRMD = 0x000;
 static constexpr unsigned CSR_PRMD = 0x001;
 static constexpr unsigned CSR_ESTAT = 0x005;
 static constexpr unsigned CSR_ERA = 0x006;
+static constexpr unsigned CSR_BADV = 0x007;
 static constexpr unsigned CSR_BADI = 0x008;
 static constexpr unsigned CSR_EENTRY = 0x00c;
+static constexpr unsigned CSR_TLBEHI = 0x011;
+static constexpr unsigned CSR_TLBRENTRY = 0x088;
 
+static constexpr unsigned ECODE_PIF = 3;
+static constexpr unsigned ECODE_PPI = 7;
+static constexpr unsigned ECODE_ADE = 8;
 static constexpr unsigned ECODE_SYS = 11;
 static constexpr unsigned ECODE_BRK = 12;
 static constexpr unsigned ECODE_INE = 13;
+static constexpr unsigned ECODE_TLBR = 0x3f;
 
 static constexpr unsigned FT_NONE = 0;
 static constexpr unsigned FT_XCPT = 1;
@@ -119,6 +126,7 @@ struct ExceptionRecord {
     uint32_t pc;
     uint32_t inst;
     uint32_t cause;
+    uint32_t badvaddr;
 };
 
 struct RedirectRecord {
@@ -141,6 +149,7 @@ struct RunResult {
 };
 
 using Program = std::map<uint32_t, uint32_t>;
+using FrontendFaults = std::map<uint32_t, unsigned>;
 
 static void tick(Vcore_exception_test_top* dut) {
     dut->clk = 1;
@@ -153,6 +162,8 @@ static void reset(Vcore_exception_test_top* dut) {
     dut->clk = 0;
     dut->rst_n = 0;
     dut->fe_valid = 0;
+    dut->fe_xcpt_valid = 0;
+    dut->fe_xcpt_code = 0;
     for (int lane = 0; lane < 4; ++lane)
         dut->fe_insts[lane] = 0;
 
@@ -164,8 +175,11 @@ static void reset(Vcore_exception_test_top* dut) {
 }
 
 static bool drive_fetch(Vcore_exception_test_top* dut,
-                        const Program& program) {
+                        const Program& program,
+                        const FrontendFaults& frontend_faults) {
     dut->fe_valid = 0;
+    dut->fe_xcpt_valid = 0;
+    dut->fe_xcpt_code = 0;
     for (int lane = 0; lane < 4; ++lane)
         dut->fe_insts[lane] = 0;
 
@@ -176,6 +190,13 @@ static bool drive_fetch(Vcore_exception_test_top* dut,
             continue;
         dut->fe_valid |= 1U << lane;
         dut->fe_insts[lane] = it->second;
+
+        auto fault = frontend_faults.find(first_pc + 4U * lane);
+        if (fault != frontend_faults.end()) {
+            dut->fe_xcpt_valid |= 1U << lane;
+            dut->fe_xcpt_code |=
+                (fault->second & 0x3fU) << (6 * lane);
+        }
     }
 
     dut->eval();
@@ -188,13 +209,14 @@ static bool has_instruction_at(const Program& program, uint32_t pc) {
 
 static RunResult run_program(Vcore_exception_test_top* dut,
                              const Program& program,
-                             int stop_after_exceptions = 0) {
+                             int stop_after_exceptions = 0,
+                             const FrontendFaults& frontend_faults = {}) {
     reset(dut);
     RunResult result;
     int last_activity = 0;
 
     for (int cycle = 0; cycle < 1500; ++cycle) {
-        if (drive_fetch(dut, program))
+        if (drive_fetch(dut, program, frontend_faults))
             last_activity = cycle;
 
         unsigned commit_mask = dut->commit_valids;
@@ -230,6 +252,7 @@ static RunResult run_program(Vcore_exception_test_top* dut,
                 dut->exception_pc,
                 dut->exception_inst,
                 dut->exception_cause,
+                dut->exception_badvaddr,
             });
             last_activity = cycle;
         }
@@ -265,6 +288,8 @@ static RunResult run_program(Vcore_exception_test_top* dut,
     result.final_eentry = dut->csr_eentry;
 
     dut->fe_valid = 0;
+    dut->fe_xcpt_valid = 0;
+    dut->fe_xcpt_code = 0;
     dut->eval();
     return result;
 }
@@ -314,6 +339,114 @@ static void add_exception_handler_reads(Program* program) {
     (*program)[HANDLER_PC + 8] = csrrd(22, CSR_BADI);
     (*program)[HANDLER_PC + 12] = csrrd(23, CSR_CRMD);
     (*program)[HANDLER_PC + 16] = csrrd(24, CSR_PRMD);
+}
+
+static void add_frontend_exception_setup(Program* program,
+                                         uint32_t tlbr_handler_pc) {
+    (*program)[RESET_PC + 0] =
+        lu12i_w(10, HANDLER_PC >> 12);
+    (*program)[RESET_PC + 4] =
+        ori(10, 10, HANDLER_PC & 0xfff);
+    (*program)[RESET_PC + 8] = csrwr(10, CSR_EENTRY);
+
+    (*program)[RESET_PC + 12] =
+        lu12i_w(12, tlbr_handler_pc >> 12);
+    (*program)[RESET_PC + 16] =
+        ori(12, 12, tlbr_handler_pc & 0xfff);
+    (*program)[RESET_PC + 20] = csrwr(12, CSR_TLBRENTRY);
+
+    (*program)[RESET_PC + 24] = addi_w(11, 0, 0x0f);
+    (*program)[RESET_PC + 28] = csrwr(11, CSR_CRMD);
+}
+
+static void add_frontend_exception_handler_reads(Program* program,
+                                                 uint32_t handler_pc) {
+    (*program)[handler_pc + 0] = csrrd(20, CSR_ERA);
+    (*program)[handler_pc + 4] = csrrd(21, CSR_ESTAT);
+    (*program)[handler_pc + 8] = csrrd(22, CSR_BADI);
+    (*program)[handler_pc + 12] = csrrd(23, CSR_CRMD);
+    (*program)[handler_pc + 16] = csrrd(24, CSR_PRMD);
+    (*program)[handler_pc + 20] = csrrd(25, CSR_BADV);
+    (*program)[handler_pc + 24] = csrrd(26, CSR_TLBEHI);
+}
+
+static bool test_frontend_exception(
+    Vcore_exception_test_top* dut, const char* tag,
+    unsigned expected_cause, bool use_tlbrentry, unsigned fault_lane) {
+    static constexpr uint32_t TLBR_HANDLER_PC = 0x1c002000;
+    static constexpr uint32_t PACKET_PC = RESET_PC + 32;
+
+    const uint32_t fault_pc = PACKET_PC + 4 * fault_lane;
+    const uint32_t older_pc =
+        fault_lane == 0 ? RESET_PC + 28 : PACKET_PC;
+    const uint32_t younger_pc = fault_pc + 4;
+
+    const uint32_t handler_pc =
+        use_tlbrentry ? TLBR_HANDLER_PC : HANDLER_PC;
+
+    Program program;
+    add_frontend_exception_setup(&program, TLBR_HANDLER_PC);
+    if (fault_lane != 0)
+        program[older_pc] = addi_w(1, 0, 7);
+    program[fault_pc] = 0;
+    program[younger_pc] = addi_w(2, 0, 99);
+    add_frontend_exception_handler_reads(&program, handler_pc);
+
+    FrontendFaults faults = {{fault_pc, expected_cause}};
+    RunResult result = run_program(dut, program, 0, faults);
+    std::string prefix = tag;
+    bool passed = true;
+
+    passed &= check(prefix + " reaches handler quiescence",
+                    result.finished);
+    passed &= check(prefix + " throws exactly one exception",
+                    result.exceptions.size() == 1);
+    if (!result.exceptions.empty()) {
+        const auto& exception = result.exceptions.front();
+        passed &= check_eq(prefix + " exception PC",
+                           exception.pc, fault_pc);
+        passed &= check_eq(prefix + " exception instruction",
+                           exception.inst, 0);
+        passed &= check_eq(prefix + " exception cause",
+                           exception.cause, expected_cause);
+        passed &= check_eq(prefix + " ROB badvaddr",
+                           exception.badvaddr, fault_pc);
+
+        int older_commit_cycle = commit_cycle(result, older_pc);
+        passed &= check(prefix + " older packet lane commits first",
+                        older_commit_cycle >= 0 &&
+                        older_commit_cycle < exception.cycle);
+    }
+
+    passed &= check(prefix + " redirects to the selected handler",
+                    has_redirect(result, FT_XCPT, handler_pc));
+    passed &= check(prefix + " faulting packet lane does not commit",
+                    !has_commit(result, fault_pc));
+    passed &= check(prefix + " younger instruction is flushed",
+                    !has_commit(result, younger_pc));
+
+    passed &= check_eq(prefix + " handler reads ERA",
+                       result.last_write[20], fault_pc);
+    passed &= check_eq(prefix + " handler reads ESTAT.ECODE",
+                       (result.last_write[21] >> 16) & 0x3f,
+                       expected_cause);
+    passed &= check_eq(prefix + " handler reads BADI",
+                       result.last_write[22], 0);
+    passed &= check_eq(prefix + " handler observes PLV0/IE0",
+                       result.last_write[23] & 0x7, 0);
+    passed &= check_eq(prefix + " handler reads saved PLV3/IE1",
+                       result.last_write[24] & 0x7, 0x7);
+    passed &= check_eq(prefix + " handler reads BADV",
+                       result.last_write[25], fault_pc);
+
+    uint32_t expected_tlbehi =
+        expected_cause == ECODE_ADE ? 0 : fault_pc & 0xffffe000U;
+    passed &= check_eq(prefix + " handler reads TLBEHI",
+                       result.last_write[26], expected_tlbehi);
+
+    if (passed)
+        std::printf("PASS: frontend %s precise exception\n", tag);
+    return passed;
 }
 
 static bool test_synchronous_exception(
@@ -467,6 +600,14 @@ int main(int argc, char** argv) {
         dut, "break", BREAK, ECODE_BRK);
     passed &= test_synchronous_exception(
         dut, "illegal", ILLEGAL, ECODE_INE);
+    passed &= test_frontend_exception(
+        dut, "ADEF", ECODE_ADE, false, 0);
+    passed &= test_frontend_exception(
+        dut, "PIF", ECODE_PIF, false, 1);
+    passed &= test_frontend_exception(
+        dut, "PPI", ECODE_PPI, false, 0);
+    passed &= test_frontend_exception(
+        dut, "TLBR", ECODE_TLBR, true, 1);
     passed &= test_wrong_path_exception(dut);
     passed &= test_exception_ertn_round_trip(dut);
 

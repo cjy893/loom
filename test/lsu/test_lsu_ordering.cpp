@@ -100,6 +100,19 @@ void present_store_data(Vlsu_ordering_test_top* dut, unsigned tag,
     dut->eval();
 }
 
+void wait_for_store_clear(Vlsu_ordering_test_top* dut, unsigned rob) {
+    for(int cycle = 0; cycle < kWaitCycles; ++cycle) {
+        dut->eval();
+        if(dut->st_clr_bsy_valid) {
+            expect_eq("store busy clear keeps ROB identity",
+                      dut->st_clr_bsy_rob_idx, rob);
+            return;
+        }
+        eval_cycle(dut);
+    }
+    expect_true("completed store clears ROB busy", false);
+}
+
 void present_load_address(Vlsu_ordering_test_top* dut, unsigned tag,
                           uint32_t addr) {
     dut->ld_agen_valid = 1;
@@ -298,11 +311,7 @@ void test_store_commit_and_backpressure(Vlsu_ordering_test_top* dut) {
     const unsigned store_tag = enqueue_store(dut, 5);
     present_store_address(dut, store_tag, 0x7000);
     present_store_data(dut, store_tag, 0x11223344);
-
-    expect_eq("completed store clears ROB busy",
-              dut->st_clr_bsy_valid, 1);
-    expect_eq("store busy clear keeps ROB identity",
-              dut->st_clr_bsy_rob_idx, 5);
+    wait_for_store_clear(dut, 5);
     for(int cycle = 0; cycle < 3; ++cycle) {
         expect_eq("uncommitted store cannot access memory",
                   dut->store_req_valid, 0);
@@ -364,8 +373,7 @@ void test_concurrent_queue_requests(Vlsu_ordering_test_top* dut) {
     const unsigned store_tag = enqueue_store(dut, 10);
     present_store_address(dut, store_tag, 0x8000);
     present_store_data(dut, store_tag, 0x55667788);
-    expect_eq("concurrent store completes before commit",
-              dut->st_clr_bsy_valid, 1);
+    wait_for_store_clear(dut, 10);
     eval_cycle(dut);
     commit_store(dut, store_tag);
     wait_for_store_request(

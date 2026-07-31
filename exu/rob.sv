@@ -359,7 +359,7 @@ module rob #(
                     rob_uop[w][rob_tail] <= enq_uops[w];
                     rob_wdata[w][rob_tail] <= '0;
                     rob_exc_cause[w][rob_tail] <= enq_uops[w].exc_cause;
-                    rob_exc_badvaddr[w][rob_tail] <= '0;
+                    rob_exc_badvaddr[w][rob_tail] <= enq_uops[w].pc[XLEN-1:0];
                 end
 
                 if(lxcpt_live && lxcpt_bank == w) begin

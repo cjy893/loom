@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TEST_DIR="$ROOT/test/lsu"
 LSU_TEST_RTL="$ROOT/lsu/lsu_test.sv"
+IDENTITY_XLATE="$TEST_DIR/lsq_identity_xlate.sv"
 rtl_args=()
 
 if [[ -f "$LSU_TEST_RTL" ]] &&
@@ -20,6 +21,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "${rtl_args[@]}" \
   "$TEST_DIR/lsu_test_top.sv"
 
@@ -34,6 +36,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "$ROOT/lsu/load_queue.sv" \
   "$TEST_DIR/load_queue_multi_test_top.sv"
 
@@ -48,6 +51,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "$ROOT/lsu/store_queue.sv" \
   "$TEST_DIR/store_queue_test_top.sv"
 
@@ -62,6 +66,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$TEST_DIR/lsq_allocation_test_top.sv"
@@ -77,6 +82,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
@@ -93,6 +99,7 @@ verilator --cc --build -j -Wno-fatal --output-split 10000 \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
+  "$IDENTITY_XLATE" \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$TEST_DIR/lsu_ordering_test_top.sv"

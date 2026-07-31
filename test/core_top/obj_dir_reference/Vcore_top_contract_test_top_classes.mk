@@ -31,9 +31,6 @@ VM_CLASSES_FAST += \
 
 # Generated module classes, non-fast-path, compile with low/medium optimization
 VM_CLASSES_SLOW += \
-  Vcore_top_contract_test_top__ConstPool__0__Slow \
-  Vcore_top_contract_test_top___024root__Slow \
-  Vcore_top_contract_test_top___024root__0__Slow \
   Vcore_top_contract_test_top_vm_classes_Slow_0 \
 
 # Generated support classes, fast-path, compile with highest optimization

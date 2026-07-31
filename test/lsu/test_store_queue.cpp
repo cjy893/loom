@@ -101,6 +101,18 @@ void present_address(Vstore_queue_test_top* dut, unsigned tag,
     dut->eval();
 }
 
+void wait_for_translation(Vstore_queue_test_top* dut) {
+    for(int cycle = 0; cycle < kWaitCycles; ++cycle) {
+        dut->eval();
+        if(dut->xlate_done) {
+            eval_cycle(dut);
+            return;
+        }
+        eval_cycle(dut);
+    }
+    expect_true("store address translation completes", false);
+}
+
 void present_data(Vstore_queue_test_top* dut, unsigned tag, uint32_t data) {
     dut->dgen_valid_in = 1;
     dut->dgen_idx_in = tag;
@@ -407,6 +419,7 @@ void test_load_query(Vstore_queue_test_top* dut) {
     clear_query(dut);
 
     present_address(dut, unresolved, 0x2000);
+    wait_for_translation(dut);
     present_data(dut, unresolved, 0x89abcdef);
     set_query(dut, 11, 0x3000, 2);
     expect_eq("known non-alias store does not block", dut->query_block, 0);
@@ -424,6 +437,7 @@ void test_load_query(Vstore_queue_test_top* dut) {
     reset_case(dut);
     const unsigned waiting = enqueue_single(dut, 20);
     present_address(dut, waiting, 0x4000);
+    wait_for_translation(dut);
     set_query(dut, 21, 0x4000, 2);
     expect_eq("matching store without data blocks", dut->query_block, 1);
     expect_eq("matching store without data cannot forward",
@@ -442,6 +456,7 @@ void test_load_query(Vstore_queue_test_top* dut) {
     reset_case(dut);
     const unsigned byte_store = enqueue_single(dut, 30, 0);
     present_address(dut, byte_store, 0x5000);
+    wait_for_translation(dut);
     present_data(dut, byte_store, 0xaa);
     set_query(dut, 31, 0x5001, 0);
     expect_eq("non-overlapping byte store does not block",

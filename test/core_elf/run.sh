@@ -20,7 +20,7 @@ verilator --cc --build -j 1 -Wno-fatal \
   --top-module core_elf_test_top \
   --exe "$TEST_DIR/test_core_elf.cpp" "$TEST_DIR/elf_image.cpp" \
   "$ROOT/test/common/la32_ref.cpp" \
-  -CFLAGS "-std=c++17 -I$TEST_DIR -I$ROOT/test/common" \
+  -CFLAGS "-std=c++17 -O0 -I$TEST_DIR -I$ROOT/test/common" \
   "$ROOT/common/params_pkg.sv" \
   "$ROOT/common/consts_pkg.sv" \
   "$ROOT/common/types_pkg.sv" \
@@ -49,6 +49,11 @@ verilator --cc --build -j 1 -Wno-fatal \
   "$ROOT/lsu/load_queue.sv" \
   "$ROOT/lsu/store_queue.sv" \
   "$ROOT/lsu/lsu.sv" \
+  "$ROOT/mmu/addr_trans.sv" \
+  "$ROOT/mmu/dmmu.sv" \
+  "$ROOT/mmu/immu.sv" \
+  "$ROOT/mmu/tlb.sv" \
+  "$ROOT/mmu/tlb_ctrl.sv" \
   "$ROOT/exu/loom_core.sv" \
   "$TEST_DIR/core_elf_test_top.sv"
 

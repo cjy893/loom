@@ -161,7 +161,27 @@
 - [x] 删除 `loom_core` 内部的重复指令包缓存，只保留逐 lane 完成掩码。
 - [x] 验证正常双发包连续进入 Decode，`is_unique` 包不会提前离开 Fetch Buffer。
 - [x] 用正式重定向端口替代测试顶层对 `loom_core` 内部信号的层次化引用。
+- [x] 建立单 outstanding IMMU 控制契约，覆盖 ITLB、取指异常、反压和 flush。
+- [ ] FTQ 和多 outstanding ICache 接入时，为 IMMU 增加请求 tag/FTQ index
+  以及 frontend epoch；迟到翻译响应必须按 epoch 丢弃，不能只依赖单请求状态机。
 - [ ] 加入分支预测器、FTQ、I-Cache 和 ITLB 后再冻结生产前端接口。
+
+### 分支预测器实现 (BPD)
+
+- [x] 实现 UBTB (µBTB) — 16-entry 全相联 flop, F1 target 预测, 测试 `test/ubtb/`
+- [x] 实现 BIM (Bimodal) — 2048×8 双峰预测器, F2 方向预测 + meta, 测试 `test/bim/`
+- [x] 实现 BTB — 32-set×2-way, F3 target 修正 + meta + hit_way, 测试 `test/btb/`
+- [x] 实现 RAS — 32-entry return address stack, `test/ras/`
+- [x] 实现 GHist — 64-bit global history + ras_idx, `test/ghist/`
+- [x] 实现 Composer — UBTB→BIM→BTB 串联 + meta 逐级打包, 测试 `test/bpd_top/`
+- [x] UBTB+BIM 集成测试通过, `test/bpd_integration/run.sh`
+- [x] UBTB+BIM+BTB 集成测试通过, `test/bpd_integration/run_ubtb_bim_btb.sh`
+- [x] GHist+RAS+UBTB+BIM+BTB 全链路集成测试通过, `test/bpd_integration/run_bpd_full.sh`
+- [ ] 实现 FTQ — 16-entry Fetch Target Queue, commit/mispredict/repair 更新, 测试已写 `test/ftq/`
+- [ ] 修改 IFU FSM — 预测驱动 next_pc, redirect 优先级
+- [ ] 在 core_top 层例化全部 BPD+FTQ 模块, 连接 brupdate/commit/redirect 信号
+- [ ] F3 decode 产出 call/ret + return_addr 信号
+- [ ] 运行全系统功能测试和性能测试
 
 ### 真实指令用例
 

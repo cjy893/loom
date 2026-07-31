@@ -19,9 +19,21 @@ static constexpr unsigned CSR_ERA = 0x006;
 static constexpr unsigned CSR_BADV = 0x007;
 static constexpr unsigned CSR_BADI = 0x008;
 static constexpr unsigned CSR_EENTRY = 0x00c;
+static constexpr unsigned CSR_TLBIDX = 0x010;
+static constexpr unsigned CSR_TLBEHI = 0x011;
+static constexpr unsigned CSR_TLBELO0 = 0x012;
+static constexpr unsigned CSR_TLBELO1 = 0x013;
+static constexpr unsigned CSR_ASID = 0x018;
+static constexpr unsigned CSR_TLBRENTRY = 0x088;
 
+static constexpr unsigned ECODE_PIL = 1;
+static constexpr unsigned ECODE_PIS = 2;
+static constexpr unsigned ECODE_PME = 4;
+static constexpr unsigned ECODE_PPI = 7;
 static constexpr unsigned ECODE_ALE = 9;
+static constexpr unsigned ECODE_TLBR = 0x3f;
 static constexpr unsigned FT_XCPT = 1;
+static constexpr uint32_t TLBWR = 0x06483000;
 
 static constexpr uint32_t addi_w(unsigned rd, unsigned rj, int imm12) {
     return 0x02800000U |
@@ -75,6 +87,20 @@ static constexpr uint32_t st_h(unsigned rd, unsigned rj, int imm12) {
 
 static constexpr uint32_t st_w(unsigned rd, unsigned rj, int imm12) {
     return mem_i12(0x29800000U, rd, rj, imm12);
+}
+
+static constexpr uint32_t make_tlbidx(unsigned index, unsigned ps,
+                                      bool ne) {
+    return (static_cast<uint32_t>(ne) << 31) |
+           ((ps & 0x3fU) << 24) | (index & 0x1fU);
+}
+
+static constexpr uint32_t make_tlbelo(unsigned ppn, unsigned plv,
+                                      bool dirty, bool valid) {
+    return ((ppn & 0xfffffU) << 8) |
+           ((plv & 3U) << 2) |
+           (static_cast<uint32_t>(dirty) << 1) |
+           static_cast<uint32_t>(valid);
 }
 
 static bool check(const std::string& name, bool condition) {
@@ -555,6 +581,140 @@ static bool test_ale(Vcore_lsu_exception_test_top* dut,
     return passed;
 }
 
+struct TranslationFaultCase {
+    const char* tag;
+    unsigned cause;
+    bool is_store;
+    bool install_entry;
+    bool valid;
+    bool dirty;
+    unsigned entry_plv;
+    unsigned request_plv;
+};
+
+static bool test_translation_fault(
+    Vcore_lsu_exception_test_top* dut,
+    const TranslationFaultCase& test_case) {
+    const uint32_t fault_addr = 0x40000100;
+    Program program;
+    uint32_t pc = RESET_PC;
+
+    auto emit = [&](uint32_t inst) {
+        uint32_t emitted_pc = pc;
+        program[pc] = inst;
+        pc += 4;
+        return emitted_pc;
+    };
+    auto li32 = [&](unsigned rd, uint32_t value) {
+        emit(lu12i_w(rd, value >> 12));
+        emit(ori(rd, rd, value & 0xfffU));
+    };
+    auto write_csr = [&](unsigned addr, unsigned rd,
+                         uint32_t value) {
+        li32(rd, value);
+        emit(csrwr(rd, addr));
+    };
+
+    write_csr(CSR_EENTRY, 10, HANDLER_PC);
+    write_csr(CSR_TLBRENTRY, 10, HANDLER_PC);
+
+    if (test_case.install_entry) {
+        write_csr(CSR_TLBIDX, 11,
+                  make_tlbidx(2, 12, false));
+        write_csr(CSR_TLBEHI, 12,
+                  fault_addr & 0xffffe000U);
+        uint32_t tlbelo = make_tlbelo(
+            0x12345, test_case.entry_plv,
+            test_case.dirty, test_case.valid);
+        write_csr(CSR_TLBELO0, 13, tlbelo);
+        write_csr(CSR_TLBELO1, 14, tlbelo);
+        write_csr(CSR_ASID, 15, 0);
+        emit(TLBWR);
+    }
+
+    li32(1, fault_addr);
+    li32(2, 0x321);
+    uint32_t older_pc = emit(addi_w(3, 0, 7));
+    write_csr(CSR_CRMD, 16,
+              (test_case.request_plv & 3U) | (1U << 4));
+    uint32_t fault_inst = test_case.is_store
+                              ? st_w(2, 1, 0)
+                              : ld_w(4, 1, 0);
+    uint32_t fault_pc = emit(fault_inst);
+    uint32_t younger_pc = emit(addi_w(5, 0, 99));
+    add_handler(&program);
+
+    DmemModel memory;
+    memory.clear();
+    memory.write_word(fault_addr, 0xdeadbeef);
+
+    RunResult result = run_program(dut, program, &memory);
+    std::string prefix = test_case.tag;
+    bool passed = true;
+
+    passed &= check(prefix + " reaches handler quiescence",
+                    result.finished &&
+                    has_commit(result, HANDLER_PC + 20));
+    passed &= check(prefix + " throws exactly one exception",
+                    result.exceptions.size() == 1);
+    if (!result.exceptions.empty()) {
+        const ExceptionRecord& exception =
+            result.exceptions.front();
+        passed &= check_eq(prefix + " exception PC",
+                           exception.pc, fault_pc);
+        passed &= check_eq(prefix + " exception instruction",
+                           exception.inst, fault_inst);
+        passed &= check_eq(prefix + " exception cause",
+                           exception.cause, test_case.cause);
+        passed &= check_eq(prefix + " exception BADV payload",
+                           exception.badvaddr, fault_addr);
+        int older_cycle = commit_cycle(result, older_pc);
+        passed &= check(prefix + " older instruction commits first",
+                        older_cycle >= 0 &&
+                        older_cycle < exception.cycle);
+    }
+
+    passed &= check(prefix + " redirects to exception entry",
+                    has_redirect(result, HANDLER_PC, FT_XCPT));
+    passed &= check(prefix + " faulting instruction does not commit",
+                    !has_commit(result, fault_pc));
+    passed &= check(prefix + " younger instruction does not commit",
+                    !has_commit(result, younger_pc));
+    passed &= check(prefix + " emits no DMem request",
+                    result.requests.empty());
+    if (test_case.is_store) {
+        passed &= check_eq(prefix + " store has no side effect",
+                           memory.read_word(fault_addr),
+                           0xdeadbeef);
+    } else {
+        passed &= check(prefix + " load destination is not written",
+                        result.write_count[4] == 0);
+    }
+
+    passed &= check_eq(prefix + " handler reads ERA",
+                       result.last_write[20], fault_pc);
+    passed &= check_eq(prefix + " handler reads ESTAT.ECODE",
+                       (result.last_write[21] >> 16) & 0x3f,
+                       test_case.cause);
+    passed &= check_eq(prefix + " handler reads BADV",
+                       result.last_write[22], fault_addr);
+    passed &= check_eq(prefix + " handler reads BADI",
+                       result.last_write[23], fault_inst);
+    passed &= check_eq(prefix + " exception enters PLV0/IE0",
+                       result.last_write[24] & 0x7, 0);
+    if (test_case.cause == ECODE_TLBR) {
+        passed &= check_eq(prefix + " enters direct-address mode",
+                           result.last_write[24] & 0x18, 0x08);
+    }
+
+    if (!passed)
+        print_diagnostic(test_case.tag, result);
+    else
+        std::printf("PASS: %s precise translation exception\n",
+                    test_case.tag);
+    return passed;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     auto* dut = new Vcore_lsu_exception_test_top;
@@ -568,6 +728,23 @@ int main(int argc, char** argv) {
         dut, "misaligned st.h", st_h(2, 1, 1), 0x101, true);
     passed &= test_ale(
         dut, "misaligned st.w", st_w(2, 1, 2), 0x102, true);
+
+    const TranslationFaultCase translation_faults[] = {
+        {"load TLBR", ECODE_TLBR, false, false,
+         false, false, 0, 0},
+        {"load PIL", ECODE_PIL, false, true,
+         false, true, 0, 0},
+        {"store PIS", ECODE_PIS, true, true,
+         false, true, 0, 0},
+        {"load PPI", ECODE_PPI, false, true,
+         true, true, 0, 3},
+        {"store PME", ECODE_PME, true, true,
+         true, false, 0, 0},
+    };
+    for (const TranslationFaultCase& test_case :
+         translation_faults) {
+        passed &= test_translation_fault(dut, test_case);
+    }
 
     dut->final();
     delete dut;

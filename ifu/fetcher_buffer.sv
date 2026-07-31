@@ -17,6 +17,11 @@ module fetcher_buffer #(
     input logic [FETCH_WIDTH-1:0] [31:0] enq_insts,
     output logic enq_ready,
 
+    input  logic [FETCH_WIDTH-1:0]      enq_xcpt_valid,
+    input  logic [FETCH_WIDTH-1:0][5:0] enq_xcpt_code,
+    output logic [CORE_WIDTH-1:0]       deq_xcpt_valid,
+    output logic [CORE_WIDTH-1:0][5:0]  deq_xcpt_code,
+
     output logic [CORE_WIDTH-1:0] deq_valid,
     output logic [CORE_WIDTH-1:0] [31:0] deq_pcs,
     output logic [CORE_WIDTH-1:0] [31:0] deq_insts,
@@ -30,6 +35,12 @@ module fetcher_buffer #(
 
     logic [NUM_ENTRIES-1:0] [31:0] inst_mem;
     logic [NUM_ENTRIES-1:0] [31:0] pc_mem;
+
+    logic [NUM_ENTRIES-1:0]      xcpt_valid_mem;
+    logic [NUM_ENTRIES-1:0][5:0] xcpt_code_mem;
+
+    logic [FETCH_WIDTH-1:0]      packed_enq_xcpt_valid;
+    logic [FETCH_WIDTH-1:0][5:0] packed_enq_xcpt_code;
 
     logic [PTR_WIDTH-1:0] head_q, tail_q;
     logic [COUNT_WIDTH-1:0] count_q;
@@ -65,11 +76,15 @@ module fetcher_buffer #(
         packed_enq_pcs = '0;
         enq_count = '0;
         packed_idx = 0;
+        packed_enq_xcpt_valid = '0;
+        packed_enq_xcpt_code = '0;
 
         for(int lane = 0; lane < FETCH_WIDTH; lane++) begin
             if(enq_valid[lane]) begin
                 packed_enq_insts[packed_idx] = enq_insts[lane];
                 packed_enq_pcs[packed_idx] = enq_pcs[lane];
+                packed_enq_xcpt_valid[packed_idx] = enq_xcpt_valid[lane];
+                packed_enq_xcpt_code[packed_idx] = enq_xcpt_code[lane];
                 packed_idx++;
             end
         end
@@ -96,6 +111,8 @@ module fetcher_buffer #(
         deq_valid = '0;
         deq_insts = '0;
         deq_pcs = '0;
+        deq_xcpt_valid = '0;
+        deq_xcpt_code = '0;
 
         if(!flush) begin
             for(int lane = 0; lane < CORE_WIDTH; lane++) begin
@@ -103,6 +120,8 @@ module fetcher_buffer #(
                     deq_valid[lane] = 1'b1;
                     deq_insts[lane] = inst_mem[ptr_add(head_q, lane)];
                     deq_pcs[lane] = pc_mem[ptr_add(head_q, lane)];
+                    deq_xcpt_valid[lane] = xcpt_valid_mem[ptr_add(head_q, lane)];
+                    deq_xcpt_code[lane] = xcpt_code_mem[ptr_add(head_q, lane)];
                 end
             end
         end
@@ -127,6 +146,8 @@ module fetcher_buffer #(
                     if(entry < int'(enq_count)) begin
                         inst_mem[ptr_add(tail_q, entry)] <= packed_enq_insts[entry];
                         pc_mem[ptr_add(tail_q, entry)] <= packed_enq_pcs[entry];
+                        xcpt_valid_mem[ptr_add(tail_q, entry)] <= packed_enq_xcpt_valid[entry];
+                        xcpt_code_mem[ptr_add(tail_q, entry)] <= packed_enq_xcpt_code[entry];
                     end
                 end
 

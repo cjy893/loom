@@ -14,67 +14,66 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024r
         vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 1U;
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[0U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[26U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[25U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[25U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[1U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[27U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[26U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[26U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[2U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[28U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[27U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[27U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[3U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[29U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[28U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[28U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[30U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[29U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[29U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[31U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[30U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[30U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[6U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[32U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[31U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[31U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[32U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[32U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[34U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[9U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[35U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[34U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[34U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[10U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[36U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[35U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[35U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[37U] 
-                << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[36U] 
-                                   >> 0x00000016U));
+                << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[36U] 
+                          >> 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U] 
-            = (0x07ffffffU & ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[38U] 
-                               << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[37U] 
-                                                  >> 0x00000016U)));
+            = (0x3fffffffU & ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[38U] 
+                               << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[37U] 
+                                         >> 0x0000001cU)));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-            = ((0xe1ffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
-               | (0x1e000000U & ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
-                                    << 0x00000011U) 
-                                   | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
-                                      >> 0x0000000fU)) 
-                                  & (~ ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                         << 0x00000018U) 
-                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                           >> 8U)))) 
-                                 << 0x00000019U)));
+            = ((0x0fffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
+               | ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
+                     << 8U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
+                               >> 0x00000018U)) & (~ 
+                                                   ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                                     << 0x00000015U) 
+                                                    | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                                       >> 0x0000000bU)))) 
+                  << 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant 
             = (4U | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 1U;
@@ -82,13 +81,13 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024r
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
         = ((7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
            | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                       << 0x00000016U) 
+                                       << 0x0000000aU) 
                                       | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                         >> 0x0000000aU)) 
+                                         >> 0x00000016U)) 
                                      & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                         << 0x0000001cU) 
+                                         << 0x00000019U) 
                                         | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                           >> 4U))))) 
+                                           >> 7U))))) 
               << 3U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
         = ((7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
@@ -96,7 +95,7 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024r
                          >> 3U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
                                       >> 3U))) & (0U 
                                                   == 
-                                                  (0x0000000eU 
+                                                  (0x0000e000U 
                                                    & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U])))) 
               << 3U));
     if ((IData)((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready) 
@@ -104,67 +103,65 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024r
         vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 1U;
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[0U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[39U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[38U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[38U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[1U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[40U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[39U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[39U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[2U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[41U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[40U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[40U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[3U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[41U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[41U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[43U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[44U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[43U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[43U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[6U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[45U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[44U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[44U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[45U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[45U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[9U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[48U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[10U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[49U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[48U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[48U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U] 
             = ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[50U] 
-                << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[49U] 
-                                   >> 0x00000011U));
+                << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[49U] 
+                          >> 0x0000001aU));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U] 
-            = (0x07ffffffU & ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[51U] 
-                               << 0x0000000fU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[50U] 
-                                                  >> 0x00000011U)));
+            = (0x3fffffffU & ((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[51U] 
+                               << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[50U] 
+                                         >> 0x0000001aU)));
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-            = ((0xe1ffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
-               | (0x1e000000U & ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                    << 0x00000016U) 
-                                   | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                      >> 0x0000000aU)) 
-                                  & (~ ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                         << 0x00000018U) 
-                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                           >> 8U)))) 
-                                 << 0x00000019U)));
+            = ((0x0fffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
+               | ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
+                     << 0x0000000aU) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
+                                        >> 0x00000016U)) 
+                   & (~ ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                          << 0x00000015U) | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                             >> 0x0000000bU)))) 
+                  << 0x0000001cU));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant 
             = (8U | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 1U;

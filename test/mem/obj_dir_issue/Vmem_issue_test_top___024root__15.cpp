@@ -51,12 +51,12 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__7(Vmem_issue_test_top___0
                                                       == 
                                                       (3U 
                                                        & (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U] 
-                                                          >> 1U)))
+                                                          >> 4U)))
                                                       ? vlSelfRef.agen_addr
                                                       : (IData)(
-                                                                ((4U 
+                                                                ((0x00000020U 
                                                                   == 
-                                                                  (6U 
+                                                                  (0x00000030U 
                                                                    & vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U])) 
                                                                  & (0U 
                                                                     != 

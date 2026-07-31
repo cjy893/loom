@@ -3,7 +3,85 @@
 
 #include "verilated.h"
 
-extern const VlWide<26>/*831:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h22c4354a_0 = VlWide<26>{{
+extern const VlWide<245>/*7839:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h09379336_0 = VlWide<245>{{
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000
+}};
+
+extern const VlWide<15>/*479:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h0c7e7fdc_0 = VlWide<15>{{
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h0cc0a684_0 = VlWide<10>{{
+        0x00000015, 0x00700000, 0x00080000, 0x00000000,
+        0x00000000, 0x80000000, 0x00000001, 0x00000000,
+        0x00000000, 0x00000000
+}};
+
+extern const VlWide<26>/*831:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h1cfef7ee_0 = VlWide<26>{{
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -13,90 +91,13 @@ extern const VlWide<26>/*831:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h
         0x00000000, 0x00000000
 }};
 
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h24b257a6_0 = VlWide<9>{{
-        0x00000a80, 0x06801800, 0x00800000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000018, 0x00000000,
-        0x00000020
-}};
-
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h2dcab423_0 = VlWide<9>{{
-        0x00000054, 0x00340000, 0x00040000, 0x00000000,
-        0x00000000, 0xc0000000, 0x00000000, 0x00000000,
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h31a8bd68_0 = VlWide<9>{{
+        0x00000054, 0x01c00000, 0x00200000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
         0x00000000
 }};
 
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h38400e15_0 = VlWide<9>{{
-        0x00000a80, 0x06800000, 0x00800000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000018, 0x00000000,
-        0x00000000
-}};
-
-extern const VlWide<224>/*7167:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h4524c1c6_0 = VlWide<224>{{
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000
-}};
-
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h5996dc93_0 = VlWide<9>{{
-        0x00000054, 0x00380000, 0x00040000, 0x00000000,
-        0x00000000, 0xc0000000, 0x00000000, 0x00000000,
-        0x00000000
-}};
-
-extern const VlWide<39>/*1247:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h5e1a4a48_0 = VlWide<39>{{
+extern const VlWide<39>/*1247:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h397b07f8_0 = VlWide<39>{{
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -109,45 +110,25 @@ extern const VlWide<39>/*1247:0*/ Vcore_top_contract_test_top__ConstPool__CONST_
         0x00000000, 0x00000000, 0x00000000
 }};
 
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h761d2ba6_0 = VlWide<9>{{
-        0x00000a80, 0x05801800, 0x00800000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000018, 0x00000000,
-        0x00000020
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h4a8a6736_0 = VlWide<10>{{
+        0x00000054, 0x00000600, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00400006, 0x00000000,
+        0x00000008, 0x00000000
 }};
 
-extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h812f7179_0 = VlWide<10>{{
-        0x15000000, 0x00000000, 0x00000d00, 0x00000100,
-        0x00000000, 0x00000000, 0x00300000, 0x00000000,
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h4ab86948_0 = VlWide<9>{{
+        0x00000054, 0x00000604, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000008
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h4b97b6c5_0 = VlWide<10>{{
+        0x00000200, 0x00000000, 0x00004000, 0x00000800,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000
 }};
 
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h827059a6_0 = VlWide<9>{{
-        0x00000a80, 0x06001800, 0x00800000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000018, 0x00000000,
-        0x00000020
-}};
-
-extern const VlWide<13>/*415:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h9a1659ba_0 = VlWide<13>{{
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000
-}};
-
-extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_ha63750ff_0 = VlWide<9>{{
-        0x00000054, 0x000000c0, 0x00000000, 0x00000000,
-        0x00000000, 0xc0000000, 0x00080000, 0x00000000,
-        0x00000001
-}};
-
-extern const VlWide<15>/*479:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hb48c9714_0 = VlWide<15>{{
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000, 0x00000000
-}};
-
-extern const VlWide<70>/*2239:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hc202c2ea_0 = VlWide<70>{{
+extern const VlWide<82>/*2623:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h4ff082c3_0 = VlWide<82>{{
         0x00003fff, 0x00000000, 0x00003fff, 0x00000001,
         0x00003fff, 0x00000002, 0x00003fff, 0x00000004,
         0x00003fff, 0x00000005, 0x00003fff, 0x0000000c,
@@ -165,7 +146,81 @@ extern const VlWide<70>/*2239:0*/ Vcore_top_contract_test_top__ConstPool__CONST_
         0x00003fff, 0x00000031, 0x00003fff, 0x00000032,
         0x00003fff, 0x00000033, 0x00003fff, 0x00000040,
         0x00003fff, 0x00000041, 0x00003fff, 0x00000043,
+        0x00003fff, 0x000000b1, 0x00003fff, 0x000000b2,
+        0x00003fff, 0x000000c0, 0x00003fff, 0x000000c1,
+        0x00003fff, 0x000000c2, 0x00003fff, 0x000000c3,
         0x00000000, 0x00000000
+}};
+
+extern const VlWide<32>/*1023:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h58f23bb5_0 = VlWide<32>{{
+        0xfc000000, 0x28000000, 0xfe000000, 0x20000000,
+        0xc0000000, 0x40000000, 0xfe000000, 0x02000000,
+        0xfff00000, 0x00400000, 0xfffc0000, 0x00280000,
+        0xfff00000, 0x00100000, 0xfff00000, 0x00200000,
+        0xf6000000, 0x14000000, 0xff000000, 0x04000000,
+        0xfe000000, 0x06000000, 0xffff8000, 0x38720000,
+        0xffff8000, 0x38728000, 0xfffff800, 0x00006000,
+        0xfffffc00, 0x00006c00, 0x00000000, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h5a67e08e_0 = VlWide<10>{{
+        0x00000054, 0x01c00000, 0x00200000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000000, 0x00000000
+}};
+
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h5d9ee93f_0 = VlWide<9>{{
+        0x00000054, 0x00000603, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000008
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h615d6922_0 = VlWide<10>{{
+        0x00000a80, 0x34000000, 0x04000000, 0x00000000,
+        0x00000000, 0x00000000, 0x000000c0, 0x00000000,
+        0x00000000, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h61d211d0_0 = VlWide<10>{{
+        0x00000a80, 0x3000c000, 0x04000000, 0x00000000,
+        0x00000000, 0x00000000, 0x000000c0, 0x00000000,
+        0x00000100, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h706d55d0_0 = VlWide<10>{{
+        0x00000a80, 0x2c00c000, 0x04000000, 0x00000000,
+        0x00000000, 0x00000000, 0x000000c0, 0x00000000,
+        0x00000100, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h90bb8da8_0 = VlWide<10>{{
+        0x15000000, 0x00000000, 0x00006800, 0x00000800,
+        0x00000000, 0x00000000, 0x01800000, 0x00000000,
+        0x00000000, 0x00000000
+}};
+
+extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h97f19dd0_0 = VlWide<10>{{
+        0x00000a80, 0x3400c000, 0x04000000, 0x00000000,
+        0x00000000, 0x00000000, 0x000000c0, 0x00000000,
+        0x00000100, 0x00000000
+}};
+
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_ha11a0d51_0 = VlWide<9>{{
+        0x00000054, 0x00000602, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000008
+}};
+
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_ha27fd3b6_0 = VlWide<9>{{
+        0x00000054, 0x00000601, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000008
+}};
+
+extern const VlWide<9>/*287:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hb7e0d3e8_0 = VlWide<9>{{
+        0x00000054, 0x01a00000, 0x00200000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000006, 0x00000000,
+        0x00000000
 }};
 
 extern const VlWide<32>/*1023:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hd6b7ba52_0 = VlWide<32>{{
@@ -179,7 +234,7 @@ extern const VlWide<32>/*1023:0*/ Vcore_top_contract_test_top__ConstPool__CONST_
         0x00000000, 0x00000000, 0x00000000, 0x00000000
 }};
 
-extern const VlWide<241>/*7711:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hf0ae997a_0 = VlWide<241>{{
+extern const VlWide<262>/*8383:0*/ Vcore_top_contract_test_top__ConstPool__CONST_he6ed1cb8_0 = VlWide<262>{{
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -237,27 +292,22 @@ extern const VlWide<241>/*7711:0*/ Vcore_top_contract_test_top__ConstPool__CONST
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000, 0x00000000, 0x00000000,
+        0x00000000, 0x00000000
+}};
+
+extern const VlWide<13>/*415:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hf75f4d44_0 = VlWide<13>{{
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000, 0x00000000, 0x00000000, 0x00000000,
         0x00000000
-}};
-
-extern const VlWide<30>/*959:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hf78d0833_0 = VlWide<30>{{
-        0xfc000000, 0x28000000, 0xfe000000, 0x20000000,
-        0xc0000000, 0x40000000, 0xfe000000, 0x02000000,
-        0xfff00000, 0x00400000, 0xfffc0000, 0x00280000,
-        0xfff00000, 0x00100000, 0xfff00000, 0x00200000,
-        0xf6000000, 0x14000000, 0xff000000, 0x04000000,
-        0xfe000000, 0x06000000, 0xffff8000, 0x38720000,
-        0xffff8000, 0x38728000, 0xfffff800, 0x00006000,
-        0x00000000, 0x00000000
-}};
-
-extern const VlWide<10>/*319:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hf83eaba4_0 = VlWide<10>{{
-        0x00000200, 0x00000000, 0x00000800, 0x00000100,
-        0x00000000, 0x00000000, 0x00000000, 0x00000000,
-        0x00000000, 0x00000000
 }};
 
 extern const VlWide<16>/*511:0*/ Vcore_top_contract_test_top__ConstPool__CONST_hfc549d0a_0 = VlWide<16>{{
@@ -267,7 +317,112 @@ extern const VlWide<16>/*511:0*/ Vcore_top_contract_test_top__ConstPool__CONST_h
         0x018978d9, 0x018a78d9, 0x020a78d5, 0x020c78d1
 }};
 
-extern const VlUnpacked<IData/*31:0*/, 35> Vcore_top_contract_test_top__ConstPool__TABLE_h0e170ef5_0 = {{
+extern const VlUnpacked<CData/*0:0*/, 256> Vcore_top_contract_test_top__ConstPool__TABLE_h193c108e_0 = {{
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
+}};
+
+extern const VlUnpacked<CData/*0:0*/, 256> Vcore_top_contract_test_top__ConstPool__TABLE_h2861b407_0 = {{
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 1U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
+}};
+
+extern const VlUnpacked<CData/*2:0*/, 256> Vcore_top_contract_test_top__ConstPool__TABLE_h2a9a4a84_0 = {{
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 3U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 3U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 7U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 7U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 3U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 3U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 7U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 7U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 1U, 7U, 7U,
+    7U, 0U, 7U, 7U, 7U, 0U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U,
+    7U, 4U, 7U, 7U, 7U, 5U, 7U, 7U
+}};
+
+extern const VlUnpacked<IData/*31:0*/, 41> Vcore_top_contract_test_top__ConstPool__TABLE_h2b7d1883_0 = {{
     0x000001ffU, 7U, 0U, 0x00001bffU,
     3U, 0xffffffc0U, 0xbf00001fU, 0xffffe000U,
     0x0fffff7fU, 0x0fffff7fU, 0x000003ffU, 0xfffff000U,
@@ -276,7 +431,9 @@ extern const VlUnpacked<IData/*31:0*/, 35> Vcore_top_contract_test_top__ConstPoo
     0U, 4U, 0xffffffc0U, 0xee000039U,
     0xee000039U, 0xffffffffU, 0xffffffffU, 0xffffffffU,
     0xffffffffU, 0xffffffffU, 0xffffffffU, 0xffffffffU,
-    0xffffffffU, 0xffffffffU, 0U
+    0xffffffffU, 0xffffffffU, 0U, 0U,
+    0U, 0U, 0U, 0U,
+    0U
 }};
 
 extern const VlUnpacked<CData/*2:0*/, 128> Vcore_top_contract_test_top__ConstPool__TABLE_h3944186b_0 = {{
@@ -317,6 +474,46 @@ extern const VlUnpacked<CData/*0:0*/, 128> Vcore_top_contract_test_top__ConstPoo
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
 }};
 
+extern const VlUnpacked<CData/*0:0*/, 256> Vcore_top_contract_test_top__ConstPool__TABLE_h9d327ae0_0 = {{
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 1U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+    0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
+}};
+
+extern const VlUnpacked<CData/*3:0*/, 16> Vcore_top_contract_test_top__ConstPool__TABLE_ha5affc86_0 = {{
+    0U, 0U, 1U, 2U, 4U, 9U, 3U, 3U,
+    5U, 6U, 7U, 7U, 7U, 8U, 6U, 0x0aU
+}};
+
 extern const VlUnpacked<CData/*0:0*/, 128> Vcore_top_contract_test_top__ConstPool__TABLE_ha9220205_0 = {{
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     0U, 1U, 0U, 1U, 0U, 1U, 0U, 1U,
@@ -334,11 +531,6 @@ extern const VlUnpacked<CData/*0:0*/, 128> Vcore_top_contract_test_top__ConstPoo
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U
-}};
-
-extern const VlUnpacked<CData/*3:0*/, 15> Vcore_top_contract_test_top__ConstPool__TABLE_hce4956f2_0 = {{
-    0U, 0U, 1U, 2U, 4U, 9U, 3U, 3U,
-    5U, 6U, 7U, 7U, 7U, 8U, 0x0aU
 }};
 
 extern const VlUnpacked<CData/*0:0*/, 64> Vcore_top_contract_test_top__ConstPool__TABLE_hea82845a_0 = {{

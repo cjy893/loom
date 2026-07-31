@@ -40,11 +40,16 @@ module core_fetch_buffer_test_top (
     logic [3:0] ifu_fetch_valid;
     logic [3:0][31:0] ifu_fetch_pcs;
     logic [3:0][31:0] ifu_fetch_insts;
+    logic [3:0] ifu_fetch_xcpt_valid;
+    logic [3:0][5:0] ifu_fetch_xcpt_code;
+    logic [31:0] ifu_xlate_req_vaddr;
     logic ifu_fetch_ready;
 
     logic [1:0] buffer_deq_valid;
     logic [1:0][31:0] buffer_deq_pcs;
     logic [1:0][31:0] buffer_deq_insts;
+    logic [1:0] buffer_deq_xcpt_valid;
+    logic [1:0][5:0] buffer_deq_xcpt_code;
     logic buffer_deq_ready;
 
     logic [1:0] core_fe_valid;
@@ -88,6 +93,21 @@ module core_fetch_buffer_test_top (
         .rst_n,
         .redirect_valid,
         .redirect_pc,
+        .xlate_req_valid(),
+        .xlate_req_ready(1'b1),
+        .xlate_req_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_valid(1'b1),
+        .xlate_resp_ready(),
+        .xlate_resp_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_paddr(ifu_xlate_req_vaddr),
+        .xlate_resp_mat(2'b01),
+        .xlate_resp_cacheable(1'b1),
+        .xlate_resp_xcpt_valid(1'b0),
+        .xlate_resp_xcpt_code('0),
+        .imem_req_mat(),
+        .imem_req_cacheable(),
+        .fetch_xcpt_valid(ifu_fetch_xcpt_valid),
+        .fetch_xcpt_code(ifu_fetch_xcpt_code),
         .imem_req_valid,
         .imem_req_ready,
         .imem_req_addr,
@@ -109,10 +129,14 @@ module core_fetch_buffer_test_top (
         .rst_n,
         .flush(redirect_valid),
         .enq_valid(ifu_fetch_valid),
+        .enq_xcpt_valid(ifu_fetch_xcpt_valid),
+        .enq_xcpt_code(ifu_fetch_xcpt_code),
         .enq_insts(ifu_fetch_insts),
         .enq_pcs(ifu_fetch_pcs),
         .enq_ready(ifu_fetch_ready),
         .deq_valid(buffer_deq_valid),
+        .deq_xcpt_valid(buffer_deq_xcpt_valid),
+        .deq_xcpt_code(buffer_deq_xcpt_code),
         .deq_insts(buffer_deq_insts),
         .deq_pcs(buffer_deq_pcs),
         .deq_ready(buffer_deq_ready)
@@ -129,9 +153,23 @@ module core_fetch_buffer_test_top (
         .fe_valid(core_fe_valid),
         .fe_insts(core_fe_insts),
         .fe_pcs(core_fe_pcs),
+        .fe_xcpt_valid(buffer_deq_xcpt_valid),
+        .fe_xcpt_code(buffer_deq_xcpt_code),
         .fe_ready(core_fe_ready),
         .fe_redirect_valid(redirect_valid),
         .fe_redirect_pc(redirect_pc),
+        .ifu_xlate_req_valid(1'b0),
+        .ifu_xlate_req_ready(),
+        .ifu_xlate_req_vaddr('0),
+        .ifu_xlate_resp_valid(),
+        .ifu_xlate_resp_ready(1'b1),
+        .ifu_xlate_resp_vaddr(),
+        .ifu_xlate_resp_paddr(),
+        .ifu_xlate_resp_mat(),
+        .ifu_xlate_resp_cacheable(),
+        .ifu_xlate_resp_xcpt_valid(),
+        .ifu_xlate_resp_xcpt_code(),
+        .ifu_xlate_resp_badvaddr(),
         .dmem_req_valid,
         .dmem_req_ready(1'b1),
         .dmem_req_is_store,

@@ -42,6 +42,22 @@ module load_queue #(
     input logic [TAG_WIDTH-1:0] dmem_resp_idx,
     input logic [XLEN-1:0] dmem_resp_data,
 
+    output logic xlate_req_valid,
+    input  logic xlate_req_ready,
+    output logic [ADDR_WIDTH-1:0] xlate_req_vaddr,
+    output logic [TAG_WIDTH-1:0] xlate_req_tag,
+
+    input  logic xlate_resp_valid,
+    input  logic xlate_resp_accept,
+    input  logic [TAG_WIDTH-1:0] xlate_resp_tag,
+    input  logic [ADDR_WIDTH-1:0] xlate_resp_paddr,
+    input  logic [1:0] xlate_resp_mat,
+    input  logic xlate_resp_cacheable,
+    input  logic xlate_resp_xcpt,
+
+    output logic xlate_resp_match,
+    output uop_t xlate_resp_uop,
+
     output logic load_wb_valid,
     output exe_unit_resp_t load_wb_resp,
 
@@ -55,12 +71,21 @@ module load_queue #(
 );
     typedef struct packed {
         logic valid;
+
         logic addr_valid;
+        logic [ADDR_WIDTH-1:0] addr;
+        logic [1:0] mat;
+        logic cacheable;
+        
+        logic xlate_requested;
+        logic xlate_fault;
+        logic vaddr_valid;
+        logic [ADDR_WIDTH-1:0] vaddr;
+        
         logic requested;
         logic completed;
-        logic [31:0] addr;
-        uop_t uop;
         logic forward_pending;
+        uop_t uop;
     } ldq_entry_t;
     
     ldq_entry_t [NUM_ENTRIES-1:0] entries;
@@ -107,6 +132,20 @@ module load_queue #(
 
     logic [SLOT_WIDTH-1:0] wb_slot;
     logic [XLEN-1:0] wb_raw_data;
+
+    logic [SLOT_WIDTH-1:0] xlate_cursor;
+    logic xlate_candidate_valid;
+    logic [SLOT_WIDTH-1:0] xlate_candidate_slot;
+
+    logic xlate_hold_valid;
+    logic [TAG_WIDTH-1:0] xlate_hold_tag;
+    logic [ADDR_WIDTH-1:0] xlate_hold_vaddr;
+    logic [SLOT_WIDTH-1:0] xlate_hold_slot;
+    logic xlate_hold_live;
+    logic xlate_hold_killed;
+    logic xlate_req_fire;
+
+    logic [SLOT_WIDTH-1:0] xlate_resp_slot;
 
     always_comb begin
         enq_entries = '0;
@@ -159,6 +198,53 @@ module load_queue #(
             enq_killed[w] = brupdate.b2.mispredict && |(enq_uops[w].br_mask & brupdate.b1.mispredict_mask);
             enq_uops_updated[w].br_mask = enq_uops[w].br_mask & ~brupdate.b1.resolve_mask;
             enq_uops_updated[w].ldq_idx = enq_idx[w];
+        end
+    end
+
+    always_comb begin
+        xlate_candidate_valid = 1'b0;
+        xlate_candidate_slot = '0;
+
+        for(int offset = 0; offset < NUM_ENTRIES; offset++) begin
+            int unsigned slot;
+            slot = (xlate_cursor + offset) % NUM_ENTRIES;
+
+            if(!xlate_candidate_valid && entries[slot].valid && entries[slot].vaddr_valid && !entries[slot].xlate_requested &&
+                !entries[slot].addr_valid && !entries[slot].xlate_fault && !entry_killed[slot]) begin
+                xlate_candidate_valid = 1'b1;
+                xlate_candidate_slot = slot[SLOT_WIDTH-1:0];
+            end
+        end
+    end
+
+    always_comb begin
+        xlate_hold_slot = xlate_hold_tag[SLOT_WIDTH-1:0];
+
+        xlate_hold_live = xlate_hold_valid && entries[xlate_hold_slot].valid && entries[xlate_hold_slot].vaddr_valid &&
+                          !entries[xlate_hold_slot].xlate_requested && !entries[xlate_hold_slot].addr_valid &&
+                          !entries[xlate_hold_slot].xlate_fault && entries[xlate_hold_slot].uop.ldq_idx == xlate_hold_tag;
+
+        xlate_hold_killed = xlate_hold_live && entry_killed[xlate_hold_slot];
+        xlate_req_valid = xlate_hold_live && !xlate_hold_killed && !flush_pipeline;
+        xlate_req_vaddr = xlate_hold_vaddr;
+        xlate_req_tag = xlate_hold_tag;
+        xlate_req_fire = xlate_req_valid && xlate_req_ready;
+    end
+
+    always_comb begin
+        xlate_resp_slot = xlate_resp_tag[SLOT_WIDTH-1:0];
+        xlate_resp_match = 1'b0;
+        xlate_resp_uop = '0;
+
+        if(xlate_resp_valid) begin
+            xlate_resp_match = entries[xlate_resp_slot].valid && entries[xlate_resp_slot].xlate_requested &&
+                               entries[xlate_resp_slot].uop.ldq_idx == xlate_resp_tag &&
+                               !entry_killed[xlate_resp_slot] && !flush_pipeline;
+
+            if(xlate_resp_match) begin
+                xlate_resp_uop = entries[xlate_resp_slot].uop;
+                xlate_resp_uop.br_mask = entries[xlate_resp_slot].uop.br_mask & ~brupdate.b1.resolve_mask;
+            end
         end
     end
 
@@ -221,7 +307,8 @@ module load_queue #(
     always_comb begin
         for(int a = 0; a < AGEN_WIDTH; a++) begin
             agen_slot[a] = agen_uops[a].ldq_idx[SLOT_WIDTH-1:0];
-            agen_match[a] = agen_valid[a] && entries[agen_slot[a]].valid && (entries[agen_slot[a]].uop.ldq_idx == agen_uops[a].ldq_idx) && !entries[agen_slot[a]].addr_valid && !entry_killed[agen_slot[a]];
+            agen_match[a] = agen_valid[a] && entries[agen_slot[a]].valid && (entries[agen_slot[a]].uop.ldq_idx == agen_uops[a].ldq_idx) &&
+                            !entries[agen_slot[a]].vaddr_valid && !entry_killed[agen_slot[a]] && !flush_pipeline;
         end
     end
 
@@ -238,11 +325,17 @@ module load_queue #(
             fwd_hold_idx <= '0;
             fwd_hold_data <= '0;
             query_cursor <= '0;
+            xlate_cursor <= '0;
+            xlate_hold_valid <= 1'b0;
+            xlate_hold_tag <= '0;
+            xlate_hold_vaddr <= '0;
         end else if(flush_pipeline) begin
             entries <= '0;
             req_hold_valid <= 1'b0;
             fwd_hold_valid <= 1'b0;
             query_cursor <= '0;
+            xlate_cursor <= '0;
+            xlate_hold_valid <= 1'b0;
         end else begin
             for(int i = 0; i < NUM_ENTRIES; i++) begin
                 if(entries[i].valid) begin
@@ -254,8 +347,8 @@ module load_queue #(
 
             for(int a = 0; a < AGEN_WIDTH; a++) begin
                 if(agen_match[a] && !entry_killed[agen_slot[a]]) begin
-                    entries[agen_slot[a]].addr_valid <= 1'b1;
-                    entries[agen_slot[a]].addr <= agen_addr[a];
+                    entries[agen_slot[a]].vaddr_valid <= 1'b1;
+                    entries[agen_slot[a]].vaddr <= agen_addr[a];
                 end
             end
 
@@ -298,6 +391,37 @@ module load_queue #(
                 fwd_hold_idx <= entries[req_candidate_slot].uop.ldq_idx;
                 fwd_hold_data <= ld_query_forward_data;
                 entries[req_candidate_slot].forward_pending <= 1'b1;
+            end
+
+            if(xlate_hold_valid) begin
+                if(!xlate_hold_live || xlate_hold_killed || xlate_req_fire)
+                    xlate_hold_valid <= 1'b0;
+            end else if(xlate_candidate_valid) begin
+                xlate_hold_valid <= 1'b1;
+                xlate_hold_tag <= entries[xlate_candidate_slot].uop.ldq_idx;
+                xlate_hold_vaddr <= entries[xlate_candidate_slot].vaddr;
+            end
+
+            if(xlate_req_fire) begin
+                entries[xlate_hold_slot].xlate_requested <= 1'b1;
+
+                if(xlate_hold_slot == NUM_ENTRIES-1)
+                    xlate_cursor <= '0;
+                else
+                    xlate_cursor <= xlate_hold_slot + 1'b1;
+            end
+
+            if(xlate_resp_match && xlate_resp_accept) begin
+                entries[xlate_resp_slot].xlate_requested <= 1'b0;
+
+                if(xlate_resp_xcpt) begin
+                    entries[xlate_resp_slot].xlate_fault <= 1'b1;
+                end else begin
+                    entries[xlate_resp_slot].addr_valid <= 1'b1;
+                    entries[xlate_resp_slot].addr <= xlate_resp_paddr;
+                    entries[xlate_resp_slot].mat <= xlate_resp_mat;
+                    entries[xlate_resp_slot].cacheable <= xlate_resp_cacheable;
+                end
             end
 
             if(dmem_req_fire) entries[req_hold_slot].requested <= 1'b1;

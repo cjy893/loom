@@ -13,7 +13,7 @@ class Vcore_top_contract_test_top__Syms;
 struct Vcore_top_contract_test_top_commit_signal_t__struct__0 {
     CData/*1:0*/ __PVT__valids;
     CData/*1:0*/ __PVT__arch_valids;
-    VlWide<26>/*821:0*/ __PVT__uops;
+    VlWide<26>/*827:0*/ __PVT__uops;
     CData/*5:0*/ __PVT__fp_flags;
     QData/*63:0*/ __PVT__debug_insts;
     QData/*63:0*/ __PVT__debug_wdata;

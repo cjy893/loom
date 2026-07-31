@@ -53,6 +53,9 @@ module core_ifu_test_top (
     localparam logic [31:0] PROGRAM_BASE = 32'h1c05_0000;
 
     logic [3:0][31:0] ifu_fetch_insts;
+    logic [3:0] ifu_fetch_xcpt_valid;
+    logic [3:0][5:0] ifu_fetch_xcpt_code;
+    logic [31:0] ifu_xlate_req_vaddr;
     commit_signal_t core_commit;
 
     ifu #(
@@ -63,6 +66,21 @@ module core_ifu_test_top (
         .rst_n,
         .redirect_valid,
         .redirect_pc,
+        .xlate_req_valid(),
+        .xlate_req_ready(1'b1),
+        .xlate_req_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_valid(1'b1),
+        .xlate_resp_ready(),
+        .xlate_resp_vaddr(ifu_xlate_req_vaddr),
+        .xlate_resp_paddr(ifu_xlate_req_vaddr),
+        .xlate_resp_mat(2'b01),
+        .xlate_resp_cacheable(1'b1),
+        .xlate_resp_xcpt_valid(1'b0),
+        .xlate_resp_xcpt_code('0),
+        .imem_req_mat(),
+        .imem_req_cacheable(),
+        .fetch_xcpt_valid(ifu_fetch_xcpt_valid),
+        .fetch_xcpt_code(ifu_fetch_xcpt_code),
         .imem_req_valid,
         .imem_req_ready,
         .imem_req_addr,
@@ -84,9 +102,23 @@ module core_ifu_test_top (
         .fe_valid(ifu_fetch_valid),
         .fe_insts(ifu_fetch_insts),
         .fe_pcs(ifu_fetch_pc),
+        .fe_xcpt_valid(ifu_fetch_xcpt_valid),
+        .fe_xcpt_code(ifu_fetch_xcpt_code),
         .fe_ready(core_fe_ready),
         .fe_redirect_valid(redirect_valid),
         .fe_redirect_pc(redirect_pc),
+        .ifu_xlate_req_valid(1'b0),
+        .ifu_xlate_req_ready(),
+        .ifu_xlate_req_vaddr('0),
+        .ifu_xlate_resp_valid(),
+        .ifu_xlate_resp_ready(1'b1),
+        .ifu_xlate_resp_vaddr(),
+        .ifu_xlate_resp_paddr(),
+        .ifu_xlate_resp_mat(),
+        .ifu_xlate_resp_cacheable(),
+        .ifu_xlate_resp_xcpt_valid(),
+        .ifu_xlate_resp_xcpt_code(),
+        .ifu_xlate_resp_badvaddr(),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
