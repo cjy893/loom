@@ -525,7 +525,9 @@ module store_queue #(
 
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
-            entries <= '0;
+            for(int i = 0; i < NUM_ENTRIES; i++) begin
+                entries[i].valid <= 1'b0;
+            end
             next_gen <= '0;
             alloc_hint <= '0;
             commit_fifo <= '0;
