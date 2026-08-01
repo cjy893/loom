@@ -41,6 +41,7 @@ module store_queue #(
     output logic store_req_valid,
     input logic store_req_ready,
     output logic [ADDR_WIDTH-1:0] store_req_addr,
+    output logic store_req_cacheable,
     output logic [DATA_WIDTH-1:0] store_req_data,
     output logic [MASK_WIDTH-1:0] store_req_mask,
     output logic [TAG_WIDTH-1:0] store_req_idx,
@@ -144,6 +145,7 @@ module store_queue #(
 
     logic [SLOT_WIDTH-1:0] req_hold_slot;
     logic req_hold_live, store_req_fire;
+    logic req_hold_cacheable;
     logic [BYTE_OFFSET_WIDTH-1:0] req_byte_offset;
 
     logic [SLOT_WIDTH-1:0] ack_slot;
@@ -240,6 +242,7 @@ module store_queue #(
         
         store_req_valid = req_hold_live && (req_hold_uop.mem_size != 2'd3);
         store_req_addr = req_hold_addr;
+        store_req_cacheable = req_hold_cacheable;
         store_req_idx = req_hold_idx;
         store_req_uop = req_hold_uop;
         store_req_data = '0;
@@ -536,6 +539,7 @@ module store_queue #(
             cq_count <= '0;
             req_hold_valid <= 1'b0;
             req_hold_addr <= '0;
+            req_hold_cacheable <= 1'b0;
             req_hold_data <= '0;
             req_hold_idx <= '0;
             req_hold_uop <= '0;
@@ -602,6 +606,7 @@ module store_queue #(
                 req_hold_valid <= 1'b1;
                 req_hold_idx <= cq_head_tag;
                 req_hold_addr <= entries[cq_head_slot].addr;
+                req_hold_cacheable <= entries[cq_head_slot].cacheable;
                 req_hold_data <= entries[cq_head_slot].data;
                 req_hold_uop <= entries[cq_head_slot].uop;
             end

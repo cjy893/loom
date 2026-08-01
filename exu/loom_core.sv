@@ -52,6 +52,7 @@ module loom_core #(
     output logic                         dmem_req_valid,
     input  logic                         dmem_req_ready,
     output logic                         dmem_req_is_store,
+    output logic                         dmem_req_cacheable,
     output logic [31:0]                  dmem_req_addr,
     output logic [31:0]                  dmem_req_data,
     output logic [3:0]                   dmem_req_mask,
@@ -62,6 +63,22 @@ module loom_core #(
     input  logic                         dmem_resp_is_store,
     input  logic [31:0]                  dmem_resp_data,
     input  logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx,
+
+    // ── Cache maintenance ──
+    output logic                         icache_maint_valid,
+    input  logic                         icache_maint_ready,
+    output logic [1:0]                   icache_maint_mode,
+    output logic [31:0]                  icache_maint_vaddr,
+    output logic [31:0]                  icache_maint_paddr,
+    input  logic                         icache_maint_done,
+
+    output logic                         dcache_maint_valid,
+    input  logic                         dcache_maint_ready,
+    output logic [1:0]                   dcache_maint_op,
+    output logic [1:0]                   dcache_maint_mode,
+    output logic [31:0]                  dcache_maint_vaddr,
+    output logic [31:0]                  dcache_maint_paddr,
+    input  logic                         dcache_maint_done,
 
     // ── 中断输入 ──
     input  logic [7:0]                   hw_irq,
@@ -790,6 +807,15 @@ module loom_core #(
     logic [31:0] dmmu_req_vaddr;
     logic [1:0] dmmu_req_access;
 
+    logic lsu_dmmu_req_valid, lsu_dmmu_req_ready;
+    logic [LSU_ADDR_SZ+1:0] lsu_dmmu_req_tag;
+    logic [31:0] lsu_dmmu_req_vaddr;
+    logic [1:0] lsu_dmmu_req_access;
+
+    logic cacop_dmmu_req_valid, cacop_dmmu_req_ready;
+    logic [31:0] cacop_dmmu_req_vaddr;
+    logic dmmu_owner_cacop_q;
+
     logic dmmu_resp_valid, dmmu_resp_ready;
     logic [LSU_ADDR_SZ+1:0] dmmu_resp_tag;
     logic [1:0] dmmu_resp_access;
@@ -799,6 +825,9 @@ module loom_core #(
     logic dmmu_resp_xcpt_valid;
     logic [5:0] dmmu_resp_xcpt_code;
     logic [31:0] dmmu_resp_badvaddr;
+
+    logic lsu_dmmu_resp_valid, lsu_dmmu_resp_ready;
+    logic cacop_dmmu_resp_valid, cacop_dmmu_resp_ready;
 
     logic dtlb_req_valid, dtlb_resp_valid, dtlb_found;
     logic [31:0] dtlb_req_vaddr;
@@ -978,6 +1007,7 @@ module loom_core #(
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
+        .dmem_req_cacheable,
         .dmem_req_addr,
         .dmem_req_data,
         .dmem_req_mask,

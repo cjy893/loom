@@ -9,6 +9,9 @@ DEFAULT_DISASM=/mnt/e/nscscc/chiplab/software/examples/nscscc_func/obj/test.s
 ELF_PATH=${ELF_PATH:-$DEFAULT_ELF}
 DISASM_PATH=${DISASM_PATH:-$DEFAULT_DISASM}
 SINGLE_DEBUG_COMMIT=${SINGLE_DEBUG_COMMIT:-1}
+VERILATOR=${VERILATOR:-verilator}
+VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
+MDIR=${CORE_TOP_ELF_AXI_OBJ_DIR:-"$TEST_DIR/obj_dir"}
 
 if [[ "$SINGLE_DEBUG_COMMIT" != 0 &&
       "$SINGLE_DEBUG_COMMIT" != 1 ]]; then
@@ -56,14 +59,16 @@ rtl=(
   "$ROOT/mmu/immu.sv"
   "$ROOT/mmu/tlb.sv"
   "$ROOT/mmu/tlb_ctrl.sv"
+  "$ROOT/cache/icache.sv"
+  "$ROOT/cache/dcache.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
   "$TEST_DIR/core_top_elf_axi_test_top.sv"
 )
 
-verilator --cc --build -j 1 -Wno-fatal \
+"$VERILATOR" --cc -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
-  --Mdir "$TEST_DIR/obj_dir" \
+  --Mdir "$MDIR" \
   --top-module core_top_elf_axi_test_top \
   -GENABLE_SINGLE_DEBUG_COMMIT="$SINGLE_DEBUG_COMMIT" \
   --exe "$TEST_DIR/test_core_top_elf_axi.cpp" \
@@ -71,10 +76,13 @@ verilator --cc --build -j 1 -Wno-fatal \
   -CFLAGS "-std=c++17 -O0 -I$ELF_DIR" \
   "${rtl[@]}"
 
+make -C "$MDIR" -f Vcore_top_elf_axi_test_top.mk -j 1 \
+  VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+
 args=(--elf "$ELF_PATH")
 if [[ -f "$DISASM_PATH" ]]; then
   args+=(--disasm "$DISASM_PATH")
 fi
 
-"$TEST_DIR/obj_dir/Vcore_top_elf_axi_test_top" \
+"$MDIR/Vcore_top_elf_axi_test_top" \
   "${args[@]}" "$@"

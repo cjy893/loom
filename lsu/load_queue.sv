@@ -36,6 +36,7 @@ module load_queue #(
     input logic dmem_req_ready,
     output logic [ADDR_WIDTH-1:0] dmem_req_addr,
     output logic [TAG_WIDTH-1:0] dmem_req_idx,
+    output logic dmem_req_cacheable,
     output uop_t dmem_req_uop,
 
     input logic dmem_resp_valid,
@@ -111,6 +112,7 @@ module load_queue #(
     logic [SLOT_WIDTH-1:0] req_hold_slot;
     logic req_hold_live;
     logic req_hold_killed;
+    logic req_hold_cacheable;
     logic dmem_req_fire;
 
     logic [SLOT_WIDTH-1:0] resp_slot;
@@ -320,6 +322,7 @@ module load_queue #(
             req_hold_valid <= 1'b0;
             req_hold_addr <= '0;
             req_hold_idx <= '0;
+            req_hold_cacheable <= 1'b0;
             req_hold_uop <= '0;
             fwd_hold_valid <= 1'b0;
             fwd_hold_idx <= '0;
@@ -380,6 +383,7 @@ module load_queue #(
             end else if(query_take_memory) begin
                 req_hold_valid <= 1'b1;
                 req_hold_addr <= entries[req_candidate_slot].addr;
+                req_hold_cacheable <= entries[req_candidate_slot].cacheable;
                 req_hold_idx <= entries[req_candidate_slot].uop.ldq_idx;
                 req_hold_uop <= req_candidate_uop;
             end
@@ -442,6 +446,7 @@ module load_queue #(
 
         dmem_req_valid = req_hold_live && !req_hold_killed && !flush_pipeline;
         dmem_req_addr = req_hold_addr;
+        dmem_req_cacheable = req_hold_cacheable;
         dmem_req_idx = req_hold_idx;
         dmem_req_uop = req_hold_uop;
         dmem_req_fire = dmem_req_valid && dmem_req_ready;

@@ -62,6 +62,7 @@ module lsu #(
     output logic dmem_req_valid,
     input logic dmem_req_ready,
     output logic dmem_req_is_store,
+    output logic dmem_req_cacheable,
     output logic [XLEN-1:0] dmem_req_addr,
     output logic [XLEN-1:0] dmem_req_data,
     output logic [XLEN/8-1:0] dmem_req_mask,
@@ -106,12 +107,14 @@ module lsu #(
 
     logic ld_req_valid;
     logic ld_req_ready;
+    logic ld_req_cacheable;
     logic [XLEN-1:0] ld_req_addr;
     logic [LDQ_TAG_WIDTH-1:0] ld_req_idx;
     uop_t ld_req_uop;
 
     logic st_req_valid;
     logic st_req_ready;
+    logic st_req_cacheable;
     logic [XLEN-1:0] st_req_addr;
     logic [XLEN-1:0] st_req_data;
     logic [XLEN/8-1:0] st_req_mask;
@@ -259,6 +262,7 @@ module lsu #(
         dmem_req_valid = 1'b0;
         dmem_req_is_store = selected_is_store;
         dmem_req_addr = '0;
+        dmem_req_cacheable = 1'b0;
         dmem_req_data = '0;
         dmem_req_mask = '0;
         dmem_req_size = '0;
@@ -270,6 +274,7 @@ module lsu #(
         if(selected_is_store) begin
             dmem_req_valid = st_req_valid;
             dmem_req_addr = st_req_addr;
+            dmem_req_cacheable = st_req_cacheable;
             dmem_req_data = st_req_data;
             dmem_req_mask = st_req_mask;
             dmem_req_size = st_req_uop.mem_size;
@@ -279,6 +284,7 @@ module lsu #(
         end else begin
             dmem_req_valid = ld_req_valid;
             dmem_req_addr = ld_req_addr;
+            dmem_req_cacheable = ld_req_cacheable;
             dmem_req_size = ld_req_uop.mem_size;
             dmem_req_idx[LDQ_TAG_WIDTH-1:0] = ld_req_idx;
             dmem_req_uop = ld_req_uop;
@@ -366,6 +372,7 @@ module lsu #(
         .dmem_req_valid(ld_req_valid),
         .dmem_req_ready(ld_req_ready),
         .dmem_req_addr(ld_req_addr),
+        .dmem_req_cacheable(ld_req_cacheable),
         .dmem_req_idx(ld_req_idx),
         .dmem_req_uop(ld_req_uop),
         .dmem_resp_valid(ld_resp_valid),
@@ -425,6 +432,7 @@ module lsu #(
         .store_req_valid(st_req_valid),
         .store_req_ready(st_req_ready),
         .store_req_addr(st_req_addr),
+        .store_req_cacheable(st_req_cacheable),
         .store_req_data(st_req_data),
         .store_req_mask(st_req_mask),
         .store_req_idx(st_req_idx),

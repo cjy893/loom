@@ -196,6 +196,91 @@ static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
     expect_eq("mul/div no exception", dut->exception, 0);
 }
 
+constexpr uint32_t cacop(unsigned code, unsigned rj, unsigned imm12) {
+    return 0x0600'0000U | ((imm12 & 0xfffU) << 10) |
+           ((rj & 0x1fU) << 5) | (code & 0x1fU);
+}
+
+static_assert(cacop(0x11, 12, 0x123) == 0x0604'8d91U);
+
+static void expect_cacop_decode(Vdecode_test_top* dut, unsigned code,
+                                unsigned rj, unsigned imm12,
+                                unsigned status_prv) {
+    decode_at_plv(dut, cacop(code, rj, imm12), status_prv);
+
+    const unsigned packed_imm =
+        (imm12 & 0x800U) != 0 ? (0x03ff'f000U | (imm12 & 0xfffU))
+                              : (imm12 & 0xfffU);
+    const bool clean_cacop =
+        dut->exception == 0 &&
+        dut->iq_type == IQ_UNQ &&
+        dut->fu_code == 0 &&
+        dut->ldst == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->lsrc1 == rj &&
+        dut->lsrc1_rtype == RT_FIX &&
+        dut->lsrc2 == 0 &&
+        dut->lsrc2_rtype == RT_X &&
+        dut->op1_sel == OP1_SRC1 &&
+        dut->op2_sel == OP2_IMM &&
+        dut->imm_sel == IMM_I12 &&
+        dut->imm_packed == packed_imm &&
+        dut->tlb_cmd == TLB_CMD_NONE &&
+        dut->is_unique == 1 &&
+        dut->flush_on_commit == 1;
+
+    if (!clean_cacop) {
+        std::fprintf(
+            stderr,
+            "FAIL: CACOP code 0x%02x in PLV%u: exception=%u cause=%u "
+            "iq=%u fu=0x%x ldst=%u/%u lsrc1=%u/%u lsrc2=%u/%u "
+            "op1=%u op2=%u imm_sel=%u imm=0x%x tlb=%u unique=%u "
+            "flush=%u\n",
+            code, status_prv, dut->exception, dut->exc_cause,
+            dut->iq_type, dut->fu_code, dut->ldst, dut->dst_rtype,
+            dut->lsrc1, dut->lsrc1_rtype, dut->lsrc2,
+            dut->lsrc2_rtype, dut->op1_sel, dut->op2_sel,
+            dut->imm_sel, dut->imm_packed, dut->tlb_cmd,
+            dut->is_unique, dut->flush_on_commit);
+        ++failures;
+    }
+}
+
+static void expect_cacop_nop(Vdecode_test_top* dut, unsigned code) {
+    decode_at_plv(dut, cacop(code, 19, 0xa55), 3);
+
+    const bool clean_nop =
+        dut->exception == 0 &&
+        dut->iq_type == IQ_ALU &&
+        dut->fu_code == (1U << FC_ALU) &&
+        dut->ldst == 0 &&
+        dut->dst_rtype == RT_X &&
+        dut->lsrc1 == 0 &&
+        dut->lsrc1_rtype == RT_X &&
+        dut->lsrc2 == 0 &&
+        dut->lsrc2_rtype == RT_X &&
+        dut->uses_ldq == 0 &&
+        dut->uses_stq == 0 &&
+        dut->tlb_cmd == TLB_CMD_NONE &&
+        dut->is_unique == 0 &&
+        dut->flush_on_commit == 0;
+
+    if (!clean_nop) {
+        std::fprintf(
+            stderr,
+            "FAIL: unsupported CACOP code 0x%02x was not a clean NOP: "
+            "exception=%u cause=%u iq=%u fu=0x%x ldst=%u/%u "
+            "lsrc1=%u/%u lsrc2=%u/%u ldq=%u stq=%u tlb=%u "
+            "unique=%u flush=%u\n",
+            code, dut->exception, dut->exc_cause, dut->iq_type,
+            dut->fu_code, dut->ldst, dut->dst_rtype, dut->lsrc1,
+            dut->lsrc1_rtype, dut->lsrc2, dut->lsrc2_rtype,
+            dut->uses_ldq, dut->uses_stq, dut->tlb_cmd,
+            dut->is_unique, dut->flush_on_commit);
+        ++failures;
+    }
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     auto* dut = new Vdecode_test_top;
@@ -391,6 +476,46 @@ int main(int argc, char** argv) {
     expect_eq("illegal INVTLB in PLV3 remains INE", dut->exc_cause, 13);
     expect_eq("illegal INVTLB in PLV3 has no command",
               dut->tlb_cmd, TLB_CMD_NONE);
+
+    // CACOP code[2:0] selects I-Cache (0) or D-Cache (1), while code[4:3]
+    // selects direct-index mode 0/1 or translated hit mode 2. It reads rj and
+    // carries si12 so the serialized execution path can form rj + si12.
+    constexpr unsigned legal_cacop_codes[] = {
+        0x00, 0x01, 0x08, 0x09, 0x10, 0x11,
+    };
+    for (unsigned code : legal_cacop_codes)
+        expect_cacop_decode(dut, code, 12, 0x123, 0);
+    expect_cacop_decode(dut, 0x10, 7, 0xffc, 3);
+    expect_cacop_decode(dut, 0x11, 8, 0x800, 3);
+
+    // Direct-index modes are privileged. Hit operations (mode 2) are legal
+    // at user privilege and rely on normal address translation permissions.
+    constexpr unsigned privileged_cacop_codes[] = {
+        0x00, 0x01, 0x08, 0x09,
+    };
+    for (unsigned code : privileged_cacop_codes) {
+        for (unsigned plv = 1; plv <= 3; ++plv) {
+            char instruction_name[32];
+            std::snprintf(instruction_name, sizeof(instruction_name),
+                          "CACOP code 0x%02x", code);
+            expect_privilege_fault(dut, cacop(code, 12, 0x123), plv,
+                                   instruction_name);
+        }
+    }
+
+    // The chosen LA32 reference treats unsupported cache selectors and mode
+    // 3 as NOPs. Cover all 26 unsupported values instead of sampling one.
+    unsigned unsupported_cacop_count = 0;
+    for (unsigned code = 0; code < 32; ++code) {
+        const bool supported =
+            (code >> 3) != 3 && ((code & 7U) == 0 || (code & 7U) == 1);
+        if (!supported) {
+            expect_cacop_nop(dut, code);
+            ++unsupported_cacop_count;
+        }
+    }
+    expect_eq("all unsupported CACOP encodings covered",
+              unsupported_cacop_count, 26);
 
     // ERTN is a serialized UNQ operation in PLV0. Its redirect is performed
     // only when the uop commits from the ROB.

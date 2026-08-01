@@ -27,6 +27,9 @@ Run one suite:
 ./test/unq/run.sh
 ./test/lsu/run.sh
 ./test/lsu_dmmu/run.sh
+./test/icache/run.sh
+./test/dcache/run.sh
+./test/cacop_ctrl/run.sh
 ./test/fetch_buffer/run.sh
 ./test/fetch_metadata/run.sh
 ./test/ifu/run.sh
@@ -52,6 +55,15 @@ can be validated against their test-only references:
 ./test/f3_predecode/run.sh --reference
 ./test/bpd_update_router/run.sh --reference
 ./test/bpd_banked/run.sh
+```
+
+The blocking cache contracts can be validated before their production modules
+exist:
+
+```bash
+./test/icache/run.sh --reference
+./test/dcache/run.sh --reference
+./test/cacop_ctrl/run.sh --reference
 ```
 
 LA32 TLB and translation contracts can be validated independently:
@@ -123,7 +135,12 @@ Current coverage:
 - `decode`: real LA32 encodings from `test.s` for integer ALU, immediate,
   load/store, branch, all seven multiply/divide variants, CSR, syscall,
   TLB management commands, all legal and representative illegal `INVTLB`
-  operations, privilege checks, and illegal instructions.
+  operations, all supported and unsupported `CACOP` codes, mode-dependent
+  privilege checks, and illegal instructions.
+- `cacop_ctrl`: all six I/D-Cache and mode combinations, direct-index
+  translation bypass, mode-2 translation faults, cache request and response
+  backpressure, ROB identity, unsupported-code NOPs, and pre-accept flush
+  recovery. Until the production controller exists, run its reference mode.
 - `f3_predecode`: frontend classification of all LA32 conditional branches,
   `B`, `BL`, and `JIRL`, direct-target formation, call/return recognition,
   and fixed-width return addresses.

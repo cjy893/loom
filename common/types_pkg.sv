@@ -40,6 +40,7 @@ package loom_types;
 
         logic is_dbar;
         logic is_ibar;
+        logic is_cacop;
         logic is_invtlb;
         logic is_llsc;
         logic is_ertn;

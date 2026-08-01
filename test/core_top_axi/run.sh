@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TEST_DIR="$ROOT/test/core_top_axi"
+VERILATOR=${VERILATOR:-verilator}
+VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
+MDIR=${CORE_TOP_AXI_OBJ_DIR:-"$TEST_DIR/obj_dir"}
 
 rtl=(
   "$ROOT/common/params_pkg.sv"
@@ -38,16 +41,21 @@ rtl=(
   "$ROOT/mmu/immu.sv"
   "$ROOT/mmu/tlb.sv"
   "$ROOT/mmu/tlb_ctrl.sv"
+  "$ROOT/cache/icache.sv"
+  "$ROOT/cache/dcache.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
 )
 
-verilator --cc --build -j 1 -Wno-fatal \
+"$VERILATOR" --cc -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
-  --Mdir "$TEST_DIR/obj_dir" \
+  --Mdir "$MDIR" \
   --top-module core_top \
   --exe "$TEST_DIR/test_core_top_axi.cpp" \
   -CFLAGS "-std=c++17 -O0" \
   "${rtl[@]}"
 
-"$TEST_DIR/obj_dir/Vcore_top"
+make -C "$MDIR" -f Vcore_top.mk -j 1 \
+  VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+
+"$MDIR/Vcore_top"

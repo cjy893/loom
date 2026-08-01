@@ -68,8 +68,8 @@ module core_top #(
 );
     localparam logic [3:0] AXI_ID_IFU = 4'd0;
     localparam logic [3:0] AXI_ID_LSU = 4'd1;
-    localparam int FETCH_BEAT_BITS =
-        (FETCH_WIDTH > 1) ? $clog2(FETCH_WIDTH) : 1;
+    localparam int ICACHE_MEM_LEN_WIDTH = 4;
+    localparam int DCACHE_MEM_LEN_WIDTH = 4;
 
     logic [FETCH_WIDTH-1:0]       ifu_fetch_valid;
     logic [FETCH_WIDTH-1:0][31:0] ifu_fetch_insts;
@@ -82,6 +82,31 @@ module core_top #(
     logic                         imem_resp_ready;
     logic [FETCH_WIDTH-1:0][31:0] imem_resp_insts;
 
+    logic                              icache_mem_req_valid;
+    logic                              icache_mem_req_ready;
+    logic [31:0]                       icache_mem_req_addr;
+    logic [ICACHE_MEM_LEN_WIDTH-1:0]   icache_mem_req_len;
+    logic                              icache_mem_resp_valid;
+    logic                              icache_mem_resp_ready;
+    logic [31:0]                       icache_mem_resp_data;
+    logic                              icache_mem_resp_last;
+
+    logic dcache_mem_read_req_valid, dcache_mem_read_req_ready;
+    logic [31:0] dcache_mem_read_req_addr;
+    logic [DCACHE_MEM_LEN_WIDTH-1:0] dcache_mem_read_req_len;
+    logic dcache_mem_read_resp_valid, dcache_mem_read_resp_ready;
+    logic [31:0] dcache_mem_read_resp_data;
+    logic dcache_mem_read_resp_last;
+
+    logic dcache_mem_write_req_valid, dcache_mem_write_req_ready;
+    logic [31:0] dcache_mem_write_req_addr;
+    logic [DCACHE_MEM_LEN_WIDTH-1:0] dcache_mem_write_req_len;
+    logic dcache_mem_write_data_valid, dcache_mem_write_data_ready;
+    logic [31:0] dcache_mem_write_data;
+    logic [3:0] dcache_mem_write_mask;
+    logic dcache_mem_write_data_last;
+    logic dcache_mem_write_resp_valid, dcache_mem_write_resp_ready;
+
     logic [CORE_WIDTH-1:0]       buffer_deq_valid;
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_insts;
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_pcs;
@@ -92,6 +117,7 @@ module core_top #(
     logic                         dmem_req_valid;
     logic                         dmem_req_ready;
     logic                         dmem_req_is_store;
+    logic                         dmem_req_cacheable;
     logic [31:0]                  dmem_req_addr;
     logic [31:0]                  dmem_req_data;
     logic [3:0]                   dmem_req_mask;
@@ -164,6 +190,96 @@ module core_top #(
         .fetch_ready(ifu_fetch_ready)
     );
 
+    icache #(
+        .FETCH_WIDTH   (FETCH_WIDTH),
+        .NUM_SETS      (ICACHE_NSETS),
+        .LINE_BYTES    (ICACHE_BLOCK_BYTES),
+        .MEM_LEN_WIDTH (ICACHE_MEM_LEN_WIDTH)
+    ) icache_inst (
+        .clk               (aclk),
+        .rst_n             (aresetn),
+        .req_valid         (imem_req_valid),
+        .req_ready         (imem_req_ready),
+        .req_paddr         (imem_req_addr),
+        .req_cacheable     (imem_req_cacheable),
+        .resp_valid        (imem_resp_valid),
+        .resp_ready        (imem_resp_ready),
+        .resp_insts        (imem_resp_insts),
+        .maint_valid       (1'b0),
+        .maint_ready       (),
+        .maint_mode        ('0),
+        .maint_all         (1'b0),
+        .maint_vaddr       ('0),
+        .maint_paddr       ('0),
+        .maint_done        (),
+        .mem_req_valid     (icache_mem_req_valid),
+        .mem_req_ready     (icache_mem_req_ready),
+        .mem_req_addr      (icache_mem_req_addr),
+        .mem_req_len       (icache_mem_req_len),
+        .mem_resp_valid    (icache_mem_resp_valid),
+        .mem_resp_ready    (icache_mem_resp_ready),
+        .mem_resp_data     (icache_mem_resp_data),
+        .mem_resp_last     (icache_mem_resp_last)
+    );
+
+    dcache #(
+        .ADDR_WIDTH    (32),
+        .TAG_WIDTH     (LSU_ADDR_SZ + 2),
+        .NUM_SETS      (64),
+        .NUM_WAYS      (2),
+        .LINE_BYTES    (32),
+        .MEM_DATA_WIDTH(32),
+        .MEM_LEN_WIDTH (DCACHE_MEM_LEN_WIDTH)
+    ) dcache_inst (
+        .clk          (aclk),
+        .rst_n        (aresetn),
+
+        .req_valid    (dmem_req_valid),
+        .req_ready    (dmem_req_ready),
+        .req_paddr    (dmem_req_addr),
+        .req_cacheable(dmem_req_cacheable),
+        .req_is_store (dmem_req_is_store),
+        .req_wdata    (dmem_req_data),
+        .req_wmask    (dmem_req_mask),
+        .req_tag      (dmem_req_idx),
+
+        .resp_valid   (dmem_resp_valid),
+        .resp_ready   (1'b1),
+        .resp_is_store(dmem_resp_is_store),
+        .resp_rdata   (dmem_resp_data),
+        .resp_tag     (dmem_resp_idx),
+
+        .maint_valid  (1'b0),
+        .maint_ready  (),
+        .maint_op     ('0),
+        .maint_mode   ('0),
+        .maint_all    (1'b0),
+        .maint_vaddr  ('0),
+        .maint_paddr  ('0),
+        .maint_done   (),
+
+        .mem_read_req_valid  (dcache_mem_read_req_valid),
+        .mem_read_req_ready  (dcache_mem_read_req_ready),
+        .mem_read_req_addr   (dcache_mem_read_req_addr),
+        .mem_read_req_len    (dcache_mem_read_req_len),
+        .mem_read_resp_valid (dcache_mem_read_resp_valid),
+        .mem_read_resp_ready (dcache_mem_read_resp_ready),
+        .mem_read_resp_data  (dcache_mem_read_resp_data),
+        .mem_read_resp_last  (dcache_mem_read_resp_last),
+
+        .mem_write_req_valid (dcache_mem_write_req_valid),
+        .mem_write_req_ready (dcache_mem_write_req_ready),
+        .mem_write_req_addr  (dcache_mem_write_req_addr),
+        .mem_write_req_len   (dcache_mem_write_req_len),
+        .mem_write_data_valid(dcache_mem_write_data_valid),
+        .mem_write_data_ready(dcache_mem_write_data_ready),
+        .mem_write_data      (dcache_mem_write_data),
+        .mem_write_mask      (dcache_mem_write_mask),
+        .mem_write_data_last (dcache_mem_write_data_last),
+        .mem_write_resp_valid(dcache_mem_write_resp_valid),
+        .mem_write_resp_ready(dcache_mem_write_resp_ready)
+    );
+
     fetcher_buffer #(
         .FETCH_WIDTH(FETCH_WIDTH),
         .CORE_WIDTH(CORE_WIDTH),
@@ -220,6 +336,7 @@ module core_top #(
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
+        .dmem_req_cacheable,
         .dmem_req_addr,
         .dmem_req_data,
         .dmem_req_mask,
@@ -264,246 +381,127 @@ module core_top #(
     typedef enum logic [1:0] {
         RD_IDLE,
         RD_ADDR,
-        RD_DATA,
-        RD_IFU_RESP
+        RD_DATA
     } read_state_t;
 
     read_state_t read_state_q;
     logic read_is_data_q;
     logic [31:0] read_addr_q;
-    logic [LSU_ADDR_SZ+1:0] read_dmem_idx_q;
-    logic [FETCH_BEAT_BITS-1:0] read_beat_q;
-    logic [FETCH_WIDTH-1:0][31:0] imem_resp_insts_q;
+    logic [ICACHE_MEM_LEN_WIDTH-1:0] read_len_q;
     logic prefer_data_q;
 
     typedef enum logic [1:0] {
         WR_IDLE,
-        WR_SEND,
+        WR_ADDR,
+        WR_DATA,
         WR_RESP
     } write_state_t;
 
     write_state_t write_state_q;
+    logic [DCACHE_MEM_LEN_WIDTH-1:0] write_len_q;
     logic [31:0] write_addr_q;
-    logic [31:0] write_data_q;
-    logic [3:0] write_mask_q;
-    logic [LSU_ADDR_SZ+1:0] write_dmem_idx_q;
-    logic write_addr_done_q;
-    logic write_data_done_q;
-    logic dmem_outstanding_q;
 
-    logic load_request_accept;
-    logic store_request_accept;
-    logic load_response_fire;
-    logic store_response_fire;
-    logic write_addr_complete;
-    logic write_data_complete;
+    logic grant_dcache_read;
 
-    assign arid = read_is_data_q ? AXI_ID_LSU : AXI_ID_IFU;
-    assign araddr = read_is_data_q
-        ? {read_addr_q[31:2], 2'b00}
-        : read_addr_q;
-    assign arlen = read_is_data_q
-        ? 4'd0
-        : 4'(FETCH_WIDTH - 1);
-    assign arsize = 3'b010;
+  assign grant_dcache_read = read_state_q == RD_IDLE &&
+        dcache_mem_read_req_valid &&
+        (prefer_data_q || !icache_mem_req_valid);
+
+    assign dcache_mem_read_req_ready = grant_dcache_read;
+    assign icache_mem_req_ready = read_state_q == RD_IDLE && !grant_dcache_read;
+
+    assign arid    = read_is_data_q ? AXI_ID_LSU : AXI_ID_IFU;
+    assign araddr  = read_addr_q;
+    assign arlen   = read_len_q;
+    assign arsize  = 3'b010;
     assign arburst = 2'b01;
-    assign arlock = 2'b00;
+    assign arlock  = 2'b00;
     assign arcache = 4'b0000;
-    assign arprot = 3'b000;
+    assign arprot  = 3'b000;
     assign arvalid = read_state_q == RD_ADDR;
-    assign rready = read_state_q == RD_DATA;
 
-    assign load_request_accept =
-        read_state_q == RD_ADDR &&
-        read_is_data_q &&
-        arready;
+    assign dcache_mem_read_resp_valid = read_state_q == RD_DATA && read_is_data_q && rvalid;
+    assign icache_mem_resp_valid = read_state_q == RD_DATA && !read_is_data_q && rvalid;
+
+    assign dcache_mem_read_resp_data = rdata;
+    assign dcache_mem_read_resp_last = rlast;
+    assign icache_mem_resp_data = rdata;
+    assign icache_mem_resp_last = rlast;
+
+    assign rready = read_state_q == RD_DATA ? (read_is_data_q ? dcache_mem_read_resp_ready : icache_mem_resp_ready) : 1'b0;
 
     always_ff @(posedge aclk or negedge aresetn) begin
         if (!aresetn) begin
             read_state_q <= RD_IDLE;
             read_is_data_q <= 1'b0;
             read_addr_q <= '0;
-            read_dmem_idx_q <= '0;
-            read_beat_q <= '0;
-            imem_resp_insts_q <= '0;
+            read_len_q <= '0;
             prefer_data_q <= 1'b1;
         end else begin
             case (read_state_q)
                 RD_IDLE: begin
-                    if (!dmem_outstanding_q &&
-                        dmem_req_valid &&
-                        !dmem_req_is_store &&
-                        (prefer_data_q || !imem_req_valid)) begin
+                    if (dcache_mem_read_req_valid && dcache_mem_read_req_ready) begin
                         read_is_data_q <= 1'b1;
-                        read_addr_q <= dmem_req_addr;
-                        read_dmem_idx_q <= dmem_req_idx;
-                        read_state_q <= RD_ADDR;
-                    end else if (imem_req_valid && imem_req_ready) begin
+                        read_addr_q    <= dcache_mem_read_req_addr;
+                        read_len_q     <= dcache_mem_read_req_len;
+                        prefer_data_q  <= 1'b0;
+                        read_state_q   <= RD_ADDR;
+                    end else if (icache_mem_req_valid && icache_mem_req_ready) begin
                         read_is_data_q <= 1'b0;
-                        read_addr_q <= imem_req_addr;
-                        read_beat_q <= '0;
-                        imem_resp_insts_q <= '0;
-                        read_state_q <= RD_ADDR;
-                    end else if (!dmem_outstanding_q &&
-                                 dmem_req_valid &&
-                                 !dmem_req_is_store) begin
-                        read_is_data_q <= 1'b1;
-                        read_addr_q <= dmem_req_addr;
-                        read_dmem_idx_q <= dmem_req_idx;
-                        read_state_q <= RD_ADDR;
+                        read_addr_q    <= icache_mem_req_addr;
+                        read_len_q     <= icache_mem_req_len;
+                        prefer_data_q  <= 1'b1;
+                        read_state_q   <= RD_ADDR;
                     end
                 end
-
-                RD_ADDR: begin
-                    if (arvalid && arready) begin
-                        read_beat_q <= '0;
-                        prefer_data_q <= !read_is_data_q;
-                        read_state_q <= RD_DATA;
-                    end
-                end
-
-                RD_DATA: begin
-                    if (rvalid && rready) begin
-                        if (read_is_data_q) begin
-                            read_state_q <= RD_IDLE;
-                        end else begin
-                            imem_resp_insts_q[read_beat_q] <= rdata;
-                            if (rlast ||
-                                read_beat_q ==
-                                    FETCH_BEAT_BITS'(FETCH_WIDTH - 1)) begin
-                                read_state_q <= RD_IFU_RESP;
-                            end else begin
-                                read_beat_q <= read_beat_q + 1'b1;
-                            end
-                        end
-                    end
-                end
-
-                RD_IFU_RESP: begin
-                    if (imem_resp_valid && imem_resp_ready)
-                        read_state_q <= RD_IDLE;
-                end
-
+                RD_ADDR: if (arvalid && arready) read_state_q <= RD_DATA;
+                RD_DATA: if (rvalid && rready && rlast) read_state_q <= RD_IDLE;
                 default: read_state_q <= RD_IDLE;
             endcase
         end
     end
 
-    assign imem_req_ready = read_state_q == RD_IDLE && !(!dmem_outstanding_q && dmem_req_valid && !dmem_req_is_store && (prefer_data_q || !imem_req_valid));
-    assign imem_resp_valid = read_state_q == RD_IFU_RESP;
-    assign imem_resp_insts = imem_resp_insts_q;
+
+    assign dcache_mem_write_req_ready = write_state_q == WR_IDLE;
 
     assign awid = AXI_ID_LSU;
-    assign awaddr = {write_addr_q[31:2], 2'b00};
-    assign awlen = 4'd0;
+    assign awaddr = write_addr_q;
+    assign awlen = write_len_q;
     assign awsize = 3'b010;
     assign awburst = 2'b01;
     assign awlock = 2'b00;
     assign awcache = 4'b0000;
     assign awprot = 3'b000;
-    assign awvalid =
-        write_state_q == WR_SEND && !write_addr_done_q;
+    assign awvalid = write_state_q == WR_ADDR;
 
     assign wid = AXI_ID_LSU;
-    assign wdata = write_data_q;
-    assign wstrb = write_mask_q;
-    assign wlast = 1'b1;
-    assign wvalid =
-        write_state_q == WR_SEND && !write_data_done_q;
-    assign bready = write_state_q == WR_RESP;
+    assign wdata = dcache_mem_write_data;
+    assign wstrb = dcache_mem_write_mask;
+    assign wlast = dcache_mem_write_data_last;
+    assign wvalid = write_state_q == WR_DATA && dcache_mem_write_data_valid;
+    assign dcache_mem_write_data_ready = write_state_q == WR_DATA && wready;
 
-    assign write_addr_complete =
-        write_addr_done_q || (awvalid && awready);
-    assign write_data_complete =
-        write_data_done_q || (wvalid && wready);
-    assign store_request_accept =
-        write_state_q == WR_SEND &&
-        write_addr_complete &&
-        write_data_complete;
+    assign dcache_mem_write_resp_valid = write_state_q == WR_RESP && bvalid;
+    assign bready = write_state_q == WR_RESP && dcache_mem_write_resp_ready;
 
     always_ff @(posedge aclk or negedge aresetn) begin
         if (!aresetn) begin
             write_state_q <= WR_IDLE;
             write_addr_q <= '0;
-            write_data_q <= '0;
-            write_mask_q <= '0;
-            write_dmem_idx_q <= '0;
-            write_addr_done_q <= 1'b0;
-            write_data_done_q <= 1'b0;
+            write_len_q   <= '0;
         end else begin
             case (write_state_q)
-                WR_IDLE: begin
-                    if (!dmem_outstanding_q &&
-                        dmem_req_valid &&
-                        dmem_req_is_store) begin
-                        write_addr_q <= dmem_req_addr;
-                        write_data_q <= dmem_req_data;
-                        write_mask_q <= dmem_req_mask;
-                        write_dmem_idx_q <= dmem_req_idx;
-                        write_addr_done_q <= 1'b0;
-                        write_data_done_q <= 1'b0;
-                        write_state_q <= WR_SEND;
+                WR_IDLE:
+                    if (dcache_mem_write_req_valid && dcache_mem_write_req_ready) begin
+                        write_addr_q  <= dcache_mem_write_req_addr;
+                        write_len_q   <= dcache_mem_write_req_len;
+                        write_state_q <= WR_ADDR;
                     end
-                end
-
-                WR_SEND: begin
-                    if (awvalid && awready)
-                        write_addr_done_q <= 1'b1;
-                    if (wvalid && wready)
-                        write_data_done_q <= 1'b1;
-
-                    if (store_request_accept)
-                        write_state_q <= WR_RESP;
-                end
-
-                WR_RESP: begin
-                    if (bvalid && bready)
-                        write_state_q <= WR_IDLE;
-                end
-
+                WR_ADDR: if (awvalid && awready) write_state_q <= WR_DATA;
+                WR_DATA: if (wvalid && wready && wlast) write_state_q <= WR_RESP;
+                WR_RESP: if (dcache_mem_write_resp_valid && dcache_mem_write_resp_ready) write_state_q <= WR_IDLE;
                 default: write_state_q <= WR_IDLE;
             endcase
-        end
-    end
-
-    assign dmem_req_ready = dmem_req_is_store
-        ? store_request_accept
-        : load_request_accept;
-
-    assign load_response_fire =
-        read_state_q == RD_DATA &&
-        read_is_data_q &&
-        rvalid &&
-        rready;
-    assign store_response_fire =
-        write_state_q == WR_RESP &&
-        bvalid &&
-        bready;
-
-    always_ff @(posedge aclk or negedge aresetn) begin
-        if (!aresetn) begin
-            dmem_outstanding_q <= 1'b0;
-        end else if (load_response_fire || store_response_fire) begin
-            dmem_outstanding_q <= 1'b0;
-        end else if (load_request_accept || store_request_accept) begin
-            dmem_outstanding_q <= 1'b1;
-        end
-    end
-
-    always_comb begin
-        dmem_resp_valid = 1'b0;
-        dmem_resp_is_store = 1'b0;
-        dmem_resp_data = '0;
-        dmem_resp_idx = '0;
-
-        if (load_response_fire) begin
-            dmem_resp_valid = 1'b1;
-            dmem_resp_data = rdata;
-            dmem_resp_idx = read_dmem_idx_q;
-        end else if (store_response_fire) begin
-            dmem_resp_valid = 1'b1;
-            dmem_resp_is_store = 1'b1;
-            dmem_resp_idx = write_dmem_idx_q;
         end
     end
 

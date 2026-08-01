@@ -375,12 +375,15 @@ private:
                 "ARADDR is not word aligned");
 
         if (dut->arid == 0) {
-            require(dut->arlen == 3,
-                    "instruction ARLEN is not four beats");
-            require((dut->araddr & 15U) == 0,
-                    "instruction ARADDR is not packet aligned");
+            bool fetch_bundle = dut->arlen == 3;
+            bool cache_line = dut->arlen == 15;
+            require(fetch_bundle || cache_line,
+                    "instruction ARLEN is not a fetch bundle or cache line");
+            require((dut->araddr & (cache_line ? 63U : 15U)) == 0,
+                    "instruction ARADDR is not burst aligned");
             ++instruction_reads_;
-            if (!image_->contains(dut->araddr, 16)) {
+            if (!image_->contains(dut->araddr,
+                                  (dut->arlen + 1U) * 4U)) {
                 invalid_fetch_ = true;
                 invalid_fetch_address_ = dut->araddr;
             }
