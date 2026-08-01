@@ -107,6 +107,21 @@ module core_top #(
     logic dcache_mem_write_data_last;
     logic dcache_mem_write_resp_valid, dcache_mem_write_resp_ready;
 
+    logic        icache_maint_valid;
+    logic        icache_maint_ready;
+    logic [1:0]  icache_maint_mode;
+    logic [31:0] icache_maint_vaddr;
+    logic [31:0] icache_maint_paddr;
+    logic        icache_maint_done;
+
+    logic        dcache_maint_valid;
+    logic        dcache_maint_ready;
+    logic [1:0]  dcache_maint_op;
+    logic [1:0]  dcache_maint_mode;
+    logic [31:0] dcache_maint_vaddr;
+    logic [31:0] dcache_maint_paddr;
+    logic        dcache_maint_done;
+
     logic [CORE_WIDTH-1:0]       buffer_deq_valid;
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_insts;
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_pcs;
@@ -205,13 +220,13 @@ module core_top #(
         .resp_valid        (imem_resp_valid),
         .resp_ready        (imem_resp_ready),
         .resp_insts        (imem_resp_insts),
-        .maint_valid       (1'b0),
-        .maint_ready       (),
-        .maint_mode        ('0),
+        .maint_valid       (icache_maint_valid),
+        .maint_ready       (icache_maint_ready),
+        .maint_mode        (icache_maint_mode),
         .maint_all         (1'b0),
-        .maint_vaddr       ('0),
-        .maint_paddr       ('0),
-        .maint_done        (),
+        .maint_vaddr       (icache_maint_vaddr),
+        .maint_paddr       (icache_maint_paddr),
+        .maint_done        (icache_maint_done),
         .mem_req_valid     (icache_mem_req_valid),
         .mem_req_ready     (icache_mem_req_ready),
         .mem_req_addr      (icache_mem_req_addr),
@@ -249,14 +264,14 @@ module core_top #(
         .resp_rdata   (dmem_resp_data),
         .resp_tag     (dmem_resp_idx),
 
-        .maint_valid  (1'b0),
-        .maint_ready  (),
-        .maint_op     ('0),
-        .maint_mode   ('0),
+        .maint_valid  (dcache_maint_valid),
+        .maint_ready  (dcache_maint_ready),
+        .maint_op     (dcache_maint_op),
+        .maint_mode   (dcache_maint_mode),
         .maint_all    (1'b0),
-        .maint_vaddr  ('0),
-        .maint_paddr  ('0),
-        .maint_done   (),
+        .maint_vaddr  (dcache_maint_vaddr),
+        .maint_paddr  (dcache_maint_paddr),
+        .maint_done   (dcache_maint_done),
 
         .mem_read_req_valid  (dcache_mem_read_req_valid),
         .mem_read_req_ready  (dcache_mem_read_req_ready),
@@ -347,6 +362,19 @@ module core_top #(
         .dmem_resp_is_store,
         .dmem_resp_data,
         .dmem_resp_idx,
+        .icache_maint_valid,
+        .icache_maint_ready,
+        .icache_maint_mode,
+        .icache_maint_vaddr,
+        .icache_maint_paddr,
+        .icache_maint_done,
+        .dcache_maint_valid,
+        .dcache_maint_ready,
+        .dcache_maint_op,
+        .dcache_maint_mode,
+        .dcache_maint_vaddr,
+        .dcache_maint_paddr,
+        .dcache_maint_done,
         .hw_irq(intrpt),
         .ipi_irq(1'b0),
         .csr_req_valid(),

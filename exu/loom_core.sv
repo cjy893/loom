@@ -816,6 +816,35 @@ module loom_core #(
     logic [31:0] cacop_dmmu_req_vaddr;
     logic dmmu_owner_cacop_q;
 
+    typedef enum logic [2:0] {
+        CACOP_IDLE,
+        CACOP_XLATE_REQ,
+        CACOP_XLATE_WAIT,
+        CACOP_CTRL_REQ,
+        CACOP_CTRL_WAIT
+    } cacop_state_t;
+
+    cacop_state_t cacop_state_q;
+    uop_t         cacop_uop_q;
+    logic [31:0]  cacop_vaddr_q;
+    logic [31:0]  cacop_paddr_q;
+    logic         cacop_xcpt_valid_q;
+    logic [5:0]   cacop_xcpt_code_q;
+    logic [31:0]  cacop_badvaddr_q;
+
+    logic         cacop_issue_ready;
+    logic         cacop_issue_fire;
+    logic         cacop_ctrl_req_valid;
+    logic         cacop_ctrl_req_ready;
+    logic         cacop_ctrl_resp_valid;
+    logic         cacop_ctrl_resp_ready;
+    logic [ROB_ADDR_SZ-1:0] cacop_ctrl_resp_rob_idx;
+    logic         cacop_ctrl_resp_xcpt_valid;
+    logic [5:0]   cacop_ctrl_resp_xcpt_code;
+    logic [31:0]  cacop_ctrl_resp_badvaddr;
+    exe_unit_resp_t cacop_res;
+    exception_t     cacop_lxcpt;
+
     logic dmmu_resp_valid, dmmu_resp_ready;
     logic [LSU_ADDR_SZ+1:0] dmmu_resp_tag;
     logic [1:0] dmmu_resp_access;
@@ -861,6 +890,40 @@ module loom_core #(
 
         if(mem_xcpt[0].valid) rob_lxcpt_w = mem_xcpt[0];
         else if(lsu_xlate_xcpt_q.valid) rob_lxcpt_w = lsu_xlate_xcpt_q;
+        else if(cacop_lxcpt.valid) rob_lxcpt_w = cacop_lxcpt;
+    end
+
+    // CACOP mode 2 shares the data-side translation port with the LSU.  The
+    // DMMU accepts one request at a time, so a single owner bit is sufficient
+    // to route the eventual response back to the requester.
+    always_comb begin
+        dmmu_req_valid = cacop_dmmu_req_valid || lsu_dmmu_req_valid;
+        dmmu_req_tag = '0;
+        dmmu_req_vaddr = cacop_dmmu_req_vaddr;
+        dmmu_req_access = ACCESS_LOAD;
+
+        if (!cacop_dmmu_req_valid) begin
+            dmmu_req_tag = lsu_dmmu_req_tag;
+            dmmu_req_vaddr = lsu_dmmu_req_vaddr;
+            dmmu_req_access = lsu_dmmu_req_access;
+        end
+
+        cacop_dmmu_req_ready = dmmu_req_ready;
+        lsu_dmmu_req_ready = dmmu_req_ready && !cacop_dmmu_req_valid;
+
+        cacop_dmmu_resp_valid = dmmu_resp_valid && dmmu_owner_cacop_q;
+        lsu_dmmu_resp_valid = dmmu_resp_valid && !dmmu_owner_cacop_q;
+        dmmu_resp_ready = dmmu_owner_cacop_q ?
+                          cacop_dmmu_resp_ready : lsu_dmmu_resp_ready;
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            dmmu_owner_cacop_q <= 1'b0;
+        else if (bm_flush)
+            dmmu_owner_cacop_q <= 1'b0;
+        else if (dmmu_req_valid && dmmu_req_ready)
+            dmmu_owner_cacop_q <= cacop_dmmu_req_valid;
     end
 
     assign q0_req_valid_w = tlb_search_req_valid_w || itlb_req_valid_w;
@@ -978,14 +1041,14 @@ module loom_core #(
         .dgen_valid(mem_dgen_valid),
         .dgen_uops(mem_dgen_uop),
         .dgen_data(mem_dgen_data),
-        .xlate_req_valid(dmmu_req_valid),
-        .xlate_req_ready(dmmu_req_ready),
-        .xlate_req_tag(dmmu_req_tag),
-        .xlate_req_vaddr(dmmu_req_vaddr),
-        .xlate_req_access(dmmu_req_access),
+        .xlate_req_valid(lsu_dmmu_req_valid),
+        .xlate_req_ready(lsu_dmmu_req_ready),
+        .xlate_req_tag(lsu_dmmu_req_tag),
+        .xlate_req_vaddr(lsu_dmmu_req_vaddr),
+        .xlate_req_access(lsu_dmmu_req_access),
 
-        .xlate_resp_valid(dmmu_resp_valid),
-        .xlate_resp_ready(dmmu_resp_ready),
+        .xlate_resp_valid(lsu_dmmu_resp_valid),
+        .xlate_resp_ready(lsu_dmmu_resp_ready),
         .xlate_resp_tag(dmmu_resp_tag),
         .xlate_resp_access(dmmu_resp_access),
         .xlate_resp_paddr(dmmu_resp_paddr),
@@ -1047,11 +1110,19 @@ module loom_core #(
     assign unq_src2 = bypass_mux(unq_iss_uop.psrc2, rf_read_data[UNQ_RF_BASE+1], bp_valid, bp_pdst, bp_data);
 
     logic tlb_selected;
+    logic cacop_selected;
 
     assign tlb_selected = unq_iss_uop.tlb_cmd != TLB_CMD_NONE;
+    assign cacop_selected = unq_iss_uop.is_cacop;
     assign tlb_req_valid = tlb_selected && unq_iss_valid;
     assign tlb_req_fire = tlb_req_valid && tlb_req_ready;
-    assign unq_exec_ready = unq_native_ready && tlb_req_ready;
+    assign cacop_issue_fire = cacop_selected && unq_iss_valid &&
+                              cacop_issue_ready;
+    // Keep the IQ backpressure independent of iss_uop.  Besides serializing
+    // the three UNQ consumers, this breaks the iss_uop -> squash_grant ->
+    // iss_uop combinational feedback path in the collapsing issue queue.
+    assign unq_exec_ready = unq_native_ready && tlb_req_ready &&
+                            cacop_issue_ready;
 
     assign rf_read_en[UNQ_RF_BASE] = unq_iss_valid;
     assign rf_read_addr[UNQ_RF_BASE] = unq_iss_uop.psrc1;
@@ -1064,18 +1135,111 @@ module loom_core #(
         else if(tlb_req_fire) tlb_uop_q <= unq_iss_uop;
     end
 
+    assign cacop_issue_ready = (cacop_state_q == CACOP_IDLE) && !bm_flush;
+    assign cacop_dmmu_req_valid = cacop_state_q == CACOP_XLATE_REQ;
+    assign cacop_dmmu_req_vaddr = cacop_vaddr_q;
+    assign cacop_dmmu_resp_ready = cacop_state_q == CACOP_XLATE_WAIT;
+    assign cacop_ctrl_req_valid = cacop_state_q == CACOP_CTRL_REQ;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            cacop_state_q <= CACOP_IDLE;
+            cacop_uop_q <= '0;
+            cacop_vaddr_q <= '0;
+            cacop_paddr_q <= '0;
+            cacop_xcpt_valid_q <= 1'b0;
+            cacop_xcpt_code_q <= '0;
+            cacop_badvaddr_q <= '0;
+        end else if (bm_flush) begin
+            cacop_state_q <= CACOP_IDLE;
+            cacop_xcpt_valid_q <= 1'b0;
+        end else begin
+            unique case (cacop_state_q)
+                CACOP_IDLE: begin
+                    if (cacop_issue_fire) begin
+                        cacop_uop_q <= unq_iss_uop;
+                        cacop_vaddr_q <= unq_src1 + expand_imm(unq_iss_uop);
+                        cacop_paddr_q <= '0;
+                        cacop_xcpt_valid_q <= 1'b0;
+                        cacop_xcpt_code_q <= '0;
+                        cacop_badvaddr_q <= '0;
+
+                        if (unq_iss_uop.inst[4:3] == 2'd2)
+                            cacop_state_q <= CACOP_XLATE_REQ;
+                        else
+                            cacop_state_q <= CACOP_CTRL_REQ;
+                    end
+                end
+
+                CACOP_XLATE_REQ: begin
+                    if (cacop_dmmu_req_valid && cacop_dmmu_req_ready)
+                        cacop_state_q <= CACOP_XLATE_WAIT;
+                end
+
+                CACOP_XLATE_WAIT: begin
+                    if (cacop_dmmu_resp_valid && cacop_dmmu_resp_ready) begin
+                        cacop_paddr_q <= dmmu_resp_paddr;
+                        cacop_xcpt_valid_q <= dmmu_resp_xcpt_valid;
+                        cacop_xcpt_code_q <= dmmu_resp_xcpt_code;
+                        cacop_badvaddr_q <= dmmu_resp_badvaddr;
+                        cacop_state_q <= CACOP_CTRL_REQ;
+                    end
+                end
+
+                CACOP_CTRL_REQ: begin
+                    if (cacop_ctrl_req_valid && cacop_ctrl_req_ready)
+                        cacop_state_q <= CACOP_CTRL_WAIT;
+                end
+
+                CACOP_CTRL_WAIT: begin
+                    if (cacop_ctrl_resp_valid && cacop_ctrl_resp_ready)
+                        cacop_state_q <= CACOP_IDLE;
+                end
+
+                default: cacop_state_q <= CACOP_IDLE;
+            endcase
+        end
+    end
+
+    always_comb begin
+        cacop_ctrl_resp_ready = !cacop_ctrl_resp_xcpt_valid ||
+                                (!mem_xcpt[0].valid &&
+                                 !lsu_xlate_xcpt_q.valid);
+
+        cacop_res = '0;
+        cacop_res.valid = cacop_ctrl_resp_valid &&
+                          cacop_ctrl_resp_ready &&
+                          !cacop_ctrl_resp_xcpt_valid;
+        cacop_res.uop = cacop_uop_q;
+        cacop_res.uop.rob_idx = cacop_ctrl_resp_rob_idx;
+
+        cacop_lxcpt = '0;
+        cacop_lxcpt.valid = cacop_ctrl_resp_valid &&
+                            cacop_ctrl_resp_ready &&
+                            cacop_ctrl_resp_xcpt_valid;
+        cacop_lxcpt.uop = cacop_uop_q;
+        cacop_lxcpt.uop.rob_idx = cacop_ctrl_resp_rob_idx;
+        cacop_lxcpt.cause = cacop_ctrl_resp_xcpt_code;
+        cacop_lxcpt.badvaddr = cacop_ctrl_resp_badvaddr;
+    end
+
     always_comb begin
         tlb_res = '0;
         tlb_res.valid = tlb_resp_valid;
         tlb_res.uop = tlb_uop_q;
         tlb_res.uop.rob_idx = tlb_resp_rob_idx;
 
-        unq_res_valid = unq_native_res_valid || tlb_resp_valid;
-        unq_res = tlb_resp_valid ? tlb_res : unq_native_res;
+        unq_res_valid = unq_native_res_valid || tlb_resp_valid ||
+                        cacop_res.valid;
+        if (cacop_res.valid)
+            unq_res = cacop_res;
+        else
+            unq_res = tlb_resp_valid ? tlb_res : unq_native_res;
     end
 
     unq unq_inst (.clk(clk), .rst_n(rst_n),
-        .iss_valid(unq_iss_valid && !tlb_selected), .iss_uop(unq_iss_uop),
+        .iss_valid(unq_iss_valid && !tlb_selected && !cacop_selected),
+        .iss_uop(unq_iss_uop),
         .iss_ready(unq_native_ready),
         .src1_data(unq_src1),
         .src2_data(unq_src2),
@@ -1085,6 +1249,42 @@ module loom_core #(
         .counter_id_value(csr_tid_value_w),
         .res_valid(unq_native_res_valid), .res(unq_native_res),
         .brupdate(brupdate_w), .kill(bm_flush));
+
+    cacop_ctrl #(
+        .ROB_IDX_WIDTH(ROB_ADDR_SZ)
+    ) cacop_ctrl_inst (
+        .clk,
+        .rst_n,
+        .req_valid(cacop_ctrl_req_valid),
+        .req_ready(cacop_ctrl_req_ready),
+        .req_rob_idx(cacop_uop_q.rob_idx),
+        .req_code(cacop_uop_q.inst[4:0]),
+        .req_vaddr(cacop_vaddr_q),
+        .req_paddr(cacop_paddr_q),
+        .req_xcpt_valid(cacop_xcpt_valid_q),
+        .req_xcpt_code(cacop_xcpt_code_q),
+        .req_badvaddr(cacop_badvaddr_q),
+        .resp_valid(cacop_ctrl_resp_valid),
+        .resp_ready(cacop_ctrl_resp_ready),
+        .resp_rob_idx(cacop_ctrl_resp_rob_idx),
+        .resp_xcpt_valid(cacop_ctrl_resp_xcpt_valid),
+        .resp_xcpt_code(cacop_ctrl_resp_xcpt_code),
+        .resp_badvaddr(cacop_ctrl_resp_badvaddr),
+        .flush_pending(bm_flush),
+        .icache_maint_valid,
+        .icache_maint_ready,
+        .icache_maint_mode,
+        .icache_maint_vaddr,
+        .icache_maint_paddr,
+        .icache_maint_done,
+        .dcache_maint_valid,
+        .dcache_maint_ready,
+        .dcache_maint_op,
+        .dcache_maint_mode,
+        .dcache_maint_vaddr,
+        .dcache_maint_paddr,
+        .dcache_maint_done
+    );
 
     // ================================================================
     // 唤醒信号收集

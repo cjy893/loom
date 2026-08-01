@@ -45,6 +45,7 @@ case "$MODE" in
       "$ROOT/mmu/immu.sv"
       "$ROOT/mmu/tlb.sv"
       "$ROOT/mmu/tlb_ctrl.sv"
+      "$ROOT/cache/cacop_ctrl.sv"
       "$ROOT/exu/loom_core.sv"
       "$TEST_DIR/core_top_reference.sv"
     )

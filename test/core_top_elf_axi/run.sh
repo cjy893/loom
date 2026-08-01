@@ -61,6 +61,7 @@ rtl=(
   "$ROOT/mmu/tlb_ctrl.sv"
   "$ROOT/cache/icache.sv"
   "$ROOT/cache/dcache.sv"
+  "$ROOT/cache/cacop_ctrl.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
   "$TEST_DIR/core_top_elf_axi_test_top.sv"

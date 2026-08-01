@@ -1,7 +1,7 @@
 # CACOP controller contract
 
-This suite fixes the LA32 CACOP control boundary before the production
-controller is implemented. It is based on the completed five-stage reference
+This suite fixes the LA32 CACOP control boundary used by the production
+controller. It is based on the completed five-stage reference
 under `/mnt/e/Download/LoongArch/LoongArch` and cross-checked against
 `/mnt/e/nscscc/chiplab/IP/myCPU_bakpak`.
 
@@ -31,14 +31,13 @@ Validate the test harness without a production controller:
 ./test/cacop_ctrl/run.sh --reference
 ```
 
-The future production module is expected at `cache/cacop_ctrl.sv` with the
-ports used by `cacop_ctrl_test_top.sv`. After it exists, run:
+The production module is `cache/cacop_ctrl.sv`. Run:
 
 ```bash
 ./test/cacop_ctrl/run.sh
 ```
 
-Cache-level tests still need to be extended when `icache.sv` and `dcache.sv`
-gain mode/index-way maintenance ports. A later core-level suite must cover
-unique dispatch, mode-2 DMMU translation, precise exceptions, I-Cache refetch,
-and suppression of maintenance on killed instructions.
+Cache-level mode/index-way and physical-hit behavior is covered by
+`test/icache` and `test/dcache`. Core serialization, mode-2 DMMU translation,
+precise translation faults, and cache-side backpressure are covered by
+`test/core_cacop`.
