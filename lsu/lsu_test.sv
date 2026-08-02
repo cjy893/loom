@@ -119,6 +119,7 @@ module lsu_test (
         .dmem_req_ready,
         .dmem_req_addr,
         .dmem_req_idx,
+        .dmem_req_cacheable(),
         .dmem_req_uop(dmem_req_uop_unused),
         .dmem_resp_valid,
         .dmem_resp_idx,

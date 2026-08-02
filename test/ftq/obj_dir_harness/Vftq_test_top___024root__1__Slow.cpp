@@ -50,10 +50,8 @@ VL_ATTR_COLD void Vftq_test_top___024root___ctor_var_reset(Vftq_test_top___024ro
     vlSelf->brupdate_b2_ftq_idx = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 8211853988230588725ull);
     vlSelf->brupdate_b2_taken = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 948442512094919306ull);
     vlSelf->brupdate_b2_target = VL_SCOPED_RAND_RESET_I(32, __VscopeHash, 13792037279461949219ull);
-    vlSelf->brupdate_b2_br_mask = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 6102970970123545589ull);
-    vlSelf->brupdate_b2_cfi_is_br = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 12672738746066430276ull);
-    vlSelf->brupdate_b2_cfi_is_call = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 10410947171980655375ull);
-    vlSelf->brupdate_b2_cfi_is_ret = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 8696363908109487574ull);
+    vlSelf->brupdate_b2_pc_lob = VL_SCOPED_RAND_RESET_I(6, __VscopeHash, 4561180861367310119ull);
+    vlSelf->brupdate_b2_cfi_type = VL_SCOPED_RAND_RESET_I(3, __VscopeHash, 4083928571929892898ull);
     vlSelf->bpd_update_valid = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 8485723521938598147ull);
     vlSelf->bpd_update_is_mispredict_update = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 353516733647158569ull);
     vlSelf->bpd_update_is_repair_update = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 6919249178677247398ull);

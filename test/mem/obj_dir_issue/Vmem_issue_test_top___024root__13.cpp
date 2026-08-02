@@ -4,7 +4,7 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-extern const VlWide<13>/*415:0*/ Vmem_issue_test_top__ConstPool__CONST_hf75f4d44_0;
+extern const VlWide<13>/*415:0*/ Vmem_issue_test_top__ConstPool__CONST_h75d095d1_0;
 
 void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___024root* vlSelf) {
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___nba_sequent__TOP__4\n"); );
@@ -14,17 +14,17 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___0
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant = 0U;
     vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 0U;
-    VL_ASSIGN_W(414, vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop, Vmem_issue_test_top__ConstPool__CONST_hf75f4d44_0);
+    VL_ASSIGN_W(416, vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop, Vmem_issue_test_top__ConstPool__CONST_h75d095d1_0);
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
         = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
-           | (0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
-                                      << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
-                                                >> 0x0000001cU)) 
+           | (0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U] 
+                                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                                >> 0x0000001eU)) 
                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                        << 0x00000019U) 
+                                        << 0x00000017U) 
                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                          >> 7U))))));
+                                          >> 9U))))));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
         = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
            | (((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
@@ -57,29 +57,38 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___0
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U] 
             = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[11U];
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U] 
-            = (0x3fffffffU & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[12U]);
+            = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[12U];
         vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-            = ((0x0fffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
-               | ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
-                     << 4U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
-                               >> 0x0000001cU)) & (~ 
+            = ((0x3fffffffU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]) 
+               | ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U] 
+                     << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                               >> 0x0000001eU)) & (~ 
                                                    ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                                     << 0x00000015U) 
+                                                     << 0x00000013U) 
                                                     | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                                       >> 0x0000000bU)))) 
-                  << 0x0000001cU));
+                                                       >> 0x0000000dU)))) 
+                  << 0x0000001eU));
+        vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+            = ((0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U]) 
+               | (3U & ((((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U] 
+                           << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                     >> 0x0000001eU)) 
+                         & (~ ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                << 0x00000013U) | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                                   >> 0x0000000dU)))) 
+                        >> 2U)));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant 
             = (1U | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant));
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 1U;
     }
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
         = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
-           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
-                                       << 6U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
-                                                 >> 0x0000001aU)) 
+           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U] 
+                                       << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
+                                                 >> 0x0000001eU)) 
                                      & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                         << 0x00000019U) 
+                                         << 0x00000017U) 
                                         | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                           >> 7U))))) 
+                                           >> 9U))))) 
               << 1U));
 }

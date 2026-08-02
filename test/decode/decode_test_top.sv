@@ -31,6 +31,9 @@ module decode_test_top (
     output logic [1:0]  mem_size,
     output logic        mem_signed,
     output logic        is_unique,
+    output logic        is_dbar,
+    output logic        is_ibar,
+    output logic        is_idle,
     output logic        is_rdcnt,
     output logic        is_ertn,
     output logic        flush_on_commit,
@@ -73,6 +76,9 @@ module decode_test_top (
     assign mem_size = uop.mem_size;
     assign mem_signed = uop.mem_signed;
     assign is_unique = uop.is_unique;
+    assign is_dbar = uop.is_dbar;
+    assign is_ibar = uop.is_ibar;
+    assign is_idle = uop.is_idle;
     assign is_rdcnt = uop.is_rdcnt;
     assign is_ertn = uop.is_ertn;
     assign flush_on_commit = uop.flush_on_commit;

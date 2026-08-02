@@ -309,8 +309,8 @@ bool test_redirect_with_pending_stale_response(
     dut->fetch_ready = 0;
     memory.drive(dut, cycle);
     dut->eval();
-    passed &= check("redirect immediately masks buffered path",
-                    dut->fetch_valid == 0);
+    passed &= check("redirect leaves buffered path visible until edge",
+                    dut->fetch_valid != 0);
     passed &= check("redirect prevents buffer enqueue",
                     !dut->buffer_enq_ready_dbg);
 
@@ -374,8 +374,8 @@ bool test_redirect_clears_held_packet(
     dut->fetch_ready = 1;
     memory.drive(dut, cycle);
     dut->eval();
-    passed &= check("redirect masks full buffer output",
-                    dut->fetch_valid == 0);
+    passed &= check("redirect leaves full buffer output visible until edge",
+                    dut->fetch_valid != 0);
     passed &= check("redirect rejects held IFU packet",
                     !dut->buffer_enq_ready_dbg);
 

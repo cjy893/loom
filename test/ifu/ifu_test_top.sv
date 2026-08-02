@@ -32,6 +32,8 @@ module ifu_test_top (
     output logic [3:0][5:0]      fetch_xcpt_code,
     output logic [3:0][31:0]     fetch_pc,
     output logic [3:0][31:0]     fetch_insts,
+    output logic [3:0]           fetch_predicted_taken,
+    output logic [3:0][31:0]     fetch_predicted_npc,
     input  logic                 fetch_ready
 );
     localparam logic [31:0] RESET_PC = 32'h1c00_0000;
@@ -43,7 +45,20 @@ module ifu_test_top (
         .clk,
         .rst_n,
         .redirect_valid,
+        .flush_valid(redirect_valid),
         .redirect_pc,
+        .branch_redirect_ftq_idx('0),
+        .branch_redirect_taken(1'b0),
+        .branch_redirect_pc_lob('0),
+        .branch_redirect_cfi_type('0),
+        .ftq_commit_valid(1'b0),
+        .ftq_commit_idx('0),
+        .exec_query_valid('0),
+        .exec_query_idx('0),
+        .exec_query_pc('0),
+        .exec_query_resp_valid(),
+        .exec_query_next_pc(),
+        .exec_query_cfi_match(),
         .xlate_req_valid,
         .xlate_req_ready,
         .xlate_req_vaddr,
@@ -68,6 +83,9 @@ module ifu_test_top (
         .fetch_valid,
         .fetch_pc,
         .fetch_insts,
+        .fetch_ftq_idx(),
+        .fetch_predicted_taken,
+        .fetch_predicted_npc,
         .fetch_ready
     );
 endmodule

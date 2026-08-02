@@ -178,19 +178,28 @@ uint64_t second_history(const Update& update) {
 BankResult expected_bank(const Update& update, int physical_bank) {
     BankResult expected{};
     const int first_bank = (update.pc / kBankBytes) & 1;
+    const int start_lane = (update.pc / 4) % kBankWidth;
+    const int shifted_br_mask = update.br_mask << start_lane;
+    const int shifted_btb_mispredicts =
+        update.btb_mispredicts << start_lane;
+    const int shifted_cfi_idx = update.cfi_idx + start_lane;
     const bool last_bank =
         ((update.pc % kBlockBytes) / kBankBytes) ==
         (kBlockBytes / kBankBytes) - 1;
     const bool is_first = physical_bank == first_bank;
+    const bool cfi_in_first =
+        update.cfi_valid && shifted_cfi_idx < kBankWidth;
+    const bool cfi_in_second =
+        update.cfi_valid && shifted_cfi_idx >= kBankWidth &&
+        shifted_cfi_idx < 2 * kBankWidth;
 
     expected.valid = is_first
         ? update.valid
         : update.valid && !last_bank &&
-          (!update.cfi_valid || update.cfi_idx >= kBankWidth);
+          (!update.cfi_valid || cfi_in_second);
 
     expected.mispredict = update.mispredict;
     expected.repair = update.repair;
-    expected.cfi_idx = update.cfi_idx & (kBankWidth - 1);
     expected.cfi_taken = update.cfi_taken;
     expected.cfi_mispredicted = update.cfi_mispredicted;
     expected.cfi_is_br = update.cfi_is_br;
@@ -201,19 +210,21 @@ BankResult expected_bank(const Update& update, int physical_bank) {
     expected.meta = update.meta[physical_bank];
 
     if (is_first) {
-        expected.pc = update.pc;
-        expected.br_mask = update.br_mask & 0x3U;
-        expected.btb_mispredicts = update.btb_mispredicts & 0x3U;
-        expected.cfi_valid =
-            update.cfi_valid && update.cfi_idx < kBankWidth;
+        expected.pc = update.pc & ~(kBankBytes - 1U);
+        expected.br_mask = shifted_br_mask & 0x3U;
+        expected.btb_mispredicts = shifted_btb_mispredicts & 0x3U;
+        expected.cfi_valid = cfi_in_first;
+        expected.cfi_idx = shifted_cfi_idx & (kBankWidth - 1);
         expected.ghist = update.old_history;
     } else {
         expected.pc = (update.pc & ~(kBankBytes - 1U)) + kBankBytes;
-        expected.br_mask = (update.br_mask >> kBankWidth) & 0x3U;
+        expected.br_mask =
+            (shifted_br_mask >> kBankWidth) & 0x3U;
         expected.btb_mispredicts =
-            (update.btb_mispredicts >> kBankWidth) & 0x3U;
-        expected.cfi_valid =
-            update.cfi_valid && update.cfi_idx >= kBankWidth;
+            (shifted_btb_mispredicts >> kBankWidth) & 0x3U;
+        expected.cfi_valid = cfi_in_second;
+        expected.cfi_idx =
+            (shifted_cfi_idx - kBankWidth) & (kBankWidth - 1);
         expected.ghist = second_history(update);
     }
 
@@ -252,7 +263,8 @@ void expect_bank(const char* prefix, const BankResult& actual,
     EXPECT_FIELD(pc);
     EXPECT_FIELD(br_mask);
     EXPECT_FIELD(cfi_valid);
-    EXPECT_FIELD(cfi_idx);
+    if (expected.cfi_valid)
+        EXPECT_FIELD(cfi_idx);
     EXPECT_FIELD(cfi_taken);
     EXPECT_FIELD(cfi_mispredicted);
     EXPECT_FIELD(cfi_is_br);
@@ -326,6 +338,39 @@ void test_bank0_start(Vbpd_update_router_test_top* dut) {
               dut->bank1_cfi_idx, 1);
 }
 
+void test_unaligned_bank0_start(Vbpd_update_router_test_top* dut) {
+    Update update = base_update();
+    update.pc = 0x1c10'0004U;
+    check_update(dut, "unaligned bank0 no CFI", update);
+    expect_eq("unaligned bank0 shifts first branch mask",
+              dut->bank0_br_mask, (update.br_mask << 1) & 0x3U);
+    expect_eq("unaligned bank0 shifts second branch mask",
+              dut->bank1_br_mask,
+              ((update.br_mask << 1) >> 2) & 0x3U);
+    expect_eq("unaligned bank0 reports aligned bank PC",
+              dut->bank0_pc, update.pc & ~(kBankBytes - 1U));
+
+    update.cfi_valid = true;
+    update.cfi_idx = 0;
+    check_update(dut, "unaligned bank0 first-bank CFI", update);
+    expect_eq("logical lane0 maps to bank0 lane1",
+              dut->bank0_cfi_idx, 1);
+    expect_eq("unaligned first-bank CFI suppresses bank1",
+              dut->bank_valid, 0b01);
+
+    update.cfi_idx = 1;
+    check_update(dut, "unaligned bank0 second-bank CFI", update);
+    expect_eq("logical lane1 maps to bank1 lane0",
+              dut->bank1_cfi_idx, 0);
+    expect_eq("unaligned second-bank CFI reaches both banks",
+              dut->bank_valid, 0b11);
+
+    update.cfi_idx = 2;
+    check_update(dut, "unaligned bank0 last fetched CFI", update);
+    expect_eq("logical lane2 maps to bank1 lane1",
+              dut->bank1_cfi_idx, 1);
+}
+
 void test_bank1_start_and_wrap(Vbpd_update_router_test_top* dut) {
     Update update = base_update();
     update.pc = 0x1c10'0008U;
@@ -361,6 +406,36 @@ void test_bank1_start_and_wrap(Vbpd_update_router_test_top* dut) {
               dut->bank0_cfi_idx, 0);
 }
 
+void test_unaligned_bank1_start_and_wrap(
+    Vbpd_update_router_test_top* dut
+) {
+    Update update = base_update();
+    update.pc = 0x1c10'000cU;
+    update.new_saw_taken = false;
+    update.new_saw_nt = true;
+    check_update(dut, "unaligned bank1 no CFI", update);
+    expect_eq("unaligned bank1 shifts first mask into physical bank1",
+              dut->bank1_br_mask, (update.br_mask << 1) & 0x3U);
+    expect_eq("unaligned bank1 shifts second mask into physical bank0",
+              dut->bank0_br_mask,
+              ((update.br_mask << 1) >> 2) & 0x3U);
+
+    update.cfi_valid = true;
+    update.cfi_idx = 0;
+    check_update(dut, "unaligned bank1 first-bank CFI", update);
+    expect_eq("unaligned bank1 logical lane0 maps to bank1 lane1",
+              dut->bank1_cfi_idx, 1);
+    expect_eq("unaligned bank1 first CFI suppresses wrapped bank0",
+              dut->bank_valid, 0b10);
+
+    update.cfi_idx = 1;
+    check_update(dut, "unaligned bank1 wrapped-bank CFI", update);
+    expect_eq("unaligned bank1 logical lane1 maps to bank0 lane0",
+              dut->bank0_cfi_idx, 0);
+    expect_eq("unaligned bank1 second CFI reaches both banks",
+              dut->bank_valid, 0b11);
+}
+
 void test_cache_line_boundary(Vbpd_update_router_test_top* dut) {
     Update update = base_update();
     update.pc = 0x1c10'0038U;
@@ -368,6 +443,13 @@ void test_cache_line_boundary(Vbpd_update_router_test_top* dut) {
     check_update(dut, "last bank in cache line", update);
     expect_eq("cache-line boundary suppresses wrapped bank",
               dut->bank_valid, 0b10);
+
+    update.pc = 0x1c10'003cU;
+    check_update(dut, "unaligned last bank in cache line", update);
+    expect_eq("unaligned cache-line boundary suppresses wrapped bank",
+              dut->bank_valid, 0b10);
+    expect_eq("unaligned cache-line boundary keeps aligned bank PC",
+              dut->bank1_pc, 0x1c10'0038U);
 }
 
 void test_invalid_update(Vbpd_update_router_test_top* dut) {
@@ -400,7 +482,9 @@ int main(int argc, char** argv) {
     auto* dut = new Vbpd_update_router_test_top;
 
     test_bank0_start(dut);
+    test_unaligned_bank0_start(dut);
     test_bank1_start_and_wrap(dut);
+    test_unaligned_bank1_start_and_wrap(dut);
     test_cache_line_boundary(dut);
     test_invalid_update(dut);
     test_repair_flags(dut);

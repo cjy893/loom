@@ -61,13 +61,12 @@ VL_ATTR_COLD void Vftq_test_top___024root___stl_sequent__TOP__0(Vftq_test_top___
                                                 & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
                                                    [vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_ptr_q][11U] 
                                                    >> 3U));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_1 = (7U 
-                                                & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                                                   [vlSelfRef.brupdate_b2_ftq_idx][11U] 
-                                                   >> 3U));
-    vlSelfRef.enq_ready = ((~ ((IData)(vlSelfRef.redirect_valid) 
-                               | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_busy_q) 
-                                  | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__entry_valid_q) 
-                                     >> (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q))))) 
+    vlSelfRef.enq_ready = ((~ ((IData)(vlSelfRef.flush_valid) 
+                               | ((IData)(vlSelfRef.redirect_valid) 
+                                  | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_busy_q) 
+                                     | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__entry_valid_q) 
+                                        >> (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q)))))) 
                            & (IData)(vlSelfRef.rst_n));
+    vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_pc_lob_d 
+        = vlSelfRef.brupdate_b2_pc_lob;
 }

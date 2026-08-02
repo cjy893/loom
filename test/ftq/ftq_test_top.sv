@@ -42,10 +42,8 @@ module ftq_test_top #(
     input  logic [$clog2(NUM_ENTRIES)-1:0]           brupdate_b2_ftq_idx,
     input  logic                                     brupdate_b2_taken,
     input  logic [31:0]                              brupdate_b2_target,
-    input  logic [FETCH_WIDTH-1:0]                   brupdate_b2_br_mask,
-    input  logic                                     brupdate_b2_cfi_is_br,
-    input  logic                                     brupdate_b2_cfi_is_call,
-    input  logic                                     brupdate_b2_cfi_is_ret,
+    input  logic [$clog2(ICACHE_BLOCK_BYTES)-1:0]    brupdate_b2_pc_lob,
+    input  logic [2:0]                               brupdate_b2_cfi_type,
 
     // ── BPD Update (to predictors) ──
     output logic                                     bpd_update_valid,
@@ -79,6 +77,7 @@ module ftq_test_top #(
     input  logic [$clog2(NUM_ENTRIES)-1:0]           query_idx,
     output logic                                     query_resp_valid,
     output logic [31:0]                              query_pc,
+    output logic [31:0]                              query_next_pc,
     output logic [FETCH_WIDTH-1:0]                   query_br_mask,
     output logic                                     query_cfi_valid,
     output logic [$clog2(FETCH_WIDTH)-1:0]           query_cfi_idx,
@@ -90,7 +89,18 @@ module ftq_test_top #(
     output logic [31:0]                              query_ras_top,
     output logic [RAS_IDX_SZ-1:0]                    query_ras_idx,
     output logic                                     query_start_bank,
-    output global_history_t                          query_ghist
+    output global_history_t                          query_ghist,
+
+    input  logic [ALU_WIDTH-1:0]                    exec_query_valid,
+    input  logic [ALU_WIDTH-1:0]
+                [$clog2(NUM_ENTRIES)-1:0]            exec_query_idx,
+    input  logic [ALU_WIDTH-1:0][31:0]              exec_query_pc,
+    output logic [ALU_WIDTH-1:0]                    exec_query_resp_valid,
+    output logic [ALU_WIDTH-1:0][31:0]              exec_query_next_pc,
+    output logic [ALU_WIDTH-1:0]                    exec_query_cfi_match,
+
+    // ── Architectural frontend flush ──
+    input  logic                                     flush_valid
 );
 `ifdef FTQ_TEST_CONTRACT_STUB
     always_comb begin
@@ -121,6 +131,7 @@ module ftq_test_top #(
 
         query_resp_valid = 1'b0;
         query_pc = '0;
+        query_next_pc = '0;
         query_br_mask = '0;
         query_cfi_valid = 1'b0;
         query_cfi_idx = '0;
@@ -133,6 +144,9 @@ module ftq_test_top #(
         query_ras_idx = '0;
         query_start_bank = 1'b0;
         query_ghist = '0;
+        exec_query_resp_valid = '0;
+        exec_query_next_pc = '0;
+        exec_query_cfi_match = '0;
     end
 `else
     fetch_target_queue #(.NUM_ENTRIES(NUM_ENTRIES)) dut (
@@ -148,8 +162,7 @@ module ftq_test_top #(
         .redirect_valid, .redirect_ftq_idx,
         .brupdate_b2_mispredict, .brupdate_b2_ftq_idx,
         .brupdate_b2_taken, .brupdate_b2_target,
-        .brupdate_b2_br_mask, .brupdate_b2_cfi_is_br,
-        .brupdate_b2_cfi_is_call, .brupdate_b2_cfi_is_ret,
+        .brupdate_b2_pc_lob, .brupdate_b2_cfi_type,
         .bpd_update_valid, .bpd_update_is_mispredict_update,
         .bpd_update_is_repair_update, .bpd_update_pc,
         .bpd_update_br_mask, .bpd_update_cfi_valid,
@@ -160,12 +173,16 @@ module ftq_test_top #(
         .ghist_restore_valid, .ghist_restore,
         .ras_repair_valid, .ras_repair_idx, .ras_repair_addr,
         .query_valid, .query_idx, .query_resp_valid,
-        .query_pc, .query_br_mask,
+        .query_pc, .query_next_pc, .query_br_mask,
         .query_cfi_valid, .query_cfi_idx, .query_cfi_type,
         .query_cfi_is_call, .query_cfi_is_ret,
         .query_cfi_npc_plus4, .query_cfi_taken,
         .query_ras_top, .query_ras_idx, .query_start_bank,
-        .query_ghist
+        .query_ghist,
+        .exec_query_valid, .exec_query_idx, .exec_query_pc,
+        .exec_query_resp_valid, .exec_query_next_pc,
+        .exec_query_cfi_match,
+        .flush_valid
     );
 `endif
 endmodule

@@ -69,7 +69,5 @@ void Vftq_test_top___024root___eval_triggers_vec__ico__2(Vftq_test_top___024root
                                          | vlSelfRef.__VicoTriggered[0U]);
         vlSelfRef.__VicoTriggered[0U] = (0x0000000040000000ULL 
                                          | vlSelfRef.__VicoTriggered[0U]);
-        vlSelfRef.__VicoTriggered[0U] = (0x0000000080000000ULL 
-                                         | vlSelfRef.__VicoTriggered[0U]);
     }
 }

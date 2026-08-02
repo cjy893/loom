@@ -22,10 +22,12 @@ suites=(
   unq
   lsu
   lsu_dmmu
+  bpd_regression
   fetch_buffer
   ifu
   ifu_fetch_buffer
   core_fetch_buffer
+  core_fetch_metadata
   core_ifu
   core_lsu
   core_lsu_exception
@@ -36,6 +38,7 @@ suites=(
   core_interrupt_lsu
   core_top
   core_top_axi
+  core_top_recovery
   branch_recovery
   integration
 )

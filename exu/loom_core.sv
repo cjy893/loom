@@ -29,9 +29,18 @@ module loom_core #(
     input  logic [FETCH_WIDTH-1:0]       fe_valid,
     input  logic [FETCH_WIDTH-1:0][31:0] fe_insts,
     input  logic [FETCH_WIDTH-1:0][31:0] fe_pcs,
+    input logic [FETCH_WIDTH-1:0][FTQ_ADDR_SZ-1:0] fe_ftq_idx,
+    input logic [FETCH_WIDTH-1:0]                  fe_predicted_taken,
+    input logic [FETCH_WIDTH-1:0][31:0] fe_predicted_npc,
     output logic                         fe_ready,
     output logic                         fe_redirect_valid,
     output logic [31:0]                  fe_redirect_pc,
+    output logic                         fe_flush_valid,
+    output logic [FTQ_ADDR_SZ-1:0]       fe_redirect_ftq_idx,
+    output logic                         fe_redirect_taken,
+    output logic [$clog2(ICACHE_BLOCK_BYTES)-1:0]
+                                         fe_redirect_pc_lob,
+    output logic [2:0]                   fe_redirect_cfi_type,
     input logic [FETCH_WIDTH-1:0]      fe_xcpt_valid,
     input logic [FETCH_WIDTH-1:0][5:0] fe_xcpt_code,
     input  logic        ifu_xlate_req_valid,
@@ -47,6 +56,14 @@ module loom_core #(
     output logic        ifu_xlate_resp_xcpt_valid,
     output logic [5:0]  ifu_xlate_resp_xcpt_code,
     output logic [31:0] ifu_xlate_resp_badvaddr,
+
+    output logic [ALU_WIDTH-1:0] ftq_exec_query_valid,
+    output logic [ALU_WIDTH-1:0][FTQ_ADDR_SZ-1:0] ftq_exec_query_idx,
+    output logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_pc,
+
+    input logic [ALU_WIDTH-1:0] ftq_exec_query_resp_valid,
+    input logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_next_pc,
+    input logic [ALU_WIDTH-1:0] ftq_exec_query_cfi_match,
 
     // ── 测试存储器接口 ──
     output logic                         dmem_req_valid,
@@ -132,6 +149,9 @@ module loom_core #(
     logic [31:0]                 next_decode_pc_q;
     logic [31:0]                 next_decode_pc_d;
     logic [CORE_WIDTH-1:0][31:0] dec_pcs;
+    logic [CORE_WIDTH-1:0][FTQ_ADDR_SZ-1:0] dec_ftq_idx;
+    logic [CORE_WIDTH-1:0]       dec_predicted_taken;
+    logic [CORE_WIDTH-1:0][31:0] dec_predicted_npc;
     logic [CORE_WIDTH-1:0]       dec_lane_eligible;
     logic                        dispatch_enable;
     logic                        unique_dispatch_ready;
@@ -276,6 +296,9 @@ module loom_core #(
         fe_count = '0;
         dec_slot = 0;
         valid_offset = 0;
+        dec_ftq_idx = '0;
+        dec_predicted_taken = '0;
+        dec_predicted_npc = '0;
 
         for (int w = 0; w < FETCH_WIDTH; w++) begin
             if (fe_valid[w]) begin
@@ -286,6 +309,9 @@ module loom_core #(
                     dec_fe_idx[dec_slot] = FE_IDX_WIDTH'(w);
                     dec_xcpt_valid[dec_slot] = fe_xcpt_valid[w];
                     dec_xcpt_code[dec_slot] = fe_xcpt_code[w];
+                    dec_ftq_idx[dec_slot] = fe_ftq_idx[w];
+                    dec_predicted_taken[dec_slot] = fe_predicted_taken[w];
+                    dec_predicted_npc[dec_slot] = fe_predicted_npc[w];
                     if (USE_EXTERNAL_FE_PCS)
                         dec_pcs[dec_slot] = fe_pcs[w];
                     else
@@ -308,9 +334,7 @@ module loom_core #(
 
     assign fe_packet_done =
         &(~fe_valid | fe_finished_q | fe_completed);
-    assign fe_ready = fe_packet_done &&
-                      !rob_flush_frontend_w &&
-                      !brupdate_w.b2.mispredict;
+    assign fe_ready = fe_packet_done && !core_idle_q && !rob_flush_frontend_w && !brupdate_w.b2.mispredict;
     assign fe_accept = fe_ready && (|fe_valid);
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -336,7 +360,7 @@ module loom_core #(
         next_decode_pc_d = next_decode_pc_q;
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (dec_fire[w])
-                next_decode_pc_d = dec_pcs[w] + 32'd4;
+                next_decode_pc_d = dec_predicted_npc[w];
         end
     end
 
@@ -401,13 +425,16 @@ module loom_core #(
                 dec_uops_pre_bm[w].debug_pc   = dec_pcs[w];
 
                 dec_uops_pre_bm[w].exception = 1'b1;
-                dec_uops_pre_bm[w].exc_cause =
-                    {{(XLEN-6){1'b0}}, dec_xcpt_code[w]};
+                dec_uops_pre_bm[w].exc_cause = {{(XLEN-6){1'b0}}, dec_xcpt_code[w]};
 
-                dec_uops_pre_bm[w].exc_pif =
-                    dec_xcpt_code[w] == ECODE_PIF;
-                dec_uops_pre_bm[w].exc_adef =
-                    dec_xcpt_code[w] == ECODE_ADE;
+                dec_uops_pre_bm[w].exc_pif = dec_xcpt_code[w] == ECODE_PIF;
+                dec_uops_pre_bm[w].exc_adef = dec_xcpt_code[w] == ECODE_ADE;
+            end
+
+            if(dec_valids[w]) begin
+                dec_uops_pre_bm[w].ftq_idx = dec_ftq_idx[w];
+                dec_uops_pre_bm[w].taken = dec_predicted_taken[w];
+                dec_uops_pre_bm[w].pc_lob = dec_pcs[w][$clog2(ICACHE_BLOCK_BYTES)-1:0];
             end
         end
     end
@@ -465,13 +492,9 @@ module loom_core #(
             !has_unique || (rob_empty && (valid_count == 1));
     end
 
-    assign dispatch_enable =
-        rob_ready_w &&
-        !rob_flush_frontend_w &&
-        !(|rn_stalls) &&
-        !(|brupdate_w.b1.mispredict_mask) &&
-        !brupdate_w.b2.mispredict &&
-        unique_dispatch_ready;
+    assign dispatch_enable = rob_ready_w && !rob_flush_frontend_w && !core_idle_q &&
+                             !(|rn_stalls) && !(|brupdate_w.b1.mispredict_mask) &&
+                             !brupdate_w.b2.mispredict && unique_dispatch_ready;
 
     // ── 灌入 dec_uops ──
     always_comb begin
@@ -739,6 +762,9 @@ module loom_core #(
         assign rf_read_addr[i*2+0] = alu_iss_uop[i].psrc1;
         assign rf_read_en[i*2+1]   = alu_iss_valid[i];
         assign rf_read_addr[i*2+1] = alu_iss_uop[i].psrc2;
+        assign ftq_exec_query_valid[i] = alu_iss_valid[i] && alu_iss_uop[i].is_jirl;
+        assign ftq_exec_query_idx[i] = alu_iss_uop[i].ftq_idx;
+        assign ftq_exec_query_pc[i]  = alu_iss_uop[i].pc[31:0];
 
         logic [31:0] alu_imm_data;
         assign alu_imm_data = expand_imm(alu_iss_uop[i]);
@@ -748,6 +774,9 @@ module loom_core #(
             .src1_data(bypass_mux(alu_iss_uop[i].psrc1, rf_read_data[i*2+0], bp_valid, bp_pdst, bp_data)),
             .src2_data(bypass_mux(alu_iss_uop[i].psrc2, rf_read_data[i*2+1], bp_valid, bp_pdst, bp_data)),
             .imm_data(alu_imm_data),
+            .ftq_resp_valid    (ftq_exec_query_resp_valid[i]),
+            .ftq_resp_next_pc  (ftq_exec_query_next_pc[i]),
+            .ftq_resp_cfi_match(ftq_exec_query_cfi_match[i]),
             .res_valid(alu_res_valid[i]), .res(alu_res[i]),
             .wakeup_valid(alu_wakeup_valid[i]), .wakeup(alu_wakeup[i]),
             .brinfo_valid(alu_brinfo_valid[i]), .brinfo(alu_brinfo[i]),
@@ -1202,21 +1231,15 @@ module loom_core #(
     end
 
     always_comb begin
-        cacop_ctrl_resp_ready = !cacop_ctrl_resp_xcpt_valid ||
-                                (!mem_xcpt[0].valid &&
-                                 !lsu_xlate_xcpt_q.valid);
+        cacop_ctrl_resp_ready = !cacop_ctrl_resp_xcpt_valid || (!mem_xcpt[0].valid && !lsu_xlate_xcpt_q.valid);
 
         cacop_res = '0;
-        cacop_res.valid = cacop_ctrl_resp_valid &&
-                          cacop_ctrl_resp_ready &&
-                          !cacop_ctrl_resp_xcpt_valid;
+        cacop_res.valid = cacop_ctrl_resp_valid && !cacop_ctrl_resp_xcpt_valid;
         cacop_res.uop = cacop_uop_q;
         cacop_res.uop.rob_idx = cacop_ctrl_resp_rob_idx;
 
         cacop_lxcpt = '0;
-        cacop_lxcpt.valid = cacop_ctrl_resp_valid &&
-                            cacop_ctrl_resp_ready &&
-                            cacop_ctrl_resp_xcpt_valid;
+        cacop_lxcpt.valid = cacop_ctrl_resp_valid && cacop_ctrl_resp_xcpt_valid;
         cacop_lxcpt.uop = cacop_uop_q;
         cacop_lxcpt.uop.rob_idx = cacop_ctrl_resp_rob_idx;
         cacop_lxcpt.cause = cacop_ctrl_resp_xcpt_code;
@@ -1245,6 +1268,7 @@ module loom_core #(
         .src2_data(unq_src2),
         .csr_req_valid, .csr_addr, .csr_cmd, .csr_wdata, .csr_wmask,
         .csr_rdata(csr_rdata_w),
+        .mem_barrier_ready(lsu_ldq_empty && lsu_stq_empty),
         .counter_value(csr_counter_value_w),
         .counter_id_value(csr_tid_value_w),
         .res_valid(unq_native_res_valid), .res(unq_native_res),
@@ -1381,13 +1405,46 @@ module loom_core #(
     assign rob_enq_valids = dis_fire;
     assign rob_enq_uops = dis_uops_w;
 
+    logic        rob_interrupt_taken_w;
+    logic        core_idle_q;
+    logic        idle_commit_w;
+    logic [31:0] idle_commit_pc_w;
+    logic [31:0] idle_resume_pc_q;
+
+    always_comb begin
+        idle_commit_w = 1'b0;
+        idle_commit_pc_w = '0;
+
+        for (int w = 0; w < CORE_WIDTH; w++) begin
+            if (!idle_commit_w && commit.valids[w] && commit.uops[w].is_idle) begin
+                idle_commit_w = 1'b1;
+                idle_commit_pc_w = commit.uops[w].pc[31:0];
+            end
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            core_idle_q <= 1'b0;
+            idle_resume_pc_q <= RESET_PC;
+        end else begin
+            if (idle_commit_w) begin
+                core_idle_q <= 1'b1;
+                idle_resume_pc_q <= idle_commit_pc_w + 32'd4;
+            end
+
+            if (rob_interrupt_taken_w)
+                core_idle_q <= 1'b0;
+        end
+    end
+
     // If the ROB is empty, the interrupt boundary may still precede a packet
     // held in Rename2 or Decode. Preserve that oldest uncommitted PC as ERA.
     always_comb begin
         logic found_rn2;
 
-        rob_interrupt_next_pc_w = next_decode_pc_q;
-        found_rn2 = 1'b0;
+        rob_interrupt_next_pc_w = core_idle_q ? idle_resume_pc_q : next_decode_pc_q;
+        found_rn2 = core_idle_q;
 
         for (int w = 0; w < CORE_WIDTH; w++) begin
             if (!found_rn2 && rn2_mask[w]) begin
@@ -1420,7 +1477,7 @@ module loom_core #(
         .brupdate   (brupdate_w),
         .interrupt_pending(csr_interrupt_pending_w),
         .interrupt_next_pc(rob_interrupt_next_pc_w),
-        .interrupt_taken(),
+        .interrupt_taken(rob_interrupt_taken_w),
         .lxcpt      (rob_lxcpt_w),
         .csr_replay ('0),
         .csr_stall  (1'b0),
@@ -1684,21 +1741,53 @@ module loom_core #(
     br_update_info_t brupdate_w;
     logic [MAX_BR_COUNT-1:0] resolve_mask;
     logic [MAX_BR_COUNT-1:0] mispredict_mask;
+    logic [ALU_WIDTH-1:0] alu_brinfo_valid_d;
+    logic [ALU_WIDTH-1:0] alu_brinfo_valid_q;
+    br_resolution_info_t [ALU_WIDTH-1:0] alu_brinfo_d;
+    br_resolution_info_t [ALU_WIDTH-1:0] alu_brinfo_q;
+    br_resolution_info_t brupdate_b2_d;
+    br_resolution_info_t brupdate_b2_q;
 
     always_comb begin
         resolve_mask    = '0;
         mispredict_mask = '0;
         for (int i = 0; i < ALU_WIDTH; i++) begin
-            if (alu_brinfo_valid[i]) begin
-                resolve_mask[alu_brinfo[i].uop.br_tag] = 1'b1;
-                if (alu_brinfo[i].mispredict)
-                    mispredict_mask[alu_brinfo[i].uop.br_tag] = 1'b1;
+            if (alu_brinfo_valid_q[i]) begin
+                resolve_mask[alu_brinfo_q[i].uop.br_tag] = 1'b1;
+                if (alu_brinfo_q[i].mispredict)
+                    mispredict_mask[alu_brinfo_q[i].uop.br_tag] = 1'b1;
             end
         end
     end
 
     assign brupdate_w.b1.resolve_mask    = resolve_mask;
     assign brupdate_w.b1.mispredict_mask = mispredict_mask;
+
+    always_comb begin
+        alu_brinfo_valid_d = alu_brinfo_valid;
+        alu_brinfo_d       = alu_brinfo;
+
+        for (int i = 0; i < ALU_WIDTH; i++) begin
+            alu_brinfo_valid_d[i] =
+                alu_brinfo_valid[i] &&
+                !(|(alu_brinfo[i].uop.br_mask & mispredict_mask));
+            alu_brinfo_d[i].uop.br_mask =
+                alu_brinfo[i].uop.br_mask & ~resolve_mask;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            alu_brinfo_valid_q <= '0;
+            alu_brinfo_q       <= '0;
+        end else if (bm_flush) begin
+            alu_brinfo_valid_q <= '0;
+            alu_brinfo_q       <= '0;
+        end else begin
+            alu_brinfo_valid_q <= alu_brinfo_valid_d;
+            alu_brinfo_q       <= alu_brinfo_d;
+        end
+    end
 
     function automatic logic rob_idx_is_older(
         input logic [ROB_ADDR_SZ-1:0] lhs,
@@ -1711,22 +1800,36 @@ module loom_core #(
         return lhs_distance < rhs_distance;
     endfunction
 
-    // b2 carries the oldest misprediction, independent of ALU port order.
+    // b2 carries the oldest live misprediction, independent of ALU port order.
     always_comb begin
         logic found_mispredict;
 
-        brupdate_w.b2 = '0;
+        brupdate_b2_d = '0;
         found_mispredict = 1'b0;
         for (int i = 0; i < ALU_WIDTH; i++) begin
-            if (alu_brinfo_valid[i] && alu_brinfo[i].mispredict &&
+            if (alu_brinfo_valid_q[i] && alu_brinfo_q[i].mispredict &&
+                !(|(alu_brinfo_q[i].uop.br_mask & mispredict_mask)) &&
                 (!found_mispredict ||
-                 rob_idx_is_older(alu_brinfo[i].uop.rob_idx,
-                                  brupdate_w.b2.uop.rob_idx))) begin
-                brupdate_w.b2 = alu_brinfo[i];
+                 rob_idx_is_older(alu_brinfo_q[i].uop.rob_idx,
+                                  brupdate_b2_d.uop.rob_idx))) begin
+                brupdate_b2_d = alu_brinfo_q[i];
                 found_mispredict = 1'b1;
             end
         end
+        brupdate_b2_d.uop.br_mask =
+            brupdate_b2_d.uop.br_mask & ~resolve_mask;
     end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            brupdate_b2_q <= '0;
+        else if (bm_flush)
+            brupdate_b2_q <= '0;
+        else
+            brupdate_b2_q <= brupdate_b2_d;
+    end
+
+    assign brupdate_w.b2 = brupdate_b2_q;
 
     // ROB redirects are older than execute-stage branch redirects and
     // therefore take priority when both are visible in the same cycle.
@@ -1761,6 +1864,12 @@ module loom_core #(
             endcase
         end
     end
+
+    assign fe_flush_valid = rob_flush_frontend_w;
+    assign fe_redirect_ftq_idx = brupdate_w.b2.uop.ftq_idx;
+    assign fe_redirect_taken = brupdate_w.b2.taken;
+    assign fe_redirect_pc_lob = brupdate_w.b2.uop.pc_lob;
+    assign fe_redirect_cfi_type = brupdate_w.b2.cfi_type;
 
     // ================================================================
     // 调试

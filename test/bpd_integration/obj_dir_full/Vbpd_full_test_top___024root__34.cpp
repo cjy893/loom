@@ -4,89 +4,533 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___nba_sequent__TOP__0(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__1(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__2(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__3(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__4(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__5(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__7(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__8(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__9(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__10(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__11(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__12(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__13(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__14(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_sequent__TOP__15(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__0(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__1(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__2(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__3(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__4(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__5(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__6(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__7(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__8(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__9(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___nba_comb__TOP__10(Vbpd_full_test_top___024root* vlSelf);
-
-void Vbpd_full_test_top___024root___eval_nba(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___eval_nba\n"); );
+void Vbpd_full_test_top___024root___nba_comb__TOP__10(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_comb__TOP__10\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if ((3ULL & vlSelfRef.__VnbaTriggered[0U])) {
-        Vbpd_full_test_top___024root___nba_sequent__TOP__0(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__1(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__2(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__3(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__4(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__5(vlSelf);
-        {
-            // Inlined CFunc: _nba_sequent__TOP__6
-            vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s2_valid 
-                = ((IData)(vlSelfRef.rst_n) && (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s1_valid));
-            vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s1_valid 
-                = ((IData)(vlSelfRef.rst_n) && (IData)(vlSelfRef.f0_valid));
-        }
+    if ((1U & (((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec) 
+                >> 0x0bU) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0bU;
     }
-    if ((1ULL & vlSelfRef.__VnbaTriggered[0U])) {
-        Vbpd_full_test_top___024root___nba_sequent__TOP__7(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__8(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__9(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__10(vlSelf);
+    if ((1U & (((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec) 
+                >> 0x0cU) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0cU;
     }
-    if ((3ULL & vlSelfRef.__VnbaTriggered[0U])) {
-        Vbpd_full_test_top___024root___nba_sequent__TOP__11(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__12(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__13(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__14(vlSelf);
-        Vbpd_full_test_top___024root___nba_sequent__TOP__15(vlSelf);
+    if ((1U & (((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec) 
+                >> 0x0dU) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0dU;
     }
-    if ((3ULL & vlSelfRef.__VnbaTriggered[0U])) {
-        Vbpd_full_test_top___024root___nba_comb__TOP__0(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__1(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__2(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__3(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__4(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__5(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__6(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__7(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__8(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__9(vlSelf);
-        Vbpd_full_test_top___024root___nba_comb__TOP__10(vlSelf);
+    if ((1U & (((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec) 
+                >> 0x0eU) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0eU;
     }
-}
-
-void Vbpd_full_test_top___024root___trigger_orInto__act_vec_vec(VlUnpacked<QData/*63:0*/, 1> &out, const VlUnpacked<QData/*63:0*/, 1> &in) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___trigger_orInto__act_vec_vec\n"); );
-    // Locals
-    IData/*31:0*/ n;
-    // Body
-    n = 0U;
-    do {
-        out[n] = (out[n] | in[n]);
-        n = ((IData)(1U) + n);
-    } while ((0U >= n));
+    if ((IData)((((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec) 
+                  >> 0x0000000fU) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0fU;
+    }
+    vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__upd_hit_way 
+        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32)) 
+           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_10));
+    vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__do_allocate 
+        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32)) 
+           & ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_10)) 
+              & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3)));
+    vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate 
+        = ((~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit)) 
+           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3));
+    vlSelfRef.ubtb_f1_preds[0U] = (IData)(((- (QData)((IData)(
+                                                              ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit) 
+                                                               & (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid))))) 
+                                           & (((QData)((IData)(
+                                                               (2U 
+                                                                | (1U 
+                                                                   & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                      [
+                                                                      (((IData)(2U) 
+                                                                        + 
+                                                                        (0x000007ffU 
+                                                                         & ((IData)(0x00000041U) 
+                                                                            * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                       >> 5U)] 
+                                                                      >> 
+                                                                      (0x0000001fU 
+                                                                       & ((IData)(2U) 
+                                                                          + 
+                                                                          (0x000007ffU 
+                                                                           & ((IData)(0x00000041U) 
+                                                                              * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))))))))) 
+                                               << 0x00000022U) 
+                                              | (((QData)((IData)(
+                                                                  (1U 
+                                                                   & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                      [
+                                                                      (((IData)(1U) 
+                                                                        + 
+                                                                        (0x000007ffU 
+                                                                         & ((IData)(0x00000041U) 
+                                                                            * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                       >> 5U)] 
+                                                                      >> 
+                                                                      (0x0000001fU 
+                                                                       & ((IData)(1U) 
+                                                                          + 
+                                                                          (0x000007ffU 
+                                                                           & ((IData)(0x00000041U) 
+                                                                              * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))))) 
+                                                  << 0x00000021U) 
+                                                 | (((QData)((IData)(
+                                                                     (1U 
+                                                                      & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                         [
+                                                                         (0x0000003fU 
+                                                                          & (((IData)(0x00000041U) 
+                                                                              * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)) 
+                                                                             >> 5U))] 
+                                                                         >> 
+                                                                         (0x0000001fU 
+                                                                          & ((IData)(0x00000041U) 
+                                                                             * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))) 
+                                                     << 0x00000020U) 
+                                                    | (QData)((IData)(
+                                                                      (((0U 
+                                                                         == 
+                                                                         (0x0000001fU 
+                                                                          & ((IData)(3U) 
+                                                                             + 
+                                                                             (0x000007ffU 
+                                                                              & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))
+                                                                         ? 0U
+                                                                         : 
+                                                                        (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                         [
+                                                                         (((IData)(0x00000022U) 
+                                                                           + 
+                                                                           (0x000007ffU 
+                                                                            & ((IData)(0x00000041U) 
+                                                                               * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                          >> 5U)] 
+                                                                         << 
+                                                                         ((IData)(0x00000020U) 
+                                                                          - 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(3U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))))))) 
+                                                                       | (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                          [
+                                                                          (((IData)(3U) 
+                                                                            + 
+                                                                            (0x000007ffU 
+                                                                             & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                           >> 5U)] 
+                                                                          >> 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(3U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))))))))));
+    vlSelfRef.ubtb_f1_preds[1U] = ((0xfffffff0U & vlSelfRef.ubtb_f1_preds[1U]) 
+                                   | (IData)((((- (QData)((IData)(
+                                                                  ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit) 
+                                                                   & (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid))))) 
+                                               & (((QData)((IData)(
+                                                                   (2U 
+                                                                    | (1U 
+                                                                       & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                          [
+                                                                          (((IData)(2U) 
+                                                                            + 
+                                                                            (0x000007ffU 
+                                                                             & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                           >> 5U)] 
+                                                                          >> 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(2U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))))))))) 
+                                                   << 0x00000022U) 
+                                                  | (((QData)((IData)(
+                                                                      (1U 
+                                                                       & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                          [
+                                                                          (((IData)(1U) 
+                                                                            + 
+                                                                            (0x000007ffU 
+                                                                             & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                           >> 5U)] 
+                                                                          >> 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(1U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))))) 
+                                                      << 0x00000021U) 
+                                                     | (((QData)((IData)(
+                                                                         (1U 
+                                                                          & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                             [
+                                                                             (0x0000003fU 
+                                                                              & (((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)) 
+                                                                                >> 5U))] 
+                                                                             >> 
+                                                                             (0x0000001fU 
+                                                                              & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))) 
+                                                         << 0x00000020U) 
+                                                        | (QData)((IData)(
+                                                                          (((0U 
+                                                                             == 
+                                                                             (0x0000001fU 
+                                                                              & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))
+                                                                             ? 0U
+                                                                             : 
+                                                                            (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                             [
+                                                                             (((IData)(0x00000022U) 
+                                                                               + 
+                                                                               (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                              >> 5U)] 
+                                                                             << 
+                                                                             ((IData)(0x00000020U) 
+                                                                              - 
+                                                                              (0x0000001fU 
+                                                                               & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))))))) 
+                                                                           | (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                              [
+                                                                              (((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx)))) 
+                                                                               >> 5U)] 
+                                                                              >> 
+                                                                              (0x0000001fU 
+                                                                               & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_idx))))))))))))) 
+                                              >> 0x00000020U)));
+    vlSelfRef.ubtb_f1_preds[1U] = ((0x0000000fU & vlSelfRef.ubtb_f1_preds[1U]) 
+                                   | ((IData)(((- (QData)((IData)(
+                                                                  ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid) 
+                                                                   & (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) 
+                                               & (((QData)((IData)(
+                                                                   (2U 
+                                                                    | (1U 
+                                                                       & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                          [
+                                                                          (((IData)(2U) 
+                                                                            + 
+                                                                            (0x000007ffU 
+                                                                             & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                           >> 5U)] 
+                                                                          >> 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(2U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))))) 
+                                                   << 0x00000022U) 
+                                                  | (((QData)((IData)(
+                                                                      (1U 
+                                                                       & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                          [
+                                                                          (((IData)(1U) 
+                                                                            + 
+                                                                            (0x000007ffU 
+                                                                             & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                           >> 5U)] 
+                                                                          >> 
+                                                                          (0x0000001fU 
+                                                                           & ((IData)(1U) 
+                                                                              + 
+                                                                              (0x000007ffU 
+                                                                               & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))))) 
+                                                      << 0x00000021U) 
+                                                     | (((QData)((IData)(
+                                                                         (1U 
+                                                                          & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                             [
+                                                                             (0x0000003fU 
+                                                                              & (((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)) 
+                                                                                >> 5U))] 
+                                                                             >> 
+                                                                             (0x0000001fU 
+                                                                              & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))) 
+                                                         << 0x00000020U) 
+                                                        | (QData)((IData)(
+                                                                          (((0U 
+                                                                             == 
+                                                                             (0x0000001fU 
+                                                                              & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))
+                                                                             ? 0U
+                                                                             : 
+                                                                            (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                             [
+                                                                             (((IData)(0x00000022U) 
+                                                                               + 
+                                                                               (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                              >> 5U)] 
+                                                                             << 
+                                                                             ((IData)(0x00000020U) 
+                                                                              - 
+                                                                              (0x0000001fU 
+                                                                               & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))) 
+                                                                           | (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                              [
+                                                                              (((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                               >> 5U)] 
+                                                                              >> 
+                                                                              (0x0000001fU 
+                                                                               & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))))))))) 
+                                      << 4U));
+    vlSelfRef.ubtb_f1_preds[2U] = (0x000000ffU & (((IData)(
+                                                           ((- (QData)((IData)(
+                                                                               ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid) 
+                                                                                & (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) 
+                                                            & (((QData)((IData)(
+                                                                                (2U 
+                                                                                | (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(2U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(2U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))))) 
+                                                                << 0x00000022U) 
+                                                               | (((QData)((IData)(
+                                                                                (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(1U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(1U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))))) 
+                                                                   << 0x00000021U) 
+                                                                  | (((QData)((IData)(
+                                                                                (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (0x0000003fU 
+                                                                                & (((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)) 
+                                                                                >> 5U))] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))) 
+                                                                      << 0x00000020U) 
+                                                                     | (QData)((IData)(
+                                                                                (((0U 
+                                                                                == 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))
+                                                                                 ? 0U
+                                                                                 : 
+                                                                                (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(0x00000022U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                << 
+                                                                                ((IData)(0x00000020U) 
+                                                                                - 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))) 
+                                                                                | (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))))))))) 
+                                                   >> 0x0000001cU) 
+                                                  | ((IData)(
+                                                             (((- (QData)((IData)(
+                                                                                ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid) 
+                                                                                & (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit))))) 
+                                                               & (((QData)((IData)(
+                                                                                (2U 
+                                                                                | (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(2U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(2U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))))) 
+                                                                   << 0x00000022U) 
+                                                                  | (((QData)((IData)(
+                                                                                (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(1U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(1U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))))) 
+                                                                      << 0x00000021U) 
+                                                                     | (((QData)((IData)(
+                                                                                (1U 
+                                                                                & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (0x0000003fU 
+                                                                                & (((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)) 
+                                                                                >> 5U))] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))) 
+                                                                         << 0x00000020U) 
+                                                                        | (QData)((IData)(
+                                                                                (((0U 
+                                                                                == 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))
+                                                                                 ? 0U
+                                                                                 : 
+                                                                                (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(0x00000022U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                << 
+                                                                                ((IData)(0x00000020U) 
+                                                                                - 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))))))) 
+                                                                                | (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entries
+                                                                                [
+                                                                                (((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx)))) 
+                                                                                >> 5U)] 
+                                                                                >> 
+                                                                                (0x0000001fU 
+                                                                                & ((IData)(3U) 
+                                                                                + 
+                                                                                (0x000007ffU 
+                                                                                & ((IData)(0x00000041U) 
+                                                                                * (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx))))))))))))) 
+                                                              >> 0x00000020U)) 
+                                                     << 4U)));
 }

@@ -10,6 +10,4 @@
 #include "Vftq_test_top___024root__6__Slow.cpp"
 #include "Vftq_test_top___024root__7__Slow.cpp"
 #include "Vftq_test_top___024root__8__Slow.cpp"
-#include "Vftq_test_top___024root__9__Slow.cpp"
-#include "Vftq_test_top___024root__10__Slow.cpp"
 #include "Vftq_test_top___024unit__Slow.cpp"

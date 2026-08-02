@@ -50,10 +50,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vftq_test_top VL_NOT_FINAL : public Verilated
     VL_IN8(&brupdate_b2_mispredict,0,0);
     VL_IN8(&brupdate_b2_ftq_idx,3,0);
     VL_IN8(&brupdate_b2_taken,0,0);
-    VL_IN8(&brupdate_b2_br_mask,3,0);
-    VL_IN8(&brupdate_b2_cfi_is_br,0,0);
-    VL_IN8(&brupdate_b2_cfi_is_call,0,0);
-    VL_IN8(&brupdate_b2_cfi_is_ret,0,0);
+    VL_IN8(&brupdate_b2_pc_lob,5,0);
+    VL_IN8(&brupdate_b2_cfi_type,2,0);
     VL_OUT8(&bpd_update_valid,0,0);
     VL_OUT8(&bpd_update_is_mispredict_update,0,0);
     VL_OUT8(&bpd_update_is_repair_update,0,0);
@@ -81,6 +79,11 @@ class alignas(VL_CACHE_LINE_BYTES) Vftq_test_top VL_NOT_FINAL : public Verilated
     VL_OUT8(&query_cfi_taken,0,0);
     VL_OUT8(&query_ras_idx,4,0);
     VL_OUT8(&query_start_bank,0,0);
+    VL_IN8(&exec_query_valid,2,0);
+    VL_IN16(&exec_query_idx,11,0);
+    VL_OUT8(&exec_query_resp_valid,2,0);
+    VL_OUT8(&exec_query_cfi_match,2,0);
+    VL_IN8(&flush_valid,0,0);
     VL_IN(&enq_pc,31,0);
     VL_IN(&enq_next_pc,31,0);
     VL_IN(&enq_ras_top,31,0);
@@ -91,7 +94,10 @@ class alignas(VL_CACHE_LINE_BYTES) Vftq_test_top VL_NOT_FINAL : public Verilated
     VL_OUTW(&bpd_update_meta,239,0,8);
     VL_OUT(&ras_repair_addr,31,0);
     VL_OUT(&query_pc,31,0);
+    VL_OUT(&query_next_pc,31,0);
     VL_OUT(&query_ras_top,31,0);
+    VL_INW(&exec_query_pc,95,0,3);
+    VL_OUTW(&exec_query_next_pc,95,0,3);
     VL_INW(&enq_ghist,71,0,3);
     VL_OUTW(&bpd_update_ghist,71,0,3);
     VL_OUTW(&ghist_restore,71,0,3);

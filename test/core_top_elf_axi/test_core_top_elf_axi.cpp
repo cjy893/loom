@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <deque>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -29,6 +30,8 @@ struct Options {
     bool stress = false;
     bool trace = false;
     bool allow_exceptions = false;
+    bool check_startup_prefix = true;
+    std::set<uint32_t> allowed_exception_pcs;
 };
 
 struct CommitRecord {
@@ -59,6 +62,10 @@ void print_usage(const char* executable) {
         "  --axi-latency N     AXI response latency\n"
         "  --stress            add deterministic AXI backpressure\n"
         "  --allow-exceptions  continue through architectural exceptions\n"
+        "  --allow-exception-pc N\n"
+        "                      allow an exception at one instruction PC\n"
+        "  --skip-startup-prefix\n"
+        "                      accept an ELF-specific startup sequence\n"
         "  --trace             print commits and AXI transactions\n",
         executable);
 }
@@ -93,6 +100,11 @@ Options parse_options(int argc, char** argv) {
             options.stress = true;
         } else if (argument == "--allow-exceptions") {
             options.allow_exceptions = true;
+        } else if (argument == "--allow-exception-pc") {
+            options.allowed_exception_pcs.insert(static_cast<uint32_t>(
+                parse_unsigned(argument, require_value())));
+        } else if (argument == "--skip-startup-prefix") {
+            options.check_startup_prefix = false;
         } else if (argument == "--trace") {
             options.trace = true;
         } else if (argument == "--help" || argument == "-h") {
@@ -388,8 +400,12 @@ private:
                 invalid_fetch_address_ = dut->araddr;
             }
         } else if (dut->arid == 1) {
-            require(dut->arlen == 0,
-                    "data ARLEN is not one beat");
+            bool uncached_word = dut->arlen == 0;
+            bool cache_line = dut->arlen == 7;
+            require(uncached_word || cache_line,
+                    "data ARLEN is neither one beat nor a cache line");
+            require((dut->araddr & (cache_line ? 31U : 3U)) == 0,
+                    "data ARADDR is not transfer aligned");
             ++loads_;
         } else {
             require(false, "unknown AXI read ID");
@@ -608,7 +624,8 @@ int main(int argc, char** argv) {
                     record.pc);
             }
 
-            if (commit_count <=
+            if (options.check_startup_prefix &&
+                commit_count <=
                     sizeof(expected_prefix) /
                         sizeof(expected_prefix[0]) &&
                 record.pc != expected_prefix[commit_count - 1]) {
@@ -633,7 +650,11 @@ int main(int argc, char** argv) {
                     dut->exception_pc, dut->exception_inst,
                     dut->exception_cause, dut->exception_badvaddr);
             }
-            if (!options.allow_exceptions) {
+            const bool exception_allowed =
+                options.allow_exceptions ||
+                options.allowed_exception_pcs.count(
+                    dut->exception_pc) != 0;
+            if (!exception_allowed) {
                 char message[192];
                 std::snprintf(
                     message, sizeof(message),

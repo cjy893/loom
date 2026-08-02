@@ -22,7 +22,30 @@ The directed programs cover:
 - serializing multiply/divide operations in fetch lanes 2 and 3;
 - a lane-2 branch with a same-packet wrong-path store;
 - a lane-0 branch whose wrong-path suffix must remain buffered until redirect;
-- LSU backpressure while a fetch packet remains pending.
+- LSU backpressure while a fetch packet remains pending;
+- repeated indirect JIRL execution, including first-use recovery, predictor
+  training, registered FTQ target validation, and suppression of later
+  correctly predicted redirects;
+- direct BL and RAS-predicted JIRL return without backend redirects;
+- speculative RAS pollution by a wrong-path BL followed by conditional-branch
+  rewind and a correctly predicted return from the repaired stack;
+- the same wrong-path RAS recovery under deterministic randomized instruction
+  request readiness, response latency, packet-boundary fetch backpressure, FTQ
+  saturation, and redirects overlapping outstanding instruction requests;
+- a precise `SYSCALL` and ERTN round trip with CSR refetches, multiple
+  speculative FTQ entries, wrong-path BL/RAS state, and an outstanding
+  instruction request; every full flush must clear FTQ and GHist/RAS state,
+  and flushed entries must neither commit nor train the predictor;
+- a hardware-interrupt and ERTN round trip triggered only after a delayed load
+  has issued while multiple FTQ entries, nonzero GHist/RAS state, and an
+  instruction request are outstanding; the test checks exact commits, handler
+  entry/return, frontend-state clearing, stale-response rejection, and absence
+  of predictor training from interrupt-flushed entries;
+- one conditional branch driven through `T,T,N,N,N,N`, covering cold target
+  allocation, stable taken prediction, counter transition, and stable
+  not-taken prediction;
+- one non-return JIRL changing from target A to target B, covering stale-target
+  detection, redirect, commit retraining, and the subsequent target-B hit.
 
 The serializing and buffered-suffix cases also check that a unique instruction
 cannot enter Dispatch while an older instruction is still in Rename or the

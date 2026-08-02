@@ -5,7 +5,8 @@ import loom_types::*;
 module fetch_target_queue #(
     parameter int NUM_ENTRIES = FTQ_ENTRIES,
     parameter int FTQ_IDX_SZ =
-        (NUM_ENTRIES <= 1) ? 1 : $clog2(NUM_ENTRIES)
+        (NUM_ENTRIES <= 1) ? 1 : $clog2(NUM_ENTRIES),
+    parameter int EXEC_QUERY_WIDTH = ALU_WIDTH
 )(
     input  logic clk,
     input  logic rst_n,
@@ -40,10 +41,9 @@ module fetch_target_queue #(
     input  logic [FTQ_IDX_SZ-1:0] brupdate_b2_ftq_idx,
     input  logic brupdate_b2_taken,
     input  logic [31:0] brupdate_b2_target,
-    input  logic [FETCH_WIDTH-1:0] brupdate_b2_br_mask,
-    input  logic brupdate_b2_cfi_is_br,
-    input  logic brupdate_b2_cfi_is_call,
-    input  logic brupdate_b2_cfi_is_ret,
+    input  logic [$clog2(ICACHE_BLOCK_BYTES)-1:0]
+                 brupdate_b2_pc_lob,
+    input  logic [2:0] brupdate_b2_cfi_type,
 
     output logic bpd_update_valid,
     output logic bpd_update_is_mispredict_update,
@@ -74,6 +74,7 @@ module fetch_target_queue #(
     input  logic [FTQ_IDX_SZ-1:0] query_idx,
     output logic query_resp_valid,
     output logic [31:0] query_pc,
+    output logic [31:0] query_next_pc,
     output logic [FETCH_WIDTH-1:0] query_br_mask,
     output logic query_cfi_valid,
     output logic [$clog2(FETCH_WIDTH)-1:0] query_cfi_idx,
@@ -85,10 +86,24 @@ module fetch_target_queue #(
     output logic [31:0] query_ras_top,
     output logic [RAS_IDX_SZ-1:0] query_ras_idx,
     output logic query_start_bank,
-    output global_history_t query_ghist
+    output global_history_t query_ghist,
+
+    input logic [EXEC_QUERY_WIDTH-1:0] exec_query_valid,
+    input logic [EXEC_QUERY_WIDTH-1:0][FTQ_IDX_SZ-1:0]
+                exec_query_idx,
+    input logic [EXEC_QUERY_WIDTH-1:0][31:0] exec_query_pc,
+    output logic [EXEC_QUERY_WIDTH-1:0] exec_query_resp_valid,
+    output logic [EXEC_QUERY_WIDTH-1:0][31:0]
+                 exec_query_next_pc,
+    output logic [EXEC_QUERY_WIDTH-1:0] exec_query_cfi_match,
+
+    input logic flush_valid
 );
     localparam int CFI_IDX_SZ =
         (FETCH_WIDTH <= 1) ? 1 : $clog2(FETCH_WIDTH);
+    localparam int PC_LOB_SZ = $clog2(ICACHE_BLOCK_BYTES);
+    localparam int INST_OFF_SZ = $clog2(XLEN / 8);
+    localparam int FETCH_OFF_SZ = $clog2(ICACHE_FETCH_BYTES);
 
     typedef struct packed {
         logic [31:0] pc;
@@ -127,6 +142,15 @@ module fetch_target_queue #(
     bpd_update_t repair_update_d;
     ftq_storage_entry_t enq_entry_d;
 
+    logic [PC_LOB_SZ-1:0] resolved_pc_lob_d;
+    logic [CFI_IDX_SZ-1:0] resolved_cfi_idx_d;
+    logic [FETCH_WIDTH-1:0] resolved_br_mask_d;
+    logic resolved_cfi_is_br_d;
+    logic resolved_cfi_is_b_bl_d;
+    logic resolved_cfi_is_jirl_d;
+    logic resolved_cfi_is_call_d;
+    logic resolved_cfi_is_ret_d;
+
     function automatic logic [FTQ_IDX_SZ-1:0] wrap_inc(
         input logic [FTQ_IDX_SZ-1:0] idx
     );
@@ -153,65 +177,45 @@ module fetch_target_queue #(
         make_kill_mask = result;
     endfunction
 
-    function automatic logic [CFI_IDX_SZ-1:0] mask_to_idx(
-        input logic [FETCH_WIDTH-1:0] mask
-    );
-        logic found;
-        logic [CFI_IDX_SZ-1:0] result;
-        found = 1'b0;
-        result = '0;
-        for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
-            if (mask[lane] && !found) begin
-                found = 1'b1;
-                result = CFI_IDX_SZ'(lane);
-            end
-        end
-        mask_to_idx = result;
-    endfunction
-
-    function automatic global_history_t corrected_ghist(
-        input global_history_t snapshot,
-        input logic taken,
-        input logic is_br,
-        input logic is_call,
-        input logic is_ret
-    );
-        global_history_t result;
-        result = snapshot;
-        result.new_saw_branch_not_taken = 1'b0;
-        result.new_saw_branch_taken = 1'b0;
-
-        if (is_br) begin
-            result.old_history =
-                {snapshot.old_history[GLOBAL_HISTORY_LENGTH-2:0],
-                 taken};
-            result.current_saw_branch_not_taken = !taken;
-        end
-
-        if (is_call) begin
-            if (snapshot.ras_idx ==
-                RAS_IDX_SZ'(RAS_ENTRIES-1))
-                result.ras_idx = '0;
-            else
-                result.ras_idx = snapshot.ras_idx + 1'b1;
-        end
-
-        if (is_ret) begin
-            if (snapshot.ras_idx == '0)
-                result.ras_idx =
-                    RAS_IDX_SZ'(RAS_ENTRIES-1);
-            else
-                result.ras_idx = snapshot.ras_idx - 1'b1;
-        end
-
-        corrected_ghist = result;
-    endfunction
-
     function automatic logic entry_needs_update(
         input ftq_storage_entry_t entry
     );
         entry_needs_update = entry.cfi_valid || |entry.br_mask;
     endfunction
+
+    always_comb begin
+        resolved_pc_lob_d = brupdate_b2_pc_lob;
+        resolved_pc_lob_d[$clog2(BANK_BYTES)] =
+            brupdate_b2_pc_lob[$clog2(BANK_BYTES)] ^
+            entries_q[brupdate_b2_ftq_idx].start_bank;
+        resolved_cfi_idx_d =
+            resolved_pc_lob_d[FETCH_OFF_SZ-1:INST_OFF_SZ];
+
+        resolved_cfi_is_br_d = brupdate_b2_cfi_type == CFI_BR;
+        resolved_cfi_is_b_bl_d = brupdate_b2_cfi_type == CFI_B_BL;
+        resolved_cfi_is_jirl_d = brupdate_b2_cfi_type == CFI_JIRL;
+        resolved_cfi_is_call_d =
+            entries_q[brupdate_b2_ftq_idx].cfi_valid &&
+            entries_q[brupdate_b2_ftq_idx].cfi_idx ==
+                resolved_cfi_idx_d &&
+            entries_q[brupdate_b2_ftq_idx].cfi_is_call &&
+            (resolved_cfi_is_b_bl_d || resolved_cfi_is_jirl_d);
+        resolved_cfi_is_ret_d =
+            entries_q[brupdate_b2_ftq_idx].cfi_valid &&
+            entries_q[brupdate_b2_ftq_idx].cfi_idx ==
+                resolved_cfi_idx_d &&
+            entries_q[brupdate_b2_ftq_idx].cfi_is_ret &&
+            resolved_cfi_is_jirl_d;
+
+        resolved_br_mask_d = '0;
+        for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
+            if (lane <= int'(resolved_cfi_idx_d))
+                resolved_br_mask_d[lane] =
+                    entries_q[brupdate_b2_ftq_idx].br_mask[lane];
+        end
+        if (resolved_cfi_is_br_d)
+            resolved_br_mask_d[resolved_cfi_idx_d] = 1'b1;
+    end
 
     function automatic bpd_update_t entry_to_update(
         input ftq_storage_entry_t entry
@@ -256,17 +260,15 @@ module fetch_target_queue #(
         mispredict_update_d =
             entry_to_update(entries_q[brupdate_b2_ftq_idx]);
         mispredict_update_d.is_mispredict_update = 1'b1;
-        mispredict_update_d.br_mask =
-            brupdate_b2_br_mask;
+        mispredict_update_d.br_mask = resolved_br_mask_d;
         mispredict_update_d.cfi_valid = 1'b1;
-        if (|brupdate_b2_br_mask)
-            mispredict_update_d.cfi_idx =
-                mask_to_idx(brupdate_b2_br_mask);
+        mispredict_update_d.cfi_idx = resolved_cfi_idx_d;
         mispredict_update_d.cfi_taken =
             brupdate_b2_taken;
         mispredict_update_d.cfi_mispredicted = 1'b1;
-        mispredict_update_d.cfi_is_br =
-            brupdate_b2_cfi_is_br;
+        mispredict_update_d.cfi_is_br = resolved_cfi_is_br_d;
+        mispredict_update_d.cfi_is_b_bl = resolved_cfi_is_b_bl_d;
+        mispredict_update_d.cfi_is_jirl = resolved_cfi_is_jirl_d;
         mispredict_update_d.target =
             brupdate_b2_target;
     end
@@ -278,7 +280,7 @@ module fetch_target_queue #(
     end
 
     assign enq_idx = enq_ptr_q;
-    assign enq_ready = rst_n && !redirect_valid &&
+    assign enq_ready = rst_n && !flush_valid && !redirect_valid &&
                        !repair_busy_q &&
                        !entry_valid_q[enq_ptr_q];
 
@@ -320,6 +322,7 @@ module fetch_target_queue #(
             query_resp_valid <= 1'b0;
 
             query_pc <= '0;
+            query_next_pc <= '0;
             query_br_mask <= '0;
             query_cfi_valid <= 1'b0;
             query_cfi_idx <= '0;
@@ -332,17 +335,66 @@ module fetch_target_queue #(
             query_ras_idx <= '0;
             query_start_bank <= 1'b0;
             query_ghist <= '0;
+            exec_query_resp_valid <= '0;
+            exec_query_next_pc <= '0;
+            exec_query_cfi_match <= '0;
         end else begin
             bpd_update_valid_q <= 1'b0;
             ghist_restore_valid <= 1'b0;
             ras_repair_valid <= 1'b0;
             query_resp_valid <= 1'b0;
+            exec_query_resp_valid <= '0;
+            exec_query_cfi_match <= '0;
 
-            if (query_valid && !redirect_valid &&
-                int'(query_idx) < NUM_ENTRIES &&
-                entry_valid_q[query_idx]) begin
+            if (flush_valid) begin
+                entry_valid_q <= '0;
+                enq_ptr_q <= '0;
+                commit_ptr_q <= '0;
+                commit_end_q <= '0;
+                repair_ptr_q <= '0;
+                repair_end_q <= '0;
+                commit_busy_q <= 1'b0;
+                repair_busy_q <= 1'b0;
+            end else begin
+                for (int port = 0;
+                     port < EXEC_QUERY_WIDTH; port++) begin
+                    if (exec_query_valid[port] &&
+                        !redirect_valid &&
+                        int'(exec_query_idx[port]) < NUM_ENTRIES &&
+                        entry_valid_q[exec_query_idx[port]]) begin
+                        exec_query_resp_valid[port] <= 1'b1;
+                        exec_query_next_pc[port] <=
+                            entries_q[
+                                exec_query_idx[port]
+                            ].next_pc;
+                        exec_query_cfi_match[port] <=
+                            entries_q[
+                                exec_query_idx[port]
+                            ].cfi_valid &&
+                            entries_q[
+                                exec_query_idx[port]
+                            ].cfi_taken &&
+                            entries_q[
+                                exec_query_idx[port]
+                            ].cfi_type == CFI_JIRL &&
+                            exec_query_pc[port] ==
+                                entries_q[
+                                    exec_query_idx[port]
+                                ].pc +
+                                (32'(
+                                    entries_q[
+                                        exec_query_idx[port]
+                                    ].cfi_idx
+                                ) << 2);
+                    end
+                end
+
+                if (query_valid && !redirect_valid &&
+                    int'(query_idx) < NUM_ENTRIES &&
+                    entry_valid_q[query_idx]) begin
                 query_resp_valid <= 1'b1;
                 query_pc <= entries_q[query_idx].pc;
+                query_next_pc <= entries_q[query_idx].next_pc;
                 query_br_mask <= entries_q[query_idx].br_mask;
                 query_cfi_valid <= entries_q[query_idx].cfi_valid;
                 query_cfi_idx <= entries_q[query_idx].cfi_idx;
@@ -364,7 +416,8 @@ module fetch_target_queue #(
 
             if (commit_valid) begin
                 commit_end_q <= commit_ftq_idx;
-                commit_busy_q <= 1'b1;
+                if (!commit_busy_q)
+                    commit_busy_q <= commit_ptr_q != commit_ftq_idx;
             end
 
             if (redirect_valid) begin
@@ -393,12 +446,16 @@ module fetch_target_queue #(
                     bpd_update_q <= mispredict_update_d;
 
                     ghist_restore_valid <= 1'b1;
-                    ghist_restore <= corrected_ghist(
+                    ghist_restore <= update_global_history(
                         entries_q[redirect_ftq_idx].ghist,
+                        resolved_br_mask_d,
+                        1'b1,
+                        resolved_cfi_idx_d,
                         brupdate_b2_taken,
-                        brupdate_b2_cfi_is_br,
-                        brupdate_b2_cfi_is_call,
-                        brupdate_b2_cfi_is_ret
+                        resolved_cfi_is_br_d,
+                        resolved_cfi_is_call_d,
+                        resolved_cfi_is_ret_d,
+                        entries_q[redirect_ftq_idx].pc
                     );
 
                     repair_ptr_q <= wrap_inc(redirect_ftq_idx);
@@ -408,19 +465,24 @@ module fetch_target_queue #(
 
                     entries_q[redirect_ftq_idx].next_pc <=
                         brupdate_b2_target;
+                    entries_q[redirect_ftq_idx].br_mask <=
+                        resolved_br_mask_d;
                     entries_q[redirect_ftq_idx].cfi_valid <=
                         1'b1;
-                    if (|brupdate_b2_br_mask)
-                        entries_q[redirect_ftq_idx].cfi_idx <=
-                            mask_to_idx(brupdate_b2_br_mask);
+                    entries_q[redirect_ftq_idx].cfi_idx <=
+                        resolved_cfi_idx_d;
+                    entries_q[redirect_ftq_idx].cfi_type <=
+                        brupdate_b2_cfi_type;
                     entries_q[redirect_ftq_idx].cfi_taken <=
                         brupdate_b2_taken;
                     entries_q[redirect_ftq_idx].
                         cfi_mispredicted <= 1'b1;
                     entries_q[redirect_ftq_idx].cfi_is_call <=
-                        brupdate_b2_cfi_is_call;
+                        resolved_cfi_is_call_d;
                     entries_q[redirect_ftq_idx].cfi_is_ret <=
-                        brupdate_b2_cfi_is_ret;
+                        resolved_cfi_is_ret_d;
+                    entries_q[redirect_ftq_idx].cfi_npc_plus4 <=
+                        1'b1;
                 end
             end else begin
                 if (repair_busy_q) begin
@@ -446,7 +508,7 @@ module fetch_target_queue #(
                     entry_valid_q[commit_ptr_q] <= 1'b0;
                     commit_ptr_q <= wrap_inc(commit_ptr_q);
 
-                    if (commit_ptr_q ==
+                    if (wrap_inc(commit_ptr_q) ==
                         (commit_valid ?
                          commit_ftq_idx : commit_end_q))
                         commit_busy_q <= 1'b0;
@@ -454,10 +516,11 @@ module fetch_target_queue #(
                         commit_busy_q <= 1'b1;
                 end
 
-                if (enq_valid && enq_ready) begin
-                    entries_q[enq_ptr_q] <= enq_entry_d;
-                    entry_valid_q[enq_ptr_q] <= 1'b1;
-                    enq_ptr_q <= wrap_inc(enq_ptr_q);
+                    if (enq_valid && enq_ready) begin
+                        entries_q[enq_ptr_q] <= enq_entry_d;
+                        entry_valid_q[enq_ptr_q] <= 1'b1;
+                        enq_ptr_q <= wrap_inc(enq_ptr_q);
+                    end
                 end
             end
         end

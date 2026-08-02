@@ -9,54 +9,44 @@ module ghist #(
     input logic clk,
     input logic rst_n,
 
-    input logic f1_update_valid,
-    input logic f1_is_br,
-    input logic f1_taken,
-    input logic f1_is_call,
-    input logic f1_is_ret,
+    input logic update_valid,
+    input logic [31:0] update_pc,
+    input logic [FETCH_WIDTH-1:0] update_br_mask,
+
+    input logic update_cfi_valid,
+    input logic [$clog2(FETCH_WIDTH)-1:0] update_cfi_idx,
+    input logic update_cfi_taken,
+    input logic update_cfi_is_br,
+    input logic update_cfi_is_call,
+    input logic update_cfi_is_ret,
 
     output global_history_t current_ghist,
 
     input logic restore_valid,
     input global_history_t restore_ghist
 );
-    localparam int RAS_IDX_SZ = (RAS_ENTRIES <= 1) ? 1 : $clog2(RAS_ENTRIES);
-    localparam logic [RAS_IDX_SZ-1:0] RAS_LAST_IDX = RAS_IDX_SZ'(RAS_ENTRIES-1);
+    global_history_t history_q;
+    global_history_t history_d;
 
-    logic [GHIST_LEN-1:0] hist;
-    logic [RAS_IDX_SZ-1:0] ras_idx;
-    logic saw_nt;
+    assign current_ghist = history_q;
 
     always_comb begin
-        current_ghist = '0;
-
-        current_ghist.old_history = hist;
-        current_ghist.current_saw_branch_not_taken = saw_nt;
-        current_ghist.ras_idx = ras_idx;
+        history_d = update_global_history(
+            history_q,
+            update_br_mask,
+            update_cfi_valid,
+            update_cfi_idx,
+            update_cfi_taken,
+            update_cfi_is_br,
+            update_cfi_is_call,
+            update_cfi_is_ret,
+            update_pc
+        );
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
-        if(!rst_n) begin
-            hist <= '0;
-            ras_idx <= '0;
-            saw_nt <= 1'b0;
-        end else if(restore_valid) begin
-            hist <= restore_ghist.old_history;
-            ras_idx <= restore_ghist.ras_idx;
-            saw_nt <= restore_ghist.current_saw_branch_not_taken;
-        end else if(f1_update_valid) begin
-            if(f1_is_br) begin
-                if(f1_taken) begin
-                    hist <= {hist[GHIST_LEN-2:0], 1'b1};
-                    saw_nt <= 1'b0;
-                end else begin
-                    hist <= hist << 1;
-                    saw_nt <= 1'b1;
-                end
-            end
-
-            if(f1_is_call) ras_idx <= (ras_idx == RAS_LAST_IDX) ? '0 : ras_idx + 1'b1;
-            if(f1_is_ret) ras_idx <= (ras_idx == '0) ? RAS_LAST_IDX : ras_idx - 1'b1;
-        end
+        if (!rst_n) history_q <= '0;
+        else if (restore_valid) history_q <= restore_ghist;
+        else if (update_valid) history_q <= history_d;
     end
 endmodule

@@ -31,10 +31,8 @@ Vftq_test_top::Vftq_test_top(VerilatedContext* _vcontextp__, const char* _vcname
     , brupdate_b2_mispredict{vlSymsp->TOP.brupdate_b2_mispredict}
     , brupdate_b2_ftq_idx{vlSymsp->TOP.brupdate_b2_ftq_idx}
     , brupdate_b2_taken{vlSymsp->TOP.brupdate_b2_taken}
-    , brupdate_b2_br_mask{vlSymsp->TOP.brupdate_b2_br_mask}
-    , brupdate_b2_cfi_is_br{vlSymsp->TOP.brupdate_b2_cfi_is_br}
-    , brupdate_b2_cfi_is_call{vlSymsp->TOP.brupdate_b2_cfi_is_call}
-    , brupdate_b2_cfi_is_ret{vlSymsp->TOP.brupdate_b2_cfi_is_ret}
+    , brupdate_b2_pc_lob{vlSymsp->TOP.brupdate_b2_pc_lob}
+    , brupdate_b2_cfi_type{vlSymsp->TOP.brupdate_b2_cfi_type}
     , bpd_update_valid{vlSymsp->TOP.bpd_update_valid}
     , bpd_update_is_mispredict_update{vlSymsp->TOP.bpd_update_is_mispredict_update}
     , bpd_update_is_repair_update{vlSymsp->TOP.bpd_update_is_repair_update}

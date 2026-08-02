@@ -51,8 +51,8 @@ void Vmem_issue_test_top___024root___ico_comb__TOP__3(Vmem_issue_test_top___024r
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[6U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[7U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[8U] 
-        = (((IData)(vlSelfRef.dis_use_dgen) << 0x00000010U) 
-           | ((IData)(vlSelfRef.dis_use_agen) << 0x0000000fU));
+        = (((IData)(vlSelfRef.dis_use_dgen) << 0x00000012U) 
+           | ((IData)(vlSelfRef.dis_use_agen) << 0x00000011U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[9U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[10U] = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated[11U] = 0U;

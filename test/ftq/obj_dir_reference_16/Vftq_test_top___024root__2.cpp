@@ -4,8 +4,8 @@
 
 #include "Vftq_test_top__pch.h"
 
-void Vftq_test_top___024root___eval_triggers_vec__ico__2(Vftq_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___eval_triggers_vec__ico__2\n"); );
+void Vftq_test_top___024root___eval_triggers_vec__ico__3(Vftq_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___eval_triggers_vec__ico__3\n"); );
     Vftq_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
@@ -70,6 +70,10 @@ void Vftq_test_top___024root___eval_triggers_vec__ico__2(Vftq_test_top___024root
         vlSelfRef.__VicoTriggered[0U] = (0x0000000040000000ULL 
                                          | vlSelfRef.__VicoTriggered[0U]);
         vlSelfRef.__VicoTriggered[0U] = (0x0000000080000000ULL 
+                                         | vlSelfRef.__VicoTriggered[0U]);
+        vlSelfRef.__VicoTriggered[0U] = (0x0000000100000000ULL 
+                                         | vlSelfRef.__VicoTriggered[0U]);
+        vlSelfRef.__VicoTriggered[0U] = (0x0000000200000000ULL 
                                          | vlSelfRef.__VicoTriggered[0U]);
     }
 }

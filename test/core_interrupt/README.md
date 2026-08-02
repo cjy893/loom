@@ -21,6 +21,8 @@ Coverage:
 - older commit preservation and younger commit suppression;
 - CRMD/PRMD state changes without overwriting BADI;
 - source deassertion followed by ERTN and exact-once resumed commits;
+- privileged IDLE sleep, hardware-interrupt wakeup, `ERA=IDLE_PC+4`, and
+  exact-once execution after ERTN;
 - held-high interrupt retriggering after ERTN restores `CRMD.IE`.
 
 The suite is included in `test/run_all.sh`.

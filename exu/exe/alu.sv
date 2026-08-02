@@ -13,6 +13,10 @@ module alu(
     input logic [31:0] src2_data,
     input logic [31:0] imm_data,
 
+    input logic        ftq_resp_valid,
+    input logic [31:0] ftq_resp_next_pc,
+    input logic        ftq_resp_cfi_match,
+
     output logic res_valid,
     output exe_unit_resp_t res,
 
@@ -36,11 +40,18 @@ module alu(
     logic exe_valid, exe_br_killed;
     uop_t exe_uop;
     logic [31:0] exe_src1, exe_src2, exe_imm;
+    logic        exe_ftq_resp_valid;
+    logic [31:0] exe_ftq_next_pc;
+    logic        exe_ftq_cfi_match;
+    logic [31:0] jirl_target;
+    logic        jirl_mispredict;
+
+    logic actual_taken;
 
     always_comb begin
-        iss_br_killed = brupdate.b2.mispredict && |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
-        rrd_br_killed = brupdate.b2.mispredict && |(rrd_uop.br_mask & brupdate.b1.mispredict_mask);
-        exe_br_killed = brupdate.b2.mispredict && |(exe_uop.br_mask & brupdate.b1.mispredict_mask);
+        iss_br_killed = |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
+        rrd_br_killed = |(rrd_uop.br_mask & brupdate.b1.mispredict_mask);
+        exe_br_killed = |(exe_uop.br_mask & brupdate.b1.mispredict_mask);
 
         iss_uop_updated = iss_uop;
         iss_uop_updated.br_mask = iss_uop.br_mask & ~brupdate.b1.resolve_mask;
@@ -63,15 +74,27 @@ module alu(
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
-        if(!rst_n) exe_valid <= 1'b0;
-        else if(kill) exe_valid <= 1'b0;
+        if(!rst_n) begin
+            exe_valid <= 1'b0;
+            exe_ftq_resp_valid <= 1'b0;
+            exe_ftq_next_pc <= '0;
+            exe_ftq_cfi_match <= 1'b0;
+        end
+        else if(kill) begin
+            exe_valid <= 1'b0;
+            exe_ftq_resp_valid <= 1'b0;
+        end
         else begin
             exe_valid <= rrd_valid && !rrd_br_killed;
+            exe_ftq_resp_valid <= rrd_valid && !rrd_br_killed && rrd_uop.is_jirl && ftq_resp_valid;
             if(rrd_valid && !rrd_br_killed) begin
                 exe_uop <= rrd_uop_updated;
                 exe_src1 <= rrd_src1;
                 exe_src2 <= rrd_src2;
                 exe_imm <= rrd_imm;
+
+                exe_ftq_next_pc <= ftq_resp_next_pc;
+                exe_ftq_cfi_match <= ftq_resp_cfi_match;
             end
         end
     end
@@ -151,12 +174,16 @@ module alu(
         if(exe_uop.is_jirl) resolved_pc_sel = PC_JIRL;
     end
 
-    assign brinfo.mispredict = (exe_uop.is_br && (exe_uop.taken != cond_true)) || exe_uop.is_b_bl || exe_uop.is_jirl;
+    assign jirl_target = exe_src1 + exe_imm;
+    assign jirl_mispredict = exe_uop.is_jirl && (!exe_uop.taken || !exe_ftq_resp_valid || !exe_ftq_cfi_match || exe_ftq_next_pc != jirl_target);
+
+    assign actual_taken = resolved_pc_sel != PC_PLUS4;
+    assign brinfo.mispredict = (exe_uop.is_br && (exe_uop.taken != cond_true)) || (exe_uop.is_b_bl && !exe_uop.taken) || jirl_mispredict;
     assign brinfo.cfi_type = exe_uop.is_br ? CFI_BR :
                              exe_uop.is_b_bl ? CFI_B_BL :
                              exe_uop.is_jirl ? CFI_JIRL : CFI_X;
-    assign brinfo.taken = resolved_pc_sel != PC_PLUS4;
+    assign brinfo.taken = actual_taken;
     assign brinfo.pc_sel = resolved_pc_sel;
-    assign brinfo.jirl_target = exe_src1 + exe_imm;
+    assign brinfo.jirl_target = jirl_target;
     assign brinfo.target_offset = exe_imm;
 endmodule

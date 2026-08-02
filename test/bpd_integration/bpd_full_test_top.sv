@@ -78,11 +78,27 @@ module bpd_full_test_top (
     assign restore_packed.new_saw_branch_taken         = 1'b0;
     assign restore_packed.ras_idx                      = restore_ras_idx;
 
+    logic [FETCH_WIDTH-1:0] ghist_br_mask;
+    logic ghist_cfi_valid;
+    logic ghist_cfi_taken;
+
+    assign ghist_br_mask = f1_is_br ? FETCH_WIDTH'(1) : '0;
+    assign ghist_cfi_valid = f1_is_br || f1_is_call || f1_is_ret;
+    assign ghist_cfi_taken = f1_is_br ? f1_taken
+                                      : (f1_is_call || f1_is_ret);
+
     ghist #(.GHIST_LEN(GLOBAL_HISTORY_LENGTH), .RAS_ENTRIES(RAS_ENTRIES))
     ghist_inst (
         .clk, .rst_n,
-        .f1_update_valid, .f1_is_br, .f1_taken,
-        .f1_is_call, .f1_is_ret,
+        .update_valid(f1_update_valid),
+        .update_pc(f0_pc),
+        .update_br_mask(ghist_br_mask),
+        .update_cfi_valid(ghist_cfi_valid),
+        .update_cfi_idx('0),
+        .update_cfi_taken(ghist_cfi_taken),
+        .update_cfi_is_br(f1_is_br),
+        .update_cfi_is_call(f1_is_call),
+        .update_cfi_is_ret(f1_is_ret),
         .current_ghist,
         .restore_valid(ghist_restore_valid),
         .restore_ghist(restore_packed)

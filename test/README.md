@@ -27,6 +27,7 @@ Run one suite:
 ./test/unq/run.sh
 ./test/lsu/run.sh
 ./test/lsu_dmmu/run.sh
+./test/bpd_regression/run.sh
 ./test/icache/run.sh
 ./test/dcache/run.sh
 ./test/cacop_ctrl/run.sh
@@ -35,6 +36,7 @@ Run one suite:
 ./test/ifu/run.sh
 ./test/ifu_fetch_buffer/run.sh
 ./test/core_fetch_buffer/run.sh
+./test/core_fetch_metadata/run.sh
 ./test/core_ifu/run.sh
 ./test/core_lsu/run.sh
 ./test/core_tlb/run.sh
@@ -44,12 +46,21 @@ Run one suite:
 ./test/core_interrupt_lsu/run.sh
 ./test/core_top/run.sh
 ./test/core_top_axi/run.sh
+./test/core_top_recovery/run.sh
 ./test/branch_recovery/run.sh
 ./test/integration/run.sh
 ```
 
-Frontend branch-prediction contracts that do not yet have production modules
-can be validated against their test-only references:
+Run all production branch-prediction modules, FTQ configurations, metadata
+transport checks, and predictor integration tests with:
+
+```bash
+./test/bpd_regression/run.sh
+```
+
+The banked organization contract still uses a test-only wrapper; the other
+tests in the aggregate run their production modules. Reference variants remain
+available for validating selected test harnesses:
 
 ```bash
 ./test/f3_predecode/run.sh --reference
@@ -196,6 +207,11 @@ Current coverage:
   each instruction's FTQ index and predicted-taken bit associated with its PC
   and instruction across sparse-lane compaction, adjacent FTQ packets,
   backpressure, pointer wraparound, flush, and randomized traffic.
+- `ftq`: complete entry storage and query identity, full-queue backpressure,
+  power-of-two and non-power-of-two wraparound, ordered commit training,
+  redirect invalidation, mispredict correction, wrong-path repair walks,
+  commit-endpoint extension while a walk is active, and simultaneous older
+  commit with a younger mispredict redirect.
 - `ifu_fetch_buffer`: production IFU and Fetch Buffer integration, covering
   four-to-two draining, full-buffer backpressure, stalled output stability,
   unaligned redirects, stale instruction-memory responses, and clearing both
@@ -205,10 +221,15 @@ Current coverage:
   unique packet ownership, exclusive unique dispatch, commit ordering, and
   buffered wrong-path branch recovery. The core-facing packet remains owned by
   the Fetch Buffer until all valid lanes have entered Decode.
+- `core_fetch_metadata`: Fetch Buffer-to-core prediction metadata integration,
+  covering sparse-lane FTQ/taken identity, adjacent FTQ packet boundaries,
+  core backpressure, flush recovery, `pc_lob` derivation, and deterministic
+  randomized traffic. Use `--reference` until the production `loom_core`
+  metadata inputs are implemented.
 - `core_ifu`: production IFU connected to the temporary core, covering complete
-  four-lane packet acceptance and redirect recovery with a delayed stale
-  instruction-memory response. IFU redirect wiring uses the core's public
-  redirect valid/PC interface.
+  four-lane packet acceptance, predictor/FTQ recovery, randomized frontend
+  backpressure, precise exception and hardware-interrupt ERTN round trips, and
+  stale instruction/data responses across full frontend flushes.
 - `core_lsu`: real LA32 load/store instructions through Decode, Rename, Issue,
   MEM, the production LSU, DMem, writeback, and ROB commit. It checks word-load
   dependencies, SB/SH/SW requests, commit-gated stores, signed and unsigned
@@ -244,6 +265,10 @@ Current coverage:
   recovery, precise synchronous exception reporting, and hardware-interrupt
   handler entry. The default reference mode composes IFU, Fetch Buffer, and
   the temporary backend without exposing their internal hierarchy.
+- `core_top_recovery`: production `core_top` recovery through real IMMU,
+  ICache, Fetch Buffer, backend, DMMU, DCache, and AXI arbitration. It covers
+  branch redirect and exception/interrupt ERTN recovery while selected ICache
+  or DCache refills are outstanding, with normal and stressed AXI timing.
 - `branch_recovery`: real taken branches through the temporary core, including
   target-PC refetch, Map Table/Free List recovery, a 24-misprediction resource
   stress case, wrong-path ROB squash, and a delayed wrong-path LSU response.

@@ -142,8 +142,8 @@
 
 - [x] 将 `loom_core.sv` 明确为乱序内核，外层由 `core_top.sv` 连接 SoC。
 - [x] 给输入指令同时提供真实 PC，不能只按数组下标隐式递增。
-- [ ] 修正并验证 Decode -> Rename -> Dispatch -> Issue -> Execute -> ROB 的握手。
-- [ ] 检查 ROB index 在所有 uop 副本中保持一致。
+- [x] 修正并验证 Decode -> Rename -> Dispatch -> Issue -> Execute -> ROB 的握手。
+- [x] 检查 ROB index 在所有 uop 副本中保持一致，并由提交日志输出对应 index。
 - [x] 检查前端反压时指令保持稳定，不重复接收或丢失。
 - [x] 检查提交顺序、物理寄存器写回和架构寄存器结果。
 - [x] 在临时顶层中验证 `is_unique` 等待 ROB 为空且不与其他 lane 同拍分发。
@@ -162,9 +162,12 @@
 - [x] 验证正常双发包连续进入 Decode，`is_unique` 包不会提前离开 Fetch Buffer。
 - [x] 用正式重定向端口替代测试顶层对 `loom_core` 内部信号的层次化引用。
 - [x] 建立单 outstanding IMMU 控制契约，覆盖 ITLB、取指异常、反压和 flush。
-- [ ] FTQ 和多 outstanding ICache 接入时，为 IMMU 增加请求 tag/FTQ index
+- [x] 单 outstanding IFU 使用 frontend epoch 丢弃迟到预测，并用请求 stale 状态
+  拒绝重定向前的翻译/取指响应。
+- [ ] 实现多 outstanding ICache/IMMU 时，为请求增加 tag/FTQ index
   以及 frontend epoch；迟到翻译响应必须按 epoch 丢弃，不能只依赖单请求状态机。
-- [ ] 加入分支预测器、FTQ、I-Cache 和 ITLB 后再冻结生产前端接口。
+- [x] 完成 BPD/FTQ 的单 outstanding 生产接入并固定当前正确性接口。
+- [ ] 多 outstanding 前端完成后，再冻结包含请求身份和 replay 的性能接口。
 
 ### 分支预测器实现 (BPD)
 
@@ -172,16 +175,54 @@
 - [x] 实现 BIM (Bimodal) — 2048×8 双峰预测器, F2 方向预测 + meta, 测试 `test/bim/`
 - [x] 实现 BTB — 32-set×2-way, F3 target 修正 + meta + hit_way, 测试 `test/btb/`
 - [x] 实现 RAS — 32-entry return address stack, `test/ras/`
-- [x] 实现 GHist — 64-bit global history + ras_idx, `test/ghist/`
+- [x] 实现 fetch-wide 双 bank GHist — 64-bit history、延迟 bank 更新和 ras_idx，
+  定向场景及 1000 周期随机参考模型通过 `test/ghist/`
 - [x] 实现 Composer — UBTB→BIM→BTB 串联 + meta 逐级打包, 测试 `test/bpd_top/`
+- [x] 实现 LA32 F3 predecode，产出 branch/call/ret/return_addr，测试 `test/f3_predecode/`
+- [x] 实现 `bpd_update_router`，将提交训练按 bank 路由到两个 Composer
+- [x] 验证双 Composer 的 bank 选择、lane 旋转和 meta 对齐，测试 `test/bpd_banked/`
+- [x] Fetch Buffer 支持随指令传输 `ftq_idx` 和 `predicted_taken`，测试 `test/fetch_metadata/`
+- [x] 实现 Fetch Target Queue，覆盖 commit、mispredict、repair、回绕及非 2 次幂深度，测试 `test/ftq/`
 - [x] UBTB+BIM 集成测试通过, `test/bpd_integration/run.sh`
 - [x] UBTB+BIM+BTB 集成测试通过, `test/bpd_integration/run_ubtb_bim_btb.sh`
 - [x] GHist+RAS+UBTB+BIM+BTB 全链路集成测试通过, `test/bpd_integration/run_bpd_full.sh`
-- [ ] 实现 FTQ — 16-entry Fetch Target Queue, commit/mispredict/repair 更新, 测试已写 `test/ftq/`
-- [ ] 修改 IFU FSM — 预测驱动 next_pc, redirect 优先级
-- [ ] 在 core_top 层例化全部 BPD+FTQ 模块, 连接 brupdate/commit/redirect 信号
-- [ ] F3 decode 产出 call/ret + return_addr 信号
-- [ ] 运行全系统功能测试和性能测试
+- [x] 分支预测聚合回归入口完成，`test/bpd_regression/run.sh`
+
+#### 生产接入顺序
+
+- [x] 新增 `test/core_fetch_metadata/`，reference 和生产模式均通过稀疏 lane、flush、
+  随机反压以及 FTQ/taken/pc_lob 提交检查。
+- [x] 固定 Fetch Buffer 到 `loom_core` 的生产接口：fetch packet 同步携带 FTQ index 和
+  逐 lane predicted-taken/predicted-npc；`core_top` 已使用 IFU 的真实预测元数据。
+- [x] IFU 将预测 next PC 保存在对应 FTQ 项，并用同一 FTQ index 提供注册执行查询。
+- [x] 扩展 GHist 为 fetch-wide、双 bank 更新语义，覆盖同包多分支、物理 bank 1 起始、
+  cache-line 尾部、延迟 history 标志和 restore 优先级。
+- [x] FTQ 误预测恢复复用 GHist 的 fetch-wide 双 bank 更新函数；测试覆盖 `start_bank`
+  槽位换算、跨 bank 历史、cache-line 尾部、CALL/RET 槽位匹配和 branch rewind repair。
+- [x] 扩展 FTQ 执行查询契约：注册查询结果并返回预测 `next_pc`，误预测修正后查询
+  返回实际后继 PC；16-entry 和非 2 次幂 5-entry 测试通过。
+- [x] 区分分支误预测 rewind 与异常、中断、ERTN 的 FTQ/历史全前端清空语义；
+  `test/core_ifu/` 和 `test/core_top_recovery/` 已覆盖两类恢复。
+- [x] 在 `ifu.sv` 内实例化两个 Composer、`bpd_update_router`、F3 predecode、RAS、GHist 和 FTQ；
+  Composer 仅管理 UBTB/BIM/BTB，RAS/GHist/FTQ 直接归 IFU 控制。
+- [x] 第一版使用已对齐的 F3 预测驱动 `next_pc`，暂不启用 F1/F2 早重定向；
+  core redirect 优先于预测，frontend epoch 拒绝迟到预测，单 outstanding 请求用 stale 状态拒绝迟到响应。
+- [x] 明确非 bank 对齐重定向后的逐 lane valid 语义；保留稀疏 bank-relative valid，
+  由 Fetch Buffer 做压缩，禁止把 lane 元数据与指令错位。
+- [x] 使 Fetch Buffer 入队和 FTQ 分配原子化：任一侧反压时两侧都不得推进。
+- [x] 在 `core_top.sv` 接通 Fetch Buffer 的 FTQ/predicted-taken/predicted-npc 端口，并连接
+  IFU 与核心之间的 brupdate、commit FTQ index、branch redirect FTQ index 和全 flush 信号。
+- [x] 在 `loom_core.sv` 将前端元数据写入 `uop.ftq_idx`、`uop.taken`，并由指令 PC 生成
+  `uop.pc_lob`；提交训练使用同一条指令对应的 FTQ/BPD meta。
+- [x] 删除 ALU 对 B/BL/JIRL 的强制误预测：条件分支校验方向，B/BL 校验 F3 直接目标，
+  JIRL 用注册的 FTQ 查询结果比较预测 next PC 与实际目标。
+- [x] 增加 IFU+BPD+FTQ、核心反馈闭环、随机反压/重定向和异常/中断全 flush 回归。
+- [x] 增加生产 `core_top` 在 ICache/DCache refill 在途时的分支、异常和中断恢复回归，
+  正常与确定性 AXI 背压模式均通过 `test/core_top_recovery/`。
+- [x] 生产 `core_top` 官方功能 ELF 在正常与 AXI 背压模式下均通过 58/58 测试点。
+- [ ] 在 `core_top_elf_axi` 增加周期、IPC、误预测、Cache miss 和主要阻塞原因统计，
+  再运行 CoreMark 与 `fireye_A0` 建立性能基线。
+- [ ] 根据性能数据决定是否实现 F1/F2 早重定向和带 tag/epoch 的多 outstanding IFU/IMMU。
 
 ### 真实指令用例
 
@@ -230,14 +271,16 @@
 
 ## 阶段 5：完整程序运行基础设施
 
-- [ ] 使用对应的 `main.elf` 或二进制镜像建立指令存储器。
-- [ ] ELF loader 正确处理程序段、入口地址和地址空洞。
-- [ ] 建立数据存储器模型和必要的 NSCSCC 外设模型。
-- [ ] 实现前端 PC、取指、分支重定向和取指反压。
-- [ ] 实现提交级架构状态检查。
+- [x] 使用 `main.elf` 建立生产 `core_top` 的 AXI 指令/数据存储器模型。
+- [x] ELF loader 按 `PT_LOAD` 程序段装载，并处理入口地址和地址空洞。
+- [x] 建立数据存储器模型及 NSCSCC 功能测试的 CONFREG/NUM 完成判定。
+- [x] 生产前端 PC、取指、分支重定向、异常恢复和取指反压已接通。
+- [x] 输出提交 PC、机器码、逻辑目的寄存器和 ROB index，并核对 ELF 指令映像。
 - [ ] 接入 LA32 参考模型或顺序解释器进行 differential testing。
-- [ ] 失败日志输出 PC、机器码、uop、ROB、Rename 和提交信息。
-- [ ] 支持固定随机 seed、最大周期数和 VCD 可选开关。
+- [x] 超时和错误日志保留近期提交 PC、机器码、逻辑目的寄存器和 ROB index。
+- [ ] 失败日志进一步加入完整 uop、Rename 映射和关键队列状态。
+- [x] 支持最大周期数、无提交 watchdog、确定性 AXI 背压和可选事务 trace。
+- [ ] 增加可配置随机 seed 和 VCD 开关。
 
 ### 阶段完成条件
 
@@ -247,12 +290,12 @@
 
 ## 阶段 6：运行 NSCSCC 功能测试
 
-- [ ] 先运行只含整数算术和分支的测试。
-- [ ] 再运行 load/store 和数据相关测试。
-- [ ] 再运行 CSR、异常、中断和 TLB 测试。
-- [ ] 对每个失败用例缩减为模块级或短基本块回归测试。
-- [ ] 将修复后的最小用例永久加入 `test/`。
-- [ ] 全部功能测试通过后，再开始 IPC、面积和频率优化。
+- [x] 官方功能 ELF 在正常 AXI 模式下通过全部 58 个测试点。
+- [x] 官方功能 ELF 在确定性随机背压模式下通过全部 58 个测试点。
+- [x] 覆盖生产 Cache/AXI 事务在途时的分支、异常和中断恢复。
+- [x] 已发现的前端、分支预测、异常和访存恢复问题均有对应模块级或核心级回归。
+- [ ] 后续失败继续缩减为最小用例并永久加入 `test/`。
+- [ ] 增加 IPC、误预测、Cache miss 和主要阻塞原因统计后，运行 CoreMark 与 `fireye_A0`。
 
 ## 每次提交前检查
 

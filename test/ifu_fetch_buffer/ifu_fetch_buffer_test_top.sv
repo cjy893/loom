@@ -1,3 +1,5 @@
+import loom_params::*;
+
 module ifu_fetch_buffer_test_top (
     input  logic                 clk,
     input  logic                 rst_n,
@@ -28,6 +30,9 @@ module ifu_fetch_buffer_test_top (
     logic [3:0] ifu_fetch_valid;
     logic [3:0][31:0] ifu_fetch_pcs;
     logic [3:0][31:0] ifu_fetch_insts;
+    logic [3:0][FTQ_ADDR_SZ-1:0] ifu_fetch_ftq_idx;
+    logic [3:0] ifu_fetch_predicted_taken;
+    logic [3:0][31:0] ifu_fetch_predicted_npc;
     logic [3:0] ifu_fetch_xcpt_valid;
     logic [3:0][5:0] ifu_fetch_xcpt_code;
     logic [31:0] ifu_xlate_req_vaddr;
@@ -49,7 +54,20 @@ module ifu_fetch_buffer_test_top (
         .clk,
         .rst_n,
         .redirect_valid,
+        .flush_valid(redirect_valid),
         .redirect_pc,
+        .branch_redirect_ftq_idx('0),
+        .branch_redirect_taken(1'b0),
+        .branch_redirect_pc_lob('0),
+        .branch_redirect_cfi_type('0),
+        .ftq_commit_valid(ifu_fetch_ready && |ifu_fetch_valid),
+        .ftq_commit_idx(ifu_fetch_ftq_idx[0]),
+        .exec_query_valid('0),
+        .exec_query_idx('0),
+        .exec_query_pc('0),
+        .exec_query_resp_valid(),
+        .exec_query_next_pc(),
+        .exec_query_cfi_match(),
         .xlate_req_valid(),
         .xlate_req_ready(1'b1),
         .xlate_req_vaddr(ifu_xlate_req_vaddr),
@@ -74,6 +92,9 @@ module ifu_fetch_buffer_test_top (
         .fetch_valid(ifu_fetch_valid),
         .fetch_insts(ifu_fetch_insts),
         .fetch_pc(ifu_fetch_pcs),
+        .fetch_ftq_idx(ifu_fetch_ftq_idx),
+        .fetch_predicted_taken(ifu_fetch_predicted_taken),
+        .fetch_predicted_npc(ifu_fetch_predicted_npc),
         .fetch_ready(ifu_fetch_ready)
     );
 
@@ -90,12 +111,18 @@ module ifu_fetch_buffer_test_top (
         .enq_xcpt_code(ifu_fetch_xcpt_code),
         .enq_insts(ifu_fetch_insts),
         .enq_pcs(ifu_fetch_pcs),
+        .enq_ftq_idx(ifu_fetch_ftq_idx),
+        .enq_predicted_taken(ifu_fetch_predicted_taken),
+        .enq_predicted_npc(ifu_fetch_predicted_npc),
         .enq_ready(ifu_fetch_ready),
         .deq_valid(fetch_valid),
         .deq_xcpt_valid(),
         .deq_xcpt_code(),
         .deq_insts(buffer_deq_insts),
         .deq_pcs(buffer_deq_pcs),
+        .deq_ftq_idx(),
+        .deq_predicted_taken(),
+        .deq_predicted_npc(),
         .deq_ready(fetch_ready)
     );
 endmodule

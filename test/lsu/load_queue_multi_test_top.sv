@@ -175,6 +175,7 @@ module load_queue_multi_test_top (
         .dmem_req_ready,
         .dmem_req_addr,
         .dmem_req_idx,
+        .dmem_req_cacheable(),
         .dmem_req_uop,
         .dmem_resp_valid,
         .dmem_resp_idx,

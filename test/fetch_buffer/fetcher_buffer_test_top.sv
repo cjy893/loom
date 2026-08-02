@@ -55,6 +55,9 @@ module fetcher_buffer_test_top (
         .enq_valid,
         .enq_insts,
         .enq_pcs,
+        .enq_ftq_idx('0),
+        .enq_predicted_taken('0),
+        .enq_predicted_npc('0),
         .enq_xcpt_valid,
         .enq_xcpt_code,
         .enq_ready,
@@ -63,6 +66,9 @@ module fetcher_buffer_test_top (
         .deq_xcpt_code,
         .deq_insts,
         .deq_pcs,
+        .deq_ftq_idx(),
+        .deq_predicted_taken(),
+        .deq_predicted_npc(),
         .deq_ready
     );
 endmodule

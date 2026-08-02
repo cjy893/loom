@@ -110,10 +110,14 @@ module ubtb #(
     logic update_is_taken_cfi;
     assign update_is_taken_cfi = update.cfi_valid && (update.cfi_is_b_bl || update.cfi_is_jirl || (update.cfi_is_br && update.cfi_taken));
 
+    logic update_is_commit;
+
+    assign update_is_commit = !update.is_mispredict_update && !update.is_repair_update && !(|update.btb_mispredicts);
+
     logic do_allocate;
     logic do_update_target;
-    assign do_allocate = update_valid && update_is_taken_cfi && !update_hit;
-    assign do_update_target = update_valid && update_is_taken_cfi && update_hit;
+    assign do_allocate = update_valid && update_is_commit && update_is_taken_cfi && !update_hit;
+    assign do_update_target = update_valid && update_is_commit && update_is_taken_cfi && update_hit;
 
     logic found_empty;
     logic [ENTRY_IDX_SIZE-1:0] alloc_idx;

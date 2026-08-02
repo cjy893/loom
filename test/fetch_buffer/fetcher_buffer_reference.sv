@@ -3,7 +3,8 @@
 module fetcher_buffer #(
     parameter int FETCH_WIDTH = 4,
     parameter int CORE_WIDTH = 2,
-    parameter int NUM_ENTRIES = 8
+    parameter int NUM_ENTRIES = 8,
+    parameter int FTQ_IDX_SZ = loom_params::FTQ_ADDR_SZ
 )(
     input  logic                              clk,
     input  logic                              rst_n,
@@ -12,9 +13,21 @@ module fetcher_buffer #(
     input  logic [FETCH_WIDTH-1:0][31:0]      enq_insts,
     input  logic [FETCH_WIDTH-1:0][31:0]      enq_pcs,
     output logic                              enq_ready,
+    input  logic [FETCH_WIDTH-1:0][FTQ_IDX_SZ-1:0]
+                                                  enq_ftq_idx,
+    input  logic [FETCH_WIDTH-1:0]            enq_predicted_taken,
+    input  logic [FETCH_WIDTH-1:0][31:0]      enq_predicted_npc,
+    input  logic [FETCH_WIDTH-1:0]            enq_xcpt_valid,
+    input  logic [FETCH_WIDTH-1:0][5:0]       enq_xcpt_code,
     output logic [CORE_WIDTH-1:0]             deq_valid,
     output logic [CORE_WIDTH-1:0][31:0]       deq_insts,
     output logic [CORE_WIDTH-1:0][31:0]       deq_pcs,
+    output logic [CORE_WIDTH-1:0][FTQ_IDX_SZ-1:0]
+                                                  deq_ftq_idx,
+    output logic [CORE_WIDTH-1:0]             deq_predicted_taken,
+    output logic [CORE_WIDTH-1:0][31:0]       deq_predicted_npc,
+    output logic [CORE_WIDTH-1:0]             deq_xcpt_valid,
+    output logic [CORE_WIDTH-1:0][5:0]        deq_xcpt_code,
     input  logic                              deq_ready
 );
     localparam int PTR_WIDTH =
@@ -23,12 +36,17 @@ module fetcher_buffer #(
 
     logic [NUM_ENTRIES-1:0][31:0] inst_mem;
     logic [NUM_ENTRIES-1:0][31:0] pc_mem;
+    logic [NUM_ENTRIES-1:0][FTQ_IDX_SZ-1:0] ftq_idx_mem;
+    logic [NUM_ENTRIES-1:0] predicted_taken_mem;
+    logic [NUM_ENTRIES-1:0][31:0] predicted_npc_mem;
+    logic [NUM_ENTRIES-1:0] xcpt_valid_mem;
+    logic [NUM_ENTRIES-1:0][5:0] xcpt_code_mem;
     logic [PTR_WIDTH-1:0] head_q;
     logic [PTR_WIDTH-1:0] tail_q;
     logic [COUNT_WIDTH-1:0] count_q;
     integer enq_count;
     integer deq_count;
-    integer free_after_deq;
+    integer free_slots;
     logic enq_fire;
 
     function automatic logic [PTR_WIDTH-1:0] add_ptr(
@@ -56,23 +74,35 @@ module fetcher_buffer #(
                 deq_count = CORE_WIDTH;
         end
 
-        free_after_deq =
-            NUM_ENTRIES - int'(count_q) + deq_count;
-        enq_ready = !flush && (enq_count <= free_after_deq);
+        free_slots = NUM_ENTRIES - int'(count_q);
+        enq_ready = !flush && (enq_count <= free_slots);
         enq_fire = enq_ready && (|enq_valid);
 
         deq_valid = '0;
         deq_insts = '0;
         deq_pcs = '0;
-        if (!flush) begin
-            for (int lane = 0; lane < CORE_WIDTH; lane++) begin
-                if (lane < int'(count_q)) begin
-                    deq_valid[lane] = 1'b1;
-                    deq_insts[lane] =
-                        inst_mem[add_ptr(head_q, lane)];
-                    deq_pcs[lane] =
-                        pc_mem[add_ptr(head_q, lane)];
-                end
+        deq_ftq_idx = '0;
+        deq_predicted_taken = '0;
+        deq_predicted_npc = '0;
+        deq_xcpt_valid = '0;
+        deq_xcpt_code = '0;
+        for (int lane = 0; lane < CORE_WIDTH; lane++) begin
+            if (lane < int'(count_q)) begin
+                deq_valid[lane] = 1'b1;
+                deq_insts[lane] =
+                    inst_mem[add_ptr(head_q, lane)];
+                deq_pcs[lane] =
+                    pc_mem[add_ptr(head_q, lane)];
+                deq_ftq_idx[lane] =
+                    ftq_idx_mem[add_ptr(head_q, lane)];
+                deq_predicted_taken[lane] =
+                    predicted_taken_mem[add_ptr(head_q, lane)];
+                deq_predicted_npc[lane] =
+                    predicted_npc_mem[add_ptr(head_q, lane)];
+                deq_xcpt_valid[lane] =
+                    xcpt_valid_mem[add_ptr(head_q, lane)];
+                deq_xcpt_code[lane] =
+                    xcpt_code_mem[add_ptr(head_q, lane)];
             end
         end
     end
@@ -97,6 +127,21 @@ module fetcher_buffer #(
                             enq_insts[lane];
                         pc_mem[add_ptr(tail_q, packed_offset)] <=
                             enq_pcs[lane];
+                        ftq_idx_mem[
+                            add_ptr(tail_q, packed_offset)
+                        ] <= enq_ftq_idx[lane];
+                        predicted_taken_mem[
+                            add_ptr(tail_q, packed_offset)
+                        ] <= enq_predicted_taken[lane];
+                        predicted_npc_mem[
+                            add_ptr(tail_q, packed_offset)
+                        ] <= enq_predicted_npc[lane];
+                        xcpt_valid_mem[
+                            add_ptr(tail_q, packed_offset)
+                        ] <= enq_xcpt_valid[lane];
+                        xcpt_code_mem[
+                            add_ptr(tail_q, packed_offset)
+                        ] <= enq_xcpt_code[lane];
                         packed_offset++;
                     end
                 end

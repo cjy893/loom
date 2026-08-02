@@ -351,7 +351,7 @@ module store_queue #(
         enq_killed = '0;
         enq_uops_updated = enq_uops;
         for(int w = 0; w < ENQ_WIDTH; w++) begin
-            enq_killed[w] = brupdate.b2.mispredict && |(enq_uops[w].br_mask & brupdate.b1.mispredict_mask);
+            enq_killed[w] = |(enq_uops[w].br_mask & brupdate.b1.mispredict_mask);
             enq_uops_updated[w].br_mask = enq_uops[w].br_mask & ~brupdate.b1.resolve_mask;
             enq_uops_updated[w].stq_idx = enq_idx[w];
         end
@@ -424,7 +424,8 @@ module store_queue #(
     always_comb begin
         entry_killed = '0;
         for(int i = 0; i < NUM_ENTRIES; i++) begin
-            entry_killed[i] = entries[i].valid && !entries[i].committed && brupdate.b2.mispredict && |(entries[i].uop.br_mask & brupdate.b1.mispredict_mask);
+            entry_killed[i] = entries[i].valid && !entries[i].committed &&
+                              |(entries[i].uop.br_mask & brupdate.b1.mispredict_mask);
         end
     end
 

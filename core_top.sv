@@ -6,6 +6,7 @@ module core_top #(
     parameter logic [31:0] RESET_PC = 32'h1c00_0000,
     parameter logic [31:0] CORE_ID = 32'd0,
     parameter int FETCH_WIDTH = 4,
+    parameter int ALU_WIDTH = 3,
     parameter int CORE_WIDTH = 2,
     parameter int FETCH_BUFFER_ENTRIES = 16,
     parameter bit ENABLE_SINGLE_DEBUG_COMMIT = 1'b1
@@ -74,6 +75,10 @@ module core_top #(
     logic [FETCH_WIDTH-1:0]       ifu_fetch_valid;
     logic [FETCH_WIDTH-1:0][31:0] ifu_fetch_insts;
     logic [FETCH_WIDTH-1:0][31:0] ifu_fetch_pcs;
+    logic [FETCH_WIDTH-1:0][FTQ_ADDR_SZ-1:0] ifu_fetch_ftq_idx;
+    logic [FETCH_WIDTH-1:0]       ifu_fetch_predicted_taken;
+    logic [FETCH_WIDTH-1:0][31:0] ifu_fetch_predicted_npc;
+    logic [CORE_WIDTH-1:0][31:0]  buffer_deq_predicted_npc;
     logic                         ifu_fetch_ready;
     logic                         imem_req_valid;
     logic                         imem_req_ready;
@@ -81,6 +86,13 @@ module core_top #(
     logic                         imem_resp_valid;
     logic                         imem_resp_ready;
     logic [FETCH_WIDTH-1:0][31:0] imem_resp_insts;
+
+    logic [ALU_WIDTH-1:0] ftq_exec_query_valid;
+    logic [ALU_WIDTH-1:0][FTQ_ADDR_SZ-1:0] ftq_exec_query_idx;
+    logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_pc;
+    logic [ALU_WIDTH-1:0] ftq_exec_query_resp_valid;
+    logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_next_pc;
+    logic [ALU_WIDTH-1:0] ftq_exec_query_cfi_match;
 
     logic                              icache_mem_req_valid;
     logic                              icache_mem_req_ready;
@@ -126,9 +138,18 @@ module core_top #(
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_insts;
     logic [CORE_WIDTH-1:0][31:0] buffer_deq_pcs;
     logic                        buffer_deq_ready;
+    logic [CORE_WIDTH-1:0][FTQ_ADDR_SZ-1:0] buffer_deq_ftq_idx;
+    logic [CORE_WIDTH-1:0] buffer_deq_predicted_taken;
 
     logic                         core_redirect_valid;
+    logic                         core_frontend_flush_valid;
     logic [31:0]                  core_redirect_pc;
+    logic [FTQ_ADDR_SZ-1:0]       core_redirect_ftq_idx;
+    logic                         core_redirect_taken;
+    logic [$clog2(ICACHE_BLOCK_BYTES)-1:0] core_redirect_pc_lob;
+    logic [2:0]                   core_redirect_cfi_type;
+    logic                         ftq_commit_valid;
+    logic [FTQ_ADDR_SZ-1:0]       ftq_commit_idx;
     logic                         dmem_req_valid;
     logic                         dmem_req_ready;
     logic                         dmem_req_is_store;
@@ -144,6 +165,18 @@ module core_top #(
     logic [31:0]                  dmem_resp_data;
     logic [LSU_ADDR_SZ+1:0]       dmem_resp_idx;
     commit_signal_t               core_commit;
+
+    always_comb begin
+        ftq_commit_valid = 1'b0;
+        ftq_commit_idx = '0;
+
+        for (int lane = 0; lane < CORE_WIDTH; lane++) begin
+            if (core_commit.valids[lane]) begin
+                ftq_commit_valid = 1'b1;
+                ftq_commit_idx = core_commit.uops[lane].ftq_idx;
+            end
+        end
+    end
 
     logic                         ifu_xlate_req_valid;
     logic                         ifu_xlate_req_ready;
@@ -169,12 +202,26 @@ module core_top #(
 
     ifu #(
         .FETCH_WIDTH(FETCH_WIDTH),
+        .EXEC_QUERY_WIDTH(ALU_WIDTH),
         .RESET_PC(RESET_PC)
     ) ifu_inst (
         .clk(aclk),
         .rst_n(aresetn),
         .redirect_valid(core_redirect_valid),
         .redirect_pc(core_redirect_pc),
+        .flush_valid(core_frontend_flush_valid),
+        .branch_redirect_ftq_idx(core_redirect_ftq_idx),
+        .branch_redirect_taken(core_redirect_taken),
+        .branch_redirect_pc_lob(core_redirect_pc_lob),
+        .branch_redirect_cfi_type(core_redirect_cfi_type),
+        .ftq_commit_valid,
+        .ftq_commit_idx,
+        .exec_query_valid     (ftq_exec_query_valid),
+        .exec_query_idx       (ftq_exec_query_idx),
+        .exec_query_pc        (ftq_exec_query_pc),
+        .exec_query_resp_valid(ftq_exec_query_resp_valid),
+        .exec_query_next_pc   (ftq_exec_query_next_pc),
+        .exec_query_cfi_match (ftq_exec_query_cfi_match),
         .xlate_req_valid       (ifu_xlate_req_valid),
         .xlate_req_ready       (ifu_xlate_req_ready),
         .xlate_req_vaddr       (ifu_xlate_req_vaddr),
@@ -202,7 +249,10 @@ module core_top #(
         .fetch_valid(ifu_fetch_valid),
         .fetch_insts(ifu_fetch_insts),
         .fetch_pc(ifu_fetch_pcs),
-        .fetch_ready(ifu_fetch_ready)
+        .fetch_ftq_idx(ifu_fetch_ftq_idx),
+        .fetch_predicted_taken(ifu_fetch_predicted_taken),
+        .fetch_ready(ifu_fetch_ready),
+        .fetch_predicted_npc(ifu_fetch_predicted_npc)
     );
 
     icache #(
@@ -311,6 +361,12 @@ module core_top #(
         .enq_pcs(ifu_fetch_pcs),
         .enq_insts(ifu_fetch_insts),
         .enq_ready(ifu_fetch_ready),
+        .enq_ftq_idx(ifu_fetch_ftq_idx),
+        .enq_predicted_taken(ifu_fetch_predicted_taken),
+        .deq_ftq_idx(buffer_deq_ftq_idx),
+        .deq_predicted_taken(buffer_deq_predicted_taken),
+        .enq_predicted_npc(ifu_fetch_predicted_npc),
+        .deq_predicted_npc(buffer_deq_predicted_npc),
         .deq_valid(buffer_deq_valid),
         .deq_pcs(buffer_deq_pcs),
         .deq_insts(buffer_deq_insts),
@@ -322,6 +378,7 @@ module core_top #(
         .USE_EXTERNAL_FE_PCS(1'b1),
         .CORE_WIDTH(CORE_WIDTH),
         .FETCH_WIDTH(CORE_WIDTH),
+        .ALU_WIDTH(ALU_WIDTH),
         .CORE_ID(CORE_ID),
         .ENABLE_SINGLE_DEBUG_COMMIT(1'b0)
     ) core_inst (
@@ -330,9 +387,17 @@ module core_top #(
         .fe_valid(buffer_deq_valid),
         .fe_insts(buffer_deq_insts),
         .fe_pcs(buffer_deq_pcs),
+        .fe_ftq_idx(buffer_deq_ftq_idx),
+        .fe_predicted_taken(buffer_deq_predicted_taken),
+        .fe_predicted_npc(buffer_deq_predicted_npc),
         .fe_ready(buffer_deq_ready),
         .fe_redirect_valid(core_redirect_valid),
         .fe_redirect_pc(core_redirect_pc),
+        .fe_flush_valid(core_frontend_flush_valid),
+        .fe_redirect_ftq_idx(core_redirect_ftq_idx),
+        .fe_redirect_taken(core_redirect_taken),
+        .fe_redirect_pc_lob(core_redirect_pc_lob),
+        .fe_redirect_cfi_type(core_redirect_cfi_type),
         .fe_xcpt_valid (buffer_deq_xcpt_valid),
         .fe_xcpt_code  (buffer_deq_xcpt_code),
         .ifu_xlate_req_valid       (ifu_xlate_req_valid),
@@ -348,6 +413,12 @@ module core_top #(
         .ifu_xlate_resp_xcpt_valid (ifu_xlate_resp_xcpt_valid),
         .ifu_xlate_resp_xcpt_code  (ifu_xlate_resp_xcpt_code),
         .ifu_xlate_resp_badvaddr   (),
+        .ftq_exec_query_valid,
+        .ftq_exec_query_idx,
+        .ftq_exec_query_pc,
+        .ftq_exec_query_resp_valid,
+        .ftq_exec_query_next_pc,
+        .ftq_exec_query_cfi_match,
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,

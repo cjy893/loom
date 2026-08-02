@@ -15,6 +15,15 @@ defines=()
 case "$MODE" in
   reference)
     rtl+=(
+      "$ROOT/ifu/bpd/ubtb.sv"
+      "$ROOT/ifu/bpd/bim.sv"
+      "$ROOT/ifu/bpd/btb.sv"
+      "$ROOT/ifu/bpd/composer.sv"
+      "$ROOT/ifu/bpd/bpd_update_router.sv"
+      "$ROOT/ifu/bpd/f3_predecode.sv"
+      "$ROOT/ifu/bpd/ghist.sv"
+      "$ROOT/ifu/bpd/ras.sv"
+      "$ROOT/ifu/fetch_target_queue.sv"
       "$ROOT/ifu/ifu.sv"
       "$ROOT/ifu/fetcher_buffer.sv"
       "$ROOT/exu/decode.sv"

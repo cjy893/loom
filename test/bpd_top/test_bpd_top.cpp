@@ -319,24 +319,56 @@ void test_no_spurious_update(Vbpd_top_test_top* dut) {
     expect_miss("update_valid=0 F3 miss", read_f3(dut, 0));
 }
 
-void test_update_modes_fanout(Vbpd_top_test_top* dut) {
+void test_update_modes_follow_v4_contract(Vbpd_top_test_top* dut) {
     reset_predictor(dut);
     constexpr uint32_t pc = 0x1c007000;
+    constexpr uint32_t commit_target = 0xAAAA0000;
 
-    train(dut, pc, 0, 0xAAAA0000, false, true, false, true);
+    train(dut, pc, 0, commit_target, false, true, false, true);
+
+    request_cycle(dut, pc);
+    expect_pred("commit update trains UBTB", read_f1(dut, 0),
+                true, false, true, false, commit_target);
+    idle_cycle(dut);
+    idle_cycle(dut);
+    expect_pred("commit update trains BTB", read_f3(dut, 0),
+                true, false, true, false, commit_target);
+    expect_low_bits("commit update creates BTB hit", dut->f3_meta[0],
+                    0x1, 0x1);
+
     train(dut, pc, 0, 0xBBBB0000, false, true, false, true, true);
+
+    request_cycle(dut, pc);
+    expect_pred("mispredict update preserves UBTB target", read_f1(dut, 0),
+                true, false, true, false, commit_target);
+    idle_cycle(dut);
+    idle_cycle(dut);
+    expect_pred("mispredict update preserves BTB target", read_f3(dut, 0),
+                true, false, true, false, commit_target);
+
     train(dut, pc, 0, 0xCCCC0000, false, true, false, true,
           false, true);
+
+    request_cycle(dut, pc);
+    expect_pred("repair update preserves UBTB target", read_f1(dut, 0),
+                true, false, true, false, commit_target);
+    idle_cycle(dut);
+    idle_cycle(dut);
+    expect_pred("repair update preserves BTB target", read_f3(dut, 0),
+                true, false, true, false, commit_target);
+
     train(dut, pc, 0, 0xDDDD0000, false, true, false, true,
           false, false, 1);
 
     request_cycle(dut, pc);
-    expect_pred("update modes reach UBTB", read_f1(dut, 0),
-                true, false, true, false, 0xDDDD0000);
+    expect_pred("BTB mispredict preserves UBTB target", read_f1(dut, 0),
+                true, false, true, false, commit_target);
     idle_cycle(dut);
     idle_cycle(dut);
-    expect_pred("update modes reach BTB", read_f3(dut, 0),
-                true, false, true, false, 0xDDDD0000);
+    expect_pred("BTB invalidation falls back to UBTB target", read_f3(dut, 0),
+                true, false, true, false, commit_target);
+    expect_low_bits("BTB mispredict invalidates BTB hit", dut->f3_meta[0],
+                    0x1, 0x0);
 }
 
 void test_real_ubtb_miss_btb_hit(Vbpd_top_test_top* dut) {
@@ -456,7 +488,7 @@ int main(int argc, char** argv) {
     test_two_lanes(dut);
     test_not_taken_does_not_allocate(dut);
     test_no_spurious_update(dut);
-    test_update_modes_fanout(dut);
+    test_update_modes_follow_v4_contract(dut);
     test_real_ubtb_miss_btb_hit(dut);
     test_true_back_to_back(dut);
     test_bubble_alignment(dut);

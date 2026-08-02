@@ -4,104 +4,79 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___eval_triggers_vec__ico__0(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___eval_triggers_vec__ico__1(Vbpd_full_test_top___024root* vlSelf);
-void Vbpd_full_test_top___024root___eval_triggers_vec__ico__2(Vbpd_full_test_top___024root* vlSelf);
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-#endif  // VL_DEBUG
-bool Vbpd_full_test_top___024root___trigger_anySet__ico(const VlUnpacked<QData/*63:0*/, 2> &in);
-void Vbpd_full_test_top___024root___eval_ico(Vbpd_full_test_top___024root* vlSelf);
-
-bool Vbpd_full_test_top___024root___eval_phase__ico(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___eval_phase__ico\n"); );
-    Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
-    auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    CData/*0:0*/ __VicoExecute;
-    // Body
-    {
-        // Inlined CFunc: _eval_triggers_vec__ico
-        Vbpd_full_test_top___024root___eval_triggers_vec__ico__0(vlSelf);
-        Vbpd_full_test_top___024root___eval_triggers_vec__ico__1(vlSelf);
-        Vbpd_full_test_top___024root___eval_triggers_vec__ico__2(vlSelf);
-    }
-#ifdef VL_DEBUG
-    if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
-        Vbpd_full_test_top___024root___dump_triggers__ico(vlSelfRef.__VicoTriggered, "ico"s);
-    }
-#endif
-    __VicoExecute = Vbpd_full_test_top___024root___trigger_anySet__ico(vlSelfRef.__VicoTriggered);
-    if (__VicoExecute) {
-        Vbpd_full_test_top___024root___eval_ico(vlSelf);
-    }
-    return (__VicoExecute);
-}
-
-bool Vbpd_full_test_top___024root___trigger_anySet__act(const VlUnpacked<QData/*63:0*/, 1> &in) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___trigger_anySet__act\n"); );
-    // Locals
-    IData/*31:0*/ n;
-    // Body
-    n = 0U;
-    do {
-        if (in[n]) {
-            return (1U);
-        }
-        n = ((IData)(1U) + n);
-    } while ((1U > n));
-    return (0U);
-}
-
-void Vbpd_full_test_top___024root___nba_sequent__TOP__0(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__0\n"); );
+void Vbpd_full_test_top___024root___ico_comb__TOP__8(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___ico_comb__TOP__8\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-        = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist;
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__ras_idx 
-        = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__ras_idx;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v1 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v1 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1 = 0U;
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set 
-        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset 
-        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v1 = 0U;
-    if (vlSelfRef.rst_n) {
-        if (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate) {
-            if ((1U & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty)))) {
-                vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr 
-                    = (0x0000000fU & ((IData)(1U) + (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr)));
-            }
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31 = (((IData)(vlSelfRef.f1_is_br)
+                                                   ? (IData)(vlSelfRef.f1_taken)
+                                                   : (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27)) 
+                                                 & (IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_cfi_valid));
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28 = ((IData)(vlSelfRef.f1_is_br) 
+                                                 & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31));
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0 = (1U 
+                                                & (- (IData)(
+                                                             ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28)) 
+                                                              & (IData)(vlSelfRef.f1_is_br)))));
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 = (1U 
+                                                 & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
+                                                    | ((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
+                                                        >> 7U) 
+                                                       | ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
+                                                          >> 1U))));
+}
+
+void Vbpd_full_test_top___024root___ico_sequent__TOP__0(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__0(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__2(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__3(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__4(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__5(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__6(Vbpd_full_test_top___024root* vlSelf);
+
+void Vbpd_full_test_top___024root___eval_ico(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___eval_ico\n"); );
+    Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
+    auto& vlSelfRef = std::ref(*vlSelf).get();
+    // Body
+    if ((0x0000000000040000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vbpd_full_test_top___024root___ico_sequent__TOP__0(vlSelf);
+    }
+    if ((0x0000000000000200ULL & vlSelfRef.__VicoTriggered[0U])) {
+        {
+            // Inlined CFunc: _ico_sequent__TOP__1
+            vlSelfRef.ras_read_addr = vlSelfRef.bpd_full_test_top__DOT__ras_inst__DOT__stack
+                [vlSelfRef.ras_read_idx];
         }
-        if (vlSelfRef.ghist_restore_valid) {
-            vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                = (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__restore_packed[2U])) 
-                    << 0x00000038U) | (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__restore_packed[1U])) 
-                                        << 0x00000018U) 
-                                       | ((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__restore_packed[0U])) 
-                                          >> 8U)));
-        } else if (vlSelfRef.f1_update_valid) {
-            if (vlSelfRef.f1_is_br) {
-                vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                    = ((IData)(vlSelfRef.f1_taken) ? 
-                       (1ULL | (vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                                << 1U)) : (vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                                           << 1U));
-            }
+    }
+    if ((0x000000001fff8000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vbpd_full_test_top___024root___ico_comb__TOP__0(vlSelf);
+    }
+    if ((0x0000000000000180ULL & vlSelfRef.__VicoTriggered[0U])) {
+        {
+            // Inlined CFunc: _ico_comb__TOP__1
+            vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27 
+                = ((IData)(vlSelfRef.f1_is_call) | (IData)(vlSelfRef.f1_is_ret));
         }
-    } else {
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr = 0U;
-        vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__hist = 0ULL;
+    }
+    if ((0x0000000000240000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vbpd_full_test_top___024root___ico_comb__TOP__2(vlSelf);
+        Vbpd_full_test_top___024root___ico_comb__TOP__3(vlSelf);
+        Vbpd_full_test_top___024root___ico_comb__TOP__4(vlSelf);
+        Vbpd_full_test_top___024root___ico_comb__TOP__5(vlSelf);
+    }
+    if ((0x000000001fffc000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vbpd_full_test_top___024root___ico_comb__TOP__6(vlSelf);
+    }
+    if ((0x00000000000001a0ULL & vlSelfRef.__VicoTriggered[0U])) {
+        {
+            // Inlined CFunc: _ico_comb__TOP__7
+            vlSelfRef.bpd_full_test_top__DOT__ghist_cfi_valid 
+                = ((IData)(vlSelfRef.f1_is_br) | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27));
+        }
+    }
+    if ((0x00000000000001e0ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vbpd_full_test_top___024root___ico_comb__TOP__8(vlSelf);
     }
 }

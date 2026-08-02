@@ -45,7 +45,7 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__7(Vmem_issue_test_top___0
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available 
             = (7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available));
     }
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_1 = (1U 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3 = (1U 
                                                 & (~ 
                                                    (((1U 
                                                       == 

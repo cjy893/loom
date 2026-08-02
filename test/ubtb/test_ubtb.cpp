@@ -254,12 +254,11 @@ void test_pipeline_simultaneous(Vubtb_test_top* dut) {
                    true, false, true, false, 0xcafe0000);
 }
 
-void test_mispredict_update(Vubtb_test_top* dut) {
-    // mispredict update 也应该分配（跟 commit update 一样处理）
+void test_mispredict_update_does_not_allocate(Vubtb_test_top* dut) {
+    // v4 contract: only commit updates train the target predictor.
     do_update(dut, 0x1c050000, 0, 0x1c060000, false, true, false, true, true);
     do_lookup(dut, 0x1c050000);
-    expect_pred_eq("mispredict: allocated", read_pred(dut, 0),
-                   true, false, true, false, 0x1c060000);
+    expect_miss("mispredict: no allocation", read_pred(dut, 0));
 }
 
 void test_multiple_banks_independent(Vubtb_test_top* dut) {
@@ -313,7 +312,7 @@ int main(int argc, char** argv) {
     test_type_change(dut);
     test_fill_and_evict(dut);
     test_pipeline_simultaneous(dut);
-    test_mispredict_update(dut);
+    test_mispredict_update_does_not_allocate(dut);
     test_multiple_banks_independent(dut);
     test_tag_4byte_granularity(dut);
 

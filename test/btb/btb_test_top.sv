@@ -31,7 +31,8 @@ module btb_test_top (
     input  logic        update_cfi_is_br,
     input  logic        update_cfi_is_b_bl,
     input  logic        update_cfi_is_jirl,
-    input  logic [31:0] update_target
+    input  logic [31:0] update_target,
+    input  logic [BPD_MAX_META_LENGTH-1:0] update_meta
 );
     bpd_bank_update_t update_packed;
     assign update_packed.is_mispredict_update = update_is_mispredict_update;
@@ -49,7 +50,7 @@ module btb_test_top (
     assign update_packed.ghist                = '0;
     assign update_packed.lhist                = '0;
     assign update_packed.target               = update_target;
-    assign update_packed.meta                 = '0;
+    assign update_packed.meta                 = update_meta;
 
     btb #(
         .NUM_SETS(BTB_SETS),

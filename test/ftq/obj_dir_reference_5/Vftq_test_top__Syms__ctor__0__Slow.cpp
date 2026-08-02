@@ -5,7 +5,7 @@
 
 void Vftq_test_top__Syms::Vftq_test_top__Syms__ctor__0() {
     // Check resources
-    Verilated::stackCheck(1176);
+    Verilated::stackCheck(1212);
     // Setup sub module instances
     // Configure time unit / time precision
     _vm_contextp__->timeunit(-12);

@@ -4,195 +4,49 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__2(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___stl_sequent__TOP__2\n"); );
+VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__1(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___stl_sequent__TOP__1\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0aU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 1U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0aU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 1U;
     }
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0bU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 2U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0bU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 2U;
     }
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0cU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 3U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0cU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 3U;
     }
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0dU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 4U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0dU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 4U;
     }
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0eU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 5U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0eU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 5U;
     }
     if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   >> 0x0fU)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+                   >> 6U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 0x0fU;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 6U;
     }
-    vlSelfRef.btb_f3_preds[0U] = (IData)((0x0000000fffffffffULL 
-                                          & (((1U & (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_hit))
-                                               ? (((QData)((IData)(
-                                                                   (1U 
-                                                                    & ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U] 
-                                                                        >> 3U) 
-                                                                       | (0U 
-                                                                          != 
-                                                                          (3U 
-                                                                           & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U])))))) 
-                                                   << 0x00000023U) 
-                                                  | (((QData)((IData)(
-                                                                      (7U 
-                                                                       & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U]))) 
-                                                      << 0x00000020U) 
-                                                     | (QData)((IData)(
-                                                                       ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                         << 0x0000001dU) 
-                                                                        | (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U] 
-                                                                           >> 3U))))))
-                                               : (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U])) 
-                                                   << 0x00000020U) 
-                                                  | (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[0U])))) 
-                                             & (- (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid))))));
-    vlSelfRef.btb_f3_preds[1U] = ((0xfffffff0U & vlSelfRef.btb_f3_preds[1U]) 
-                                  | (IData)(((0x0000000fffffffffULL 
-                                              & (((1U 
-                                                   & (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_hit))
-                                                   ? 
-                                                  (((QData)((IData)(
-                                                                    (1U 
-                                                                     & ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U] 
-                                                                         >> 3U) 
-                                                                        | (0U 
-                                                                           != 
-                                                                           (3U 
-                                                                            & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U])))))) 
-                                                    << 0x00000023U) 
-                                                   | (((QData)((IData)(
-                                                                       (7U 
-                                                                        & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U]))) 
-                                                       << 0x00000020U) 
-                                                      | (QData)((IData)(
-                                                                        ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                          << 0x0000001dU) 
-                                                                         | (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[0U] 
-                                                                            >> 3U))))))
-                                                   : 
-                                                  (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U])) 
-                                                    << 0x00000020U) 
-                                                   | (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[0U])))) 
-                                                 & (- (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid))))) 
-                                             >> 0x00000020U)));
-    vlSelfRef.btb_f3_preds[1U] = ((0x0000000fU & vlSelfRef.btb_f3_preds[1U]) 
-                                  | ((IData)((0x0000000fffffffffULL 
-                                              & (((2U 
-                                                   & (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_hit))
-                                                   ? 
-                                                  (((QData)((IData)(
-                                                                    (1U 
-                                                                     & (IData)(
-                                                                               ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U] 
-                                                                                >> 7U) 
-                                                                                | (0U 
-                                                                                != 
-                                                                                (0x30000000U 
-                                                                                & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U]))))))) 
-                                                    << 0x00000023U) 
-                                                   | (((QData)((IData)(
-                                                                       (7U 
-                                                                        & (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                           >> 0x0000001cU)))) 
-                                                       << 0x00000020U) 
-                                                      | (QData)((IData)(
-                                                                        ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[2U] 
-                                                                          << 1U) 
-                                                                         | (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                            >> 0x0000001fU))))))
-                                                   : 
-                                                  (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                    << 0x0000003cU) 
-                                                   | (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                       << 0x0000001cU) 
-                                                      | ((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U])) 
-                                                         >> 4U)))) 
-                                                 & (- (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid)))))) 
-                                     << 4U));
-    vlSelfRef.btb_f3_preds[2U] = (0x000000ffU & (((IData)(
-                                                          (0x0000000fffffffffULL 
-                                                           & (((2U 
-                                                                & (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_hit))
-                                                                ? 
-                                                               (((QData)((IData)(
-                                                                                (1U 
-                                                                                & (IData)(
-                                                                                ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U] 
-                                                                                >> 7U) 
-                                                                                | (0U 
-                                                                                != 
-                                                                                (0x30000000U 
-                                                                                & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U]))))))) 
-                                                                 << 0x00000023U) 
-                                                                | (((QData)((IData)(
-                                                                                (7U 
-                                                                                & (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                                >> 0x0000001cU)))) 
-                                                                    << 0x00000020U) 
-                                                                   | (QData)((IData)(
-                                                                                ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[2U] 
-                                                                                << 1U) 
-                                                                                | (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                                >> 0x0000001fU))))))
-                                                                : 
-                                                               (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                                 << 0x0000003cU) 
-                                                                | (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                                    << 0x0000001cU) 
-                                                                   | ((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U])) 
-                                                                      >> 4U)))) 
-                                                              & (- (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid)))))) 
-                                                  >> 0x0000001cU) 
-                                                 | ((IData)(
-                                                            ((0x0000000fffffffffULL 
-                                                              & (((2U 
-                                                                   & (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_hit))
-                                                                   ? 
-                                                                  (((QData)((IData)(
-                                                                                (1U 
-                                                                                & (IData)(
-                                                                                ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U] 
-                                                                                >> 7U) 
-                                                                                | (0U 
-                                                                                != 
-                                                                                (0x30000000U 
-                                                                                & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U]))))))) 
-                                                                    << 0x00000023U) 
-                                                                   | (((QData)((IData)(
-                                                                                (7U 
-                                                                                & (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                                >> 0x0000001cU)))) 
-                                                                       << 0x00000020U) 
-                                                                      | (QData)((IData)(
-                                                                                ((vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[2U] 
-                                                                                << 1U) 
-                                                                                | (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_entry[1U] 
-                                                                                >> 0x0000001fU))))))
-                                                                   : 
-                                                                  (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                                    << 0x0000003cU) 
-                                                                   | (((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[2U])) 
-                                                                       << 0x0000001cU) 
-                                                                      | ((QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_preds_in[1U])) 
-                                                                         >> 4U)))) 
-                                                                 & (- (QData)((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid))))) 
-                                                             >> 0x00000020U)) 
-                                                    << 4U)));
+    if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
+                   >> 7U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 7U;
+    }
+    if ((1U & ((~ ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
+                   >> 8U)) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty))))) {
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty = 1U;
+        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx = 8U;
+    }
 }

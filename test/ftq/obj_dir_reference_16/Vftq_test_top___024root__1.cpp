@@ -75,15 +75,21 @@ void Vftq_test_top___024root___eval_triggers_vec__ico__1(Vftq_test_top___024root
         = vlSelfRef.brupdate_b2_taken;
     vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_target__0 
         = vlSelfRef.brupdate_b2_target;
-    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_br_mask__0 
-        = vlSelfRef.brupdate_b2_br_mask;
-    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_cfi_is_br__0 
-        = vlSelfRef.brupdate_b2_cfi_is_br;
-    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_cfi_is_call__0 
-        = vlSelfRef.brupdate_b2_cfi_is_call;
-    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_cfi_is_ret__0 
-        = vlSelfRef.brupdate_b2_cfi_is_ret;
+    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_pc_lob__0 
+        = vlSelfRef.brupdate_b2_pc_lob;
+    vlSelfRef.__Vtrigprevexpr___TOP__brupdate_b2_cfi_type__0 
+        = vlSelfRef.brupdate_b2_cfi_type;
     vlSelfRef.__Vtrigprevexpr___TOP__query_valid__0 
         = vlSelfRef.query_valid;
     vlSelfRef.__Vtrigprevexpr___TOP__query_idx__0 = vlSelfRef.query_idx;
+    vlSelfRef.__Vtrigprevexpr___TOP__exec_query_valid__0 
+        = vlSelfRef.exec_query_valid;
+    vlSelfRef.__Vtrigprevexpr___TOP__exec_query_idx__0 
+        = vlSelfRef.exec_query_idx;
+    vlSelfRef.__Vtrigprevexpr___TOP__exec_query_pc__0[0U] 
+        = vlSelfRef.exec_query_pc[0U];
+    vlSelfRef.__Vtrigprevexpr___TOP__exec_query_pc__0[1U] 
+        = vlSelfRef.exec_query_pc[1U];
+    vlSelfRef.__Vtrigprevexpr___TOP__exec_query_pc__0[2U] 
+        = vlSelfRef.exec_query_pc[2U];
 }

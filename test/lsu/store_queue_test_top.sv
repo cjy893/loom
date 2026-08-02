@@ -189,6 +189,7 @@ module store_queue_test_top (
         .store_req_valid,
         .store_req_ready,
         .store_req_addr,
+        .store_req_cacheable(),
         .store_req_data,
         .store_req_mask,
         .store_req_idx,

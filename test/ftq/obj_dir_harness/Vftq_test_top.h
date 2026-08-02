@@ -50,10 +50,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vftq_test_top VL_NOT_FINAL : public Verilated
     VL_IN8(&brupdate_b2_mispredict,0,0);
     VL_IN8(&brupdate_b2_ftq_idx,3,0);
     VL_IN8(&brupdate_b2_taken,0,0);
-    VL_IN8(&brupdate_b2_br_mask,3,0);
-    VL_IN8(&brupdate_b2_cfi_is_br,0,0);
-    VL_IN8(&brupdate_b2_cfi_is_call,0,0);
-    VL_IN8(&brupdate_b2_cfi_is_ret,0,0);
+    VL_IN8(&brupdate_b2_pc_lob,5,0);
+    VL_IN8(&brupdate_b2_cfi_type,2,0);
     VL_OUT8(&bpd_update_valid,0,0);
     VL_OUT8(&bpd_update_is_mispredict_update,0,0);
     VL_OUT8(&bpd_update_is_repair_update,0,0);

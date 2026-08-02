@@ -134,7 +134,9 @@ module btb #(
     logic [SET_SZ-1:0] upd_set;
     logic [TAG_SZ-1:0] upd_tag;
     logic upd_is_taken_cfi;
+    logic upd_is_commit;
 
+    assign upd_is_commit = !update.is_mispredict_update && !update.is_repair_update && !(|update.btb_mispredicts);
     assign upd_lane_pc = update.pc + ({31'b0, update.cfi_idx} << 2);
     assign upd_set = upd_lane_pc[SET_SZ+1:2];
     assign upd_tag = upd_lane_pc[SET_SZ+2 +: TAG_SZ];
@@ -142,6 +144,20 @@ module btb #(
 
     logic upd_hit;
     logic [WAY_IDX_SZ-1:0] upd_hit_way;
+
+    logic [BANK_WIDTH-1:0] upd_meta_hit;
+    logic [BANK_WIDTH-1:0][WAY_IDX_SZ-1:0] upd_meta_way;
+    logic [BANK_WIDTH-1:0][SET_SZ-1:0] invalidate_set;
+
+    assign upd_meta_hit = update.meta[BANK_WIDTH-1:0];
+    assign upd_meta_way = update.meta[BANK_WIDTH +: BANK_WIDTH * WAY_IDX_SZ];
+
+    for (genvar lane = 0; lane < BANK_WIDTH; lane++) begin : gen_invalidate_addr
+        logic [31:0] lane_pc;
+
+        assign lane_pc = update.pc + lane * 4;
+        assign invalidate_set[lane] = lane_pc[SET_SZ+1:2];
+    end
 
     always_comb begin
         upd_hit = 1'b0;
@@ -156,8 +172,8 @@ module btb #(
     end
 
     logic do_allocate, do_update;
-    assign do_allocate = update_valid && upd_is_taken_cfi && !upd_hit;
-    assign do_update = update_valid && upd_is_taken_cfi && upd_hit;
+    assign do_allocate = update_valid && upd_is_commit && upd_is_taken_cfi && !upd_hit;
+    assign do_update = update_valid && upd_is_commit && upd_is_taken_cfi && upd_hit;
 
     logic [WAY_IDX_SZ-1:0] alloc_way;
     assign alloc_way = repl_ptr[upd_set];
@@ -168,11 +184,19 @@ module btb #(
                 repl_ptr[s] <= '0;
                 entry_valid[s] <= '0;
             end
-        end else if(do_allocate) begin
-            entry_valid[upd_set][alloc_way] <= 1'b1;
-            
-            if(repl_ptr[upd_set] == WAY_IDX_SZ'(NUM_WAYS - 1)) repl_ptr[upd_set] <= '0;
-            else repl_ptr[upd_set] <= repl_ptr[upd_set] + 1'b1;
+        end else begin
+            if(do_allocate) begin
+                entry_valid[upd_set][alloc_way] <= 1'b1;
+
+                if(repl_ptr[upd_set] == WAY_IDX_SZ'(NUM_WAYS - 1)) repl_ptr[upd_set] <= '0;
+                else repl_ptr[upd_set] <= repl_ptr[upd_set] + 1'b1;
+            end
+
+            for(int lane = 0; lane < BANK_WIDTH; lane++) begin
+                if(update_valid && update.btb_mispredicts[lane] && upd_meta_hit[lane]) begin
+                    entry_valid[invalidate_set[lane]][upd_meta_way[lane]] <= 1'b0;
+                end
+            end
         end
     end
 

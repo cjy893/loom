@@ -4,44 +4,69 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___nba_sequent__TOP__5(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__5\n"); );
+void Vbpd_full_test_top___024root___nba_sequent__TOP__4(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__4\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
+        = vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U];
+    vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U] 
+        = vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U];
+    vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U] 
+        = vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U];
     vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_set 
         = vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
-    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0) {
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0] 
-            = vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0;
+    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0) {
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0] 
+            = (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid
+               [vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0] 
+               | (3U & ((CData)(1U) << (IData)(vlSelfRef.__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0))));
     }
-    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0) {
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v1] 
-            = vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v1;
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0] 
-            = vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0;
+    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1) {
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1] 
+            = ((~ ((CData)(1U) << (IData)(vlSelfRef.__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1))) 
+               & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid
+               [vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1]);
     }
-    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v1) {
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data[0U] = 0U;
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data[1U] = 0U;
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[0U] = 0U;
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[1U] = 0U;
+    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v2) {
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v2] 
+            = ((~ ((CData)(1U) << (IData)(vlSelfRef.__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v2))) 
+               & vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid
+               [vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v2]);
     }
-    vlSelfRef.ras_read_addr = vlSelfRef.bpd_full_test_top__DOT__ras_inst__DOT__stack
-        [vlSelfRef.ras_read_idx];
-    vlSelfRef.current_ghist[0U] = (((IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist) 
-                                    << 8U) | (((IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__saw_nt) 
-                                               << 7U) 
-                                              | (IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__ras_idx)));
-    vlSelfRef.current_ghist[1U] = (((IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist) 
-                                    >> 0x00000018U) 
-                                   | ((IData)((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                                               >> 0x00000020U)) 
-                                      << 8U));
-    vlSelfRef.current_ghist[2U] = ((IData)((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__hist 
-                                            >> 0x00000020U)) 
-                                   >> 0x00000018U);
-    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_valid 
-        = ((IData)(vlSelfRef.rst_n) && ((IData)(vlSelfRef.f0_valid) 
-                                        & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset))));
+    if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v3) {
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[0U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[1U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[2U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[3U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[4U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[5U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[6U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[7U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[8U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[9U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[10U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[11U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[12U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[13U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[14U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[15U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[16U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[17U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[18U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[19U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[20U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[21U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[22U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[23U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[24U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[25U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[26U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[27U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[28U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[29U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[30U] = 0U;
+        vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[31U] = 0U;
+    }
 }

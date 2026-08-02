@@ -46,13 +46,13 @@ void Vmem_issue_test_top___024root___eval_ico(Vmem_issue_test_top___024root* vlS
         {
             // Inlined CFunc: _ico_comb__TOP__8
             vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                            >> 0x00000010U));
+                                            >> 0x00000012U));
             vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
                 = ((IData)(vlSelfRef.br_mispredict) 
                    & (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                             & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                 << 4U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                           >> 0x0000001cU)))));
+                             & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                                 << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                           >> 0x0000001eU)))));
         }
     }
 }

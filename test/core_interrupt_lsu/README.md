@@ -11,9 +11,8 @@ Covered contracts:
   drains exactly once;
 - a delayed load response from before the interrupt cannot write back or
   commit;
-- a branch misprediction redirect wins when the branch resolves in the same
-  cycle that an interrupt becomes pending, and the pending interrupt is taken
-  afterward.
+- a pending interrupt is blocked by the branch `b1` kill phase, then the
+  registered `b2` redirect is observed before interrupt entry.
 
 Run:
 

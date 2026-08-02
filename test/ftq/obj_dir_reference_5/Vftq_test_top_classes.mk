@@ -28,12 +28,13 @@ VM_VPI = 0
 # Generated module classes, fast-path, compile with highest optimization
 VM_CLASSES_FAST += \
   Vftq_test_top_vm_classes_0 \
-  Vftq_test_top___024root__4 \
-  Vftq_test_top___024root__5 \
   Vftq_test_top___024root__6 \
   Vftq_test_top___024root__7 \
   Vftq_test_top___024root__8 \
   Vftq_test_top___024root__9 \
+  Vftq_test_top___024root__10 \
+  Vftq_test_top___024root__11 \
+  Vftq_test_top___024root__12 \
 
 # Generated module classes, non-fast-path, compile with low/medium optimization
 VM_CLASSES_SLOW += \

@@ -20,6 +20,8 @@ module unq(
     output logic [31:0] csr_wmask,
     input logic [31:0] csr_rdata,
 
+    input logic mem_barrier_ready,
+
     input logic [63:0] counter_value,
     input logic [31:0] counter_id_value,
 
@@ -30,13 +32,16 @@ module unq(
     input logic kill
 );
 
-    typedef enum logic [2:0] { 
+    typedef enum logic [3:0] { 
         S_IDLE,
         S_CSR,
         S_MUL,
         S_DIV,
         S_CNT,
-        S_ERTN
+        S_ERTN,
+        S_IDLE_OP,
+        S_DBAR,
+        S_DBAR_DONE
     } state_t;
 
     state_t state, next_state;
@@ -52,8 +57,8 @@ module unq(
     uop_t iss_uop_updated;
 
     always_comb begin
-        iss_br_killed = brupdate.b2.mispredict && |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
-        pipe_br_killed = (state != S_IDLE) && brupdate.b2.mispredict && |(pipe_uop.br_mask & brupdate.b1.mispredict_mask);
+        iss_br_killed = |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
+        pipe_br_killed = (state != S_IDLE) && |(pipe_uop.br_mask & brupdate.b1.mispredict_mask);
 
         iss_uop_updated = iss_uop;
         iss_uop_updated.br_mask = iss_uop.br_mask & ~brupdate.b1.resolve_mask;
@@ -77,6 +82,8 @@ module unq(
                     else if(iss_uop.fu_code[FC_DIV]) next_state = S_DIV;
                     else if(iss_uop.is_rdcnt) next_state = S_CNT;
                     else if(iss_uop.is_ertn) next_state = S_ERTN;
+                    else if (iss_uop.is_idle) next_state = S_IDLE_OP;
+                    else if(iss_uop.is_dbar || iss_uop.is_ibar) next_state = S_DBAR;
                 end
             end
             S_CSR: next_state = S_IDLE;
@@ -84,6 +91,9 @@ module unq(
             S_DIV: if(busy_done) next_state = S_IDLE;
             S_CNT: next_state = S_IDLE;
             S_ERTN: next_state = S_IDLE;
+            S_IDLE_OP: next_state = S_IDLE;
+            S_DBAR: if(mem_barrier_ready) next_state = S_DBAR_DONE;
+            S_DBAR_DONE: next_state = S_IDLE;
             default: next_state = S_IDLE;
         endcase
     end
@@ -170,7 +180,8 @@ module unq(
     assign div_resp_ready = (state == S_DIV);
 
     assign res_valid = !kill && !pipe_br_killed &&
-                        ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) || (state == S_CNT) || (state == S_ERTN));
+                        ((state == S_CSR) || (state == S_MUL && busy_done) || (state == S_DIV && busy_done) ||
+                        (state == S_CNT) || (state == S_ERTN) || (state == S_DBAR_DONE) || (state == S_IDLE_OP));
     assign res.valid = res_valid;
     assign res.uop = pipe_uop;
     assign res.predicated = 1'b0;

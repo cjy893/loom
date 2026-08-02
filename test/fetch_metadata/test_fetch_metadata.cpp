@@ -19,12 +19,14 @@ struct Entry {
     uint32_t inst = 0;
     uint8_t ftq_idx = 0;
     bool taken = false;
+    uint32_t predicted_npc = 0;
 
     bool operator==(const Entry& rhs) const {
         return pc == rhs.pc &&
                inst == rhs.inst &&
                ftq_idx == rhs.ftq_idx &&
-               taken == rhs.taken;
+               taken == rhs.taken &&
+               predicted_npc == rhs.predicted_npc;
     }
 };
 
@@ -72,6 +74,10 @@ void clear_enqueue(Vfetch_metadata_test_top* dut) {
     dut->enq_ftq_idx2 = 0;
     dut->enq_ftq_idx3 = 0;
     dut->enq_taken = 0;
+    dut->enq_npc0 = 0;
+    dut->enq_npc1 = 0;
+    dut->enq_npc2 = 0;
+    dut->enq_npc3 = 0;
 }
 
 void reset(Vfetch_metadata_test_top* dut) {
@@ -99,6 +105,8 @@ Packet make_packet(unsigned valid,
         packet.lanes[lane].ftq_idx = ftq_idx;
         packet.lanes[lane].taken =
             (taken_mask & (1U << lane)) != 0;
+        packet.lanes[lane].predicted_npc =
+            pc_base + 0x100U + lane * 0x24U;
     }
     return packet;
 }
@@ -138,6 +146,10 @@ void drive_packet(Vfetch_metadata_test_top* dut,
         (packet.lanes[1].taken ? 0x2U : 0U) |
         (packet.lanes[2].taken ? 0x4U : 0U) |
         (packet.lanes[3].taken ? 0x8U : 0U);
+    dut->enq_npc0 = packet.lanes[0].predicted_npc;
+    dut->enq_npc1 = packet.lanes[1].predicted_npc;
+    dut->enq_npc2 = packet.lanes[2].predicted_npc;
+    dut->enq_npc3 = packet.lanes[3].predicted_npc;
 }
 
 Output output_of(Vfetch_metadata_test_top* dut) {
@@ -148,13 +160,15 @@ Output output_of(Vfetch_metadata_test_top* dut) {
         dut->deq_pc0,
         dut->deq_inst0,
         static_cast<uint8_t>(dut->deq_ftq_idx0),
-        (dut->deq_taken & 0x1U) != 0
+        (dut->deq_taken & 0x1U) != 0,
+        dut->deq_npc0
     };
     output.lanes[1] = {
         dut->deq_pc1,
         dut->deq_inst1,
         static_cast<uint8_t>(dut->deq_ftq_idx1),
-        (dut->deq_taken & 0x2U) != 0
+        (dut->deq_taken & 0x2U) != 0,
+        dut->deq_npc1
     };
     return output;
 }
@@ -291,11 +305,16 @@ bool test_stall_wrap_flush(Vfetch_metadata_test_top* dut) {
     dut->deq_ready = 1;
     dut->eval();
     passed &= check(
-        "metadata wrap accepts after same-cycle dequeue",
+        "metadata wrap does not borrow dequeue capacity",
+        !dut->enq_ready);
+    tick(dut);
+    dut->deq_ready = 0;
+    dut->eval();
+    passed &= check(
+        "metadata wrap accepts on the next cycle",
         dut->enq_ready);
     tick(dut);
     clear_enqueue(dut);
-    dut->deq_ready = 0;
     dut->eval();
 
     std::vector<Entry> expected = packed_entries(first);
@@ -311,8 +330,8 @@ bool test_stall_wrap_flush(Vfetch_metadata_test_top* dut) {
     dut->deq_ready = 1;
     dut->eval();
     passed &= check(
-        "flush masks wrong-path metadata immediately",
-        dut->deq_valid == 0);
+        "flush leaves registered metadata visible until edge",
+        dut->deq_valid == 0x3U);
     passed &= check(
         "flush rejects metadata enqueue",
         !dut->enq_ready);
@@ -370,6 +389,9 @@ bool test_random_reference(Vfetch_metadata_test_top* dut) {
                               (packet_ftq + lane) & 0xfU);
                 pending.lanes[lane].taken =
                     (random & (1U << (16 + lane))) != 0;
+                pending.lanes[lane].predicted_npc =
+                    0x1d000000U ^ (sequence * 0x104U) ^
+                    (static_cast<uint32_t>(lane) << 2);
                 if (pending.valid & (1U << lane))
                     ++sequence;
             }
@@ -385,7 +407,6 @@ bool test_random_reference(Vfetch_metadata_test_top* dut) {
         dut->eval();
 
         const unsigned expected_valid =
-            flush ? 0U :
             (model.size() >= 2 ? 0x3U :
              (model.size() == 1 ? 0x1U : 0U));
         const Output output = output_of(dut);
@@ -415,8 +436,7 @@ bool test_random_reference(Vfetch_metadata_test_top* dut) {
                 : 0;
         const bool expected_ready =
             !flush &&
-            static_cast<int>(model.size()) -
-                    deq_count + enq_count <=
+            static_cast<int>(model.size()) + enq_count <=
                 kEntries;
         passed &= check(
             "random metadata ready cycle " +

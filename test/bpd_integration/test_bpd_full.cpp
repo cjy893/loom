@@ -43,7 +43,15 @@ PredInfo read_btb(Vbpd_full_test_top* dut, int l) {
 
 uint64_t read_ghist_hist(Vbpd_full_test_top* dut) {
     uint32_t w0 = dut->current_ghist[0], w1 = dut->current_ghist[1], w2 = dut->current_ghist[2];
-    return (uint64_t(w0) >> 8) | (uint64_t(w1) << 24) | (uint64_t(w2 & 0xFF) << 56);
+    const uint64_t old_history =
+        (uint64_t(w0) >> 8) | (uint64_t(w1) << 24) |
+        (uint64_t(w2 & 0xFF) << 56);
+    const bool new_saw_nt = (w0 >> 6) & 1U;
+    const bool new_saw_taken = (w0 >> 5) & 1U;
+
+    if (new_saw_taken) return (old_history << 1) | 1ULL;
+    if (new_saw_nt) return old_history << 1;
+    return old_history;
 }
 
 void expect_pred(const char* n, const PredInfo& p, bool t, bool br, bool bb, bool ji, uint32_t tg) {

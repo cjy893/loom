@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+TEST_DIR="$ROOT/test/core_top_recovery"
+VERILATOR=${VERILATOR:-verilator}
+VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
+MDIR=${CORE_TOP_RECOVERY_OBJ_DIR:-"$TEST_DIR/obj_dir"}
+
+rtl=(
+  "$ROOT/common/params_pkg.sv"
+  "$ROOT/common/consts_pkg.sv"
+  "$ROOT/common/types_pkg.sv"
+  "$ROOT/ifu/bpd/ubtb.sv"
+  "$ROOT/ifu/bpd/bim.sv"
+  "$ROOT/ifu/bpd/btb.sv"
+  "$ROOT/ifu/bpd/composer.sv"
+  "$ROOT/ifu/bpd/bpd_update_router.sv"
+  "$ROOT/ifu/bpd/f3_predecode.sv"
+  "$ROOT/ifu/bpd/ghist.sv"
+  "$ROOT/ifu/bpd/ras.sv"
+  "$ROOT/ifu/fetch_target_queue.sv"
+  "$ROOT/ifu/ifu.sv"
+  "$ROOT/ifu/fetcher_buffer.sv"
+  "$ROOT/exu/decode.sv"
+  "$ROOT/exu/br_mask.sv"
+  "$ROOT/exu/rename/rename_maptable.sv"
+  "$ROOT/exu/rename/rename_freelist.sv"
+  "$ROOT/exu/rename/rename_busytable.sv"
+  "$ROOT/exu/rename/rename_stage.sv"
+  "$ROOT/exu/dispatch.sv"
+  "$ROOT/exu/issue/issue_slot.sv"
+  "$ROOT/exu/issue/issue_unit_collapsing.sv"
+  "$ROOT/exu/regfile.sv"
+  "$ROOT/exu/exe/alu.sv"
+  "$ROOT/exu/exe/mem.sv"
+  "$ROOT/exu/exe/div/srt4_qselect.sv"
+  "$ROOT/exu/exe/div/srt4_preprocess.sv"
+  "$ROOT/exu/exe/div/srt4_otfc.sv"
+  "$ROOT/exu/exe/div/srt4_core.sv"
+  "$ROOT/exu/exe/div/divider.sv"
+  "$ROOT/exu/exe/unq.sv"
+  "$ROOT/exu/rob.sv"
+  "$ROOT/csr/csr_file.sv"
+  "$ROOT/lsu/load_queue.sv"
+  "$ROOT/lsu/store_queue.sv"
+  "$ROOT/lsu/lsu.sv"
+  "$ROOT/mmu/addr_trans.sv"
+  "$ROOT/mmu/dmmu.sv"
+  "$ROOT/mmu/immu.sv"
+  "$ROOT/mmu/tlb.sv"
+  "$ROOT/mmu/tlb_ctrl.sv"
+  "$ROOT/cache/icache.sv"
+  "$ROOT/cache/dcache.sv"
+  "$ROOT/cache/cacop_ctrl.sv"
+  "$ROOT/exu/loom_core.sv"
+  "$ROOT/core_top.sv"
+  "$TEST_DIR/core_top_recovery_test_top.sv"
+)
+
+"$VERILATOR" --cc -Wno-fatal \
+  -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
+  --Mdir "$MDIR" \
+  --top-module core_top_recovery_test_top \
+  --exe "$TEST_DIR/test_core_top_recovery.cpp" \
+  -CFLAGS "-std=c++17 -O0" \
+  "${rtl[@]}"
+
+make -C "$MDIR" -f Vcore_top_recovery_test_top.mk -j 1 \
+  VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+
+"$MDIR/Vcore_top_recovery_test_top"

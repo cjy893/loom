@@ -1,9 +1,9 @@
 # Fetch Metadata Transport Test
 
 This test defines the frontend-to-decode transport contract for branch
-prediction metadata. It is intentionally independent of the current
-production `ifu/fetcher_buffer.sv`, whose interface still transports only
-`pc` and `inst`.
+prediction metadata. By default it compiles the production
+`ifu/fetcher_buffer.sv`. The reference mode validates the contract before the
+production interface and storage are implemented.
 
 Each valid instruction carries one indivisible record:
 
@@ -22,11 +22,23 @@ The test covers:
 - flush priority and wrong-path metadata removal
 - a deterministic randomized reference model
 
-Run with:
+Run the production module with:
 
 ```sh
 bash test/fetch_metadata/run.sh
 ```
+
+Run the reference implementation with:
+
+```sh
+bash test/fetch_metadata/run.sh --reference
+```
+
+The production Fetch Buffer contract adds `FTQ_IDX_SZ` and transports
+`enq_ftq_idx`/`deq_ftq_idx` plus
+`enq_predicted_taken`/`deq_predicted_taken`. These fields must be compacted,
+stalled, wrapped, and flushed as part of the same indivisible instruction
+record as PC, instruction bits, and fetch exception metadata.
 
 This test does not yet choose how the execute stage obtains the predicted
 target. The v4-style design can carry `ftq_idx` with the uop and retrieve

@@ -156,6 +156,8 @@ void clear_inputs(Vbtb_test_top* dut) {
     dut->update_cfi_is_b_bl        = 0;
     dut->update_cfi_is_jirl        = 0;
     dut->update_target             = 0;
+    for (int word = 0; word < 4; ++word)
+        dut->update_meta[word] = 0;
 }
 
 // BTB pipeline: F0 request, S2 lookup result, then align it with the
@@ -382,6 +384,19 @@ uint8_t read_btb_meta(Vbtb_test_top* dut) {
     return uint8_t(dut->f3_meta[0] & 0xF);  // 低 4 bit: {way1,way0,hit1,hit0}
 }
 
+void do_btb_mispredict_update(Vbtb_test_top* dut, uint32_t pc,
+                              uint8_t btb_mispredicts, uint8_t meta) {
+    dut->update_valid = 1;
+    dut->update_btb_mispredicts = btb_mispredicts;
+    dut->update_pc = pc;
+    dut->update_meta[0] = meta;
+    eval_cycle(dut);
+
+    dut->update_valid = 0;
+    dut->update_btb_mispredicts = 0;
+    dut->update_meta[0] = 0;
+}
+
 void test_meta_hit(Vbtb_test_top* dut) {
     clear_inputs(dut); ref_init(); reset_dut(dut);
 
@@ -420,6 +435,33 @@ void test_meta_two_way(Vbtb_test_top* dut) {
     expect_eq("btb_meta2: way idx",  (m >> 2) & 1, 0);
 }
 
+void test_btb_mispredict_invalidates_recorded_way(Vbtb_test_top* dut) {
+    clear_inputs(dut); ref_init(); reset_dut(dut);
+
+    constexpr uint32_t pc_way0 = 0x1c010000;
+    constexpr uint32_t pc_way1 = pc_way0 + 0x100000;
+    do_train(dut, pc_way0, 0, 0xaaaa0000, false, true, false);
+    do_train(dut, pc_way1, 0, 0xbbbb0000, false, true, false);
+
+    uint64_t pred_in = pred_to_u64({true, false, true, false, 0xbad00000});
+    do_btb_lookup(dut, pc_way1, pred_in, 0);
+    uint8_t meta = read_btb_meta(dut);
+    expect_eq("btb_invalidate: recorded hit", (meta >> 0) & 1, 1);
+    expect_eq("btb_invalidate: recorded way1", (meta >> 2) & 1, 1);
+
+    do_btb_mispredict_update(dut, pc_way1, 0x1, meta);
+
+    do_btb_lookup(dut, pc_way1, pred_in, 0);
+    expect_pred_eq("btb_invalidate: way1 removed", read_f3_pred(dut, 0),
+                   true, false, true, false, 0xbad00000);
+    expect_eq("btb_invalidate: way1 now misses", read_btb_meta(dut) & 1, 0);
+
+    do_btb_lookup(dut, pc_way0, pred_in, 0);
+    expect_pred_eq("btb_invalidate: way0 preserved", read_f3_pred(dut, 0),
+                   true, false, true, false, 0xaaaa0000);
+    expect_eq("btb_invalidate: way0 still hits", read_btb_meta(dut) & 1, 1);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -442,6 +484,7 @@ int main(int argc, char** argv) {
     test_meta_hit(dut);
     test_meta_miss(dut);
     test_meta_two_way(dut);
+    test_btb_mispredict_invalidates_recorded_way(dut);
 
     pass("btb");
     delete dut;

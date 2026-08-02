@@ -188,8 +188,10 @@ struct FetchSnapshot {
     uint32_t valid = 0;
     uint32_t xcpt_valid = 0;
     uint32_t xcpt_code = 0;
+    uint32_t predicted_taken = 0;
     std::array<uint32_t, FETCH_WIDTH> pc{};
     std::array<uint32_t, FETCH_WIDTH> inst{};
+    std::array<uint32_t, FETCH_WIDTH> predicted_npc{};
 };
 
 static FetchSnapshot snapshot_fetch(Vifu_test_top* dut) {
@@ -198,9 +200,12 @@ static FetchSnapshot snapshot_fetch(Vifu_test_top* dut) {
     snapshot.valid = dut->fetch_valid;
     snapshot.xcpt_valid = dut->fetch_xcpt_valid;
     snapshot.xcpt_code = dut->fetch_xcpt_code;
+    snapshot.predicted_taken = dut->fetch_predicted_taken;
     for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
         snapshot.pc[lane] = dut->fetch_pc[lane];
         snapshot.inst[lane] = dut->fetch_insts[lane];
+        snapshot.predicted_npc[lane] =
+            dut->fetch_predicted_npc[lane];
     }
     return snapshot;
 }
@@ -209,13 +214,15 @@ static bool same_fetch(const FetchSnapshot& lhs,
                        const FetchSnapshot& rhs) {
     if (lhs.valid != rhs.valid ||
         lhs.xcpt_valid != rhs.xcpt_valid ||
-        lhs.xcpt_code != rhs.xcpt_code)
+        lhs.xcpt_code != rhs.xcpt_code ||
+        lhs.predicted_taken != rhs.predicted_taken)
         return false;
     for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
         if ((lhs.valid & (1U << lane)) == 0)
             continue;
         if (lhs.pc[lane] != rhs.pc[lane] ||
-            lhs.inst[lane] != rhs.inst[lane])
+            lhs.inst[lane] != rhs.inst[lane] ||
+            lhs.predicted_npc[lane] != rhs.predicted_npc[lane])
             return false;
     }
     return true;
@@ -298,6 +305,13 @@ static bool run_reset_and_sequential(Vifu_test_top* dut) {
     passed &= accept_request(dut, RESET_PC);
     passed &= send_response(dut, FIRST);
     passed &= expect_fetch(dut, 0xfU, RESET_PC, FIRST, 0);
+    passed &= check("sequential packet predicts no taken lane",
+                    dut->fetch_predicted_taken == 0);
+    for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
+        passed &= check("sequential lane predicted NPC is PC+4",
+                        dut->fetch_predicted_npc[lane] ==
+                            RESET_PC + lane * 4U + 4U);
+    }
 
     const FetchSnapshot stalled = snapshot_fetch(dut);
     for (int cycle = 0; cycle < 4; ++cycle) {
@@ -313,6 +327,38 @@ static bool run_reset_and_sequential(Vifu_test_top* dut) {
 
     if (passed)
         std::printf("PASS: IFU reset, sequential fetch, and backpressure\n");
+    return passed;
+}
+
+static bool run_direct_self_branch_predicted_npc(
+    Vifu_test_top* dut) {
+    static constexpr Bundle SELF_BRANCH = {
+        0x50000000U, 0x03400000U, 0x03400000U, 0x03400000U
+    };
+
+    reset(dut);
+    bool passed = complete_translation(dut, RESET_PC, RESET_PC);
+    passed &= expect_request(dut, RESET_PC);
+    passed &= accept_request(dut, RESET_PC);
+    passed &= send_response(dut, SELF_BRANCH);
+    passed &= expect_fetch(dut, 0x1U, RESET_PC, SELF_BRANCH, 0);
+    passed &= check("self B/BL is predicted taken",
+                    dut->fetch_predicted_taken == 0x1U);
+    passed &= check("self B/BL predicted NPC remains at its PC",
+                    dut->fetch_predicted_npc[0] == RESET_PC);
+
+    const FetchSnapshot stalled = snapshot_fetch(dut);
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        tick(dut);
+        passed &= check("self B/BL metadata holds under backpressure",
+                        same_fetch(stalled, snapshot_fetch(dut)));
+    }
+
+    accept_fetch(dut);
+    passed &= expect_xlate_request(dut, RESET_PC);
+
+    if (passed)
+        std::printf("PASS: IFU direct self-branch predicted NPC\n");
     return passed;
 }
 
@@ -534,6 +580,7 @@ int main(int argc, char** argv) {
 
     bool passed = true;
     passed &= run_reset_and_sequential(dut);
+    passed &= run_direct_self_branch_predicted_npc(dut);
     passed &= run_redirect_while_request_stalled(dut);
     passed &= run_redirect_with_pending_response(dut);
     passed &= run_redirect_flushes_fetch_buffer(dut);

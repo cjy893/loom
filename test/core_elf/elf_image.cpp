@@ -106,7 +106,7 @@ bool ElfImage::load(const std::string& path, std::string* error) {
             continue;
 
         uint32_t file_offset = read_u32(file, offset + 4);
-        uint32_t virtual_address = read_u32(file, offset + 8);
+        uint32_t physical_address = read_u32(file, offset + 12);
         uint32_t file_size = read_u32(file, offset + 16);
         uint32_t memory_size = read_u32(file, offset + 20);
         uint32_t flags = read_u32(file, offset + 24);
@@ -119,14 +119,18 @@ bool ElfImage::load(const std::string& path, std::string* error) {
             *error = "PT_LOAD data is outside the ELF file";
             return false;
         }
-        if (static_cast<uint64_t>(virtual_address) + memory_size >
+        if (static_cast<uint64_t>(physical_address) + memory_size >
             (uint64_t{1} << 32)) {
             *error = "PT_LOAD address range wraps around 32 bits";
             return false;
         }
 
         Segment segment;
-        segment.address = virtual_address;
+        // Bare-metal images use p_paddr as the load-memory address.  In
+        // particular, nscscc_perf copies .data from its LMA to p_vaddr in
+        // start.S; preloading at p_vaddr skips that contract and leaves the
+        // actual copy source empty.
+        segment.address = physical_address;
         segment.file_size = file_size;
         segment.memory_size = memory_size;
         segment.flags = flags;

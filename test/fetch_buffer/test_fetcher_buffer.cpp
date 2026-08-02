@@ -303,13 +303,17 @@ bool test_full_simultaneous_wrap(Vfetcher_buffer_test_top* dut) {
 
     dut->deq_ready = 1;
     dut->eval();
-    passed &= check("same-cycle dequeue exposes capacity",
-                    dut->enq_ready);
+    passed &= check("full queue does not borrow dequeue capacity",
+                    !dut->enq_ready);
     passed &= expect_output(dut, packed_entries(first), 0,
                             "full queue oldest entries");
     tick(dut);
-    clear_enqueue(dut);
     dut->deq_ready = 0;
+    dut->eval();
+    passed &= check("dequeued capacity is visible next cycle",
+                    dut->enq_ready);
+    tick(dut);
+    clear_enqueue(dut);
     dut->eval();
 
     std::vector<Entry> expected = packed_entries(first);
@@ -344,8 +348,8 @@ bool test_flush_priority(Vfetcher_buffer_test_top* dut) {
     dut->deq_ready = 1;
     dut->flush = 1;
     dut->eval();
-    passed &= check("flush masks wrong-path output immediately",
-                    dut->deq_valid == 0);
+    passed &= check("flush leaves registered queue output visible until edge",
+                    dut->deq_valid == 0x3U);
     passed &= check("flush rejects same-cycle enqueue",
                     !dut->enq_ready);
     tick(dut);
@@ -419,7 +423,6 @@ bool test_random_reference(Vfetcher_buffer_test_top* dut) {
         dut->eval();
 
         const unsigned expected_valid =
-            flush ? 0U :
             (model.size() >= 2 ? 0x3U :
              (model.size() == 1 ? 0x1U : 0U));
         const Output output = output_of(dut);
@@ -448,8 +451,7 @@ bool test_random_reference(Vfetcher_buffer_test_top* dut) {
                 : 0;
         const bool expected_ready =
             !flush &&
-            static_cast<int>(model.size()) -
-                    deq_count + enq_count <=
+            static_cast<int>(model.size()) + enq_count <=
                 kEntries;
         passed &= check("random enqueue ready cycle " +
                             std::to_string(cycle),

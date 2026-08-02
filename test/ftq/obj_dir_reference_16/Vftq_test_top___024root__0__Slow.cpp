@@ -14,6 +14,9 @@ VL_ATTR_COLD void Vftq_test_top___024root___eval_static(Vftq_test_top___024root*
     Vftq_test_top___024root___eval_static__0(vlSelf);
     {
         // Inlined CFunc: _eval_static__1
+        vlSelfRef.__Vtrigprevexpr___TOP__flush_valid__0 
+            = vlSelfRef.flush_valid;
+        vlSelfRef.__Vtrigprevexpr___TOP__clk__1 = vlSelfRef.clk;
         vlSelfRef.__Vtrigprevexpr___TOP__rst_n__1 = vlSelfRef.rst_n;
     }
 }
@@ -49,7 +52,7 @@ VL_ATTR_COLD void Vftq_test_top___024root___eval_settle(Vftq_test_top___024root*
 #ifdef VL_DEBUG
             Vftq_test_top___024root___dump_triggers__stl(vlSelfRef.__VstlTriggered, "stl"s);
 #endif
-            VL_FATAL_MT("test/ftq/ftq_test_top.sv", 5, "", "DIDNOTCONVERGE: Settle region did not converge after '--converge-limit' of 10000 tries");
+            VL_FATAL_MT("/mnt/e/nscscc/chiplab/IP/myCPU/test/ftq/ftq_test_top.sv", 5, "", "DIDNOTCONVERGE: Settle region did not converge after '--converge-limit' of 10000 tries");
         }
         __VstlIterCount = ((IData)(1U) + __VstlIterCount);
         vlSelfRef.__VstlPhaseResult = Vftq_test_top___024root___eval_phase__stl(vlSelf);

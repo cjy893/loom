@@ -4,95 +4,65 @@
 
 #include "Vftq_test_top__pch.h"
 
-#ifdef VL_DEBUG
-void Vftq_test_top___024root___eval_debug_assertions(Vftq_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___eval_debug_assertions\n"); );
+void Vftq_test_top___024root___nba_sequent__TOP__0(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___nba_sequent__TOP__1(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___nba_sequent__TOP__2(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___nba_sequent__TOP__3(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___nba_sequent__TOP__4(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___nba_sequent__TOP__5(Vftq_test_top___024root* vlSelf);
+
+void Vftq_test_top___024root___eval_nba(Vftq_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___eval_nba\n"); );
     Vftq_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if (VL_UNLIKELY(((vlSelfRef.clk & 0xfeU)))) {
-        Verilated::overWidthError("clk");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.rst_n & 0xfeU)))) {
-        Verilated::overWidthError("rst_n");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_valid & 0xfeU)))) {
-        Verilated::overWidthError("enq_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_br_mask & 0xf0U)))) {
-        Verilated::overWidthError("enq_br_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_valid & 0xfeU)))) {
-        Verilated::overWidthError("enq_cfi_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_idx & 0xfcU)))) {
-        Verilated::overWidthError("enq_cfi_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_type & 0xf8U)))) {
-        Verilated::overWidthError("enq_cfi_type");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_is_call & 0xfeU)))) {
-        Verilated::overWidthError("enq_cfi_is_call");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_is_ret & 0xfeU)))) {
-        Verilated::overWidthError("enq_cfi_is_ret");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_npc_plus4 & 0xfeU)))) {
-        Verilated::overWidthError("enq_cfi_npc_plus4");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_cfi_taken & 0xfeU)))) {
-        Verilated::overWidthError("enq_cfi_taken");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_ras_idx & 0xe0U)))) {
-        Verilated::overWidthError("enq_ras_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.enq_start_bank & 0xfeU)))) {
-        Verilated::overWidthError("enq_start_bank");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.commit_valid & 0xfeU)))) {
-        Verilated::overWidthError("commit_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.commit_ftq_idx & 0xf0U)))) {
-        Verilated::overWidthError("commit_ftq_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.redirect_valid & 0xfeU)))) {
-        Verilated::overWidthError("redirect_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.redirect_ftq_idx & 0xf0U)))) {
-        Verilated::overWidthError("redirect_ftq_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_mispredict 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_mispredict");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_ftq_idx 
-                      & 0xf0U)))) {
-        Verilated::overWidthError("brupdate_b2_ftq_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_taken & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_taken");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_br_mask 
-                      & 0xf0U)))) {
-        Verilated::overWidthError("brupdate_b2_br_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_br 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_br");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_call 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_call");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_ret 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_ret");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.query_valid & 0xfeU)))) {
-        Verilated::overWidthError("query_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.query_idx & 0xf0U)))) {
-        Verilated::overWidthError("query_idx");
+    if ((3ULL & vlSelfRef.__VnbaTriggered[0U])) {
+        Vftq_test_top___024root___nba_sequent__TOP__0(vlSelf);
+        Vftq_test_top___024root___nba_sequent__TOP__1(vlSelf);
+        Vftq_test_top___024root___nba_sequent__TOP__2(vlSelf);
+        Vftq_test_top___024root___nba_sequent__TOP__3(vlSelf);
+        Vftq_test_top___024root___nba_sequent__TOP__4(vlSelf);
+        Vftq_test_top___024root___nba_sequent__TOP__5(vlSelf);
+        {
+            // Inlined CFunc: _ico_comb__TOP__2
+            if (VL_LTES_III(32, 1U, (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_cfi_idx_d))) {
+                vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d 
+                    = ((0x0dU & (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d)) 
+                       | (2U & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
+                                [vlSelfRef.brupdate_b2_ftq_idx][11U] 
+                                >> 9U)));
+            }
+            if (VL_LTES_III(32, 2U, (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_cfi_idx_d))) {
+                vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d 
+                    = ((0x0bU & (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d)) 
+                       | (4U & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
+                                [vlSelfRef.brupdate_b2_ftq_idx][11U] 
+                                >> 9U)));
+            }
+            if (VL_LTES_III(32, 3U, (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_cfi_idx_d))) {
+                vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d 
+                    = ((7U & (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d)) 
+                       | (8U & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
+                                [vlSelfRef.brupdate_b2_ftq_idx][11U] 
+                                >> 9U)));
+            }
+            if (vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_cfi_is_br_d) {
+                vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d 
+                    = ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_br_mask_d) 
+                       | (0x0fU & ((IData)(1U) << (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__resolved_cfi_idx_d))));
+            }
+        }
     }
 }
-#endif  // VL_DEBUG
+
+void Vftq_test_top___024root___trigger_orInto__act_vec_vec(VlUnpacked<QData/*63:0*/, 1> &out, const VlUnpacked<QData/*63:0*/, 1> &in) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___trigger_orInto__act_vec_vec\n"); );
+    // Locals
+    IData/*31:0*/ n;
+    // Body
+    n = 0U;
+    do {
+        out[n] = (out[n] | in[n]);
+        n = ((IData)(1U) + n);
+    } while ((0U >= n));
+}

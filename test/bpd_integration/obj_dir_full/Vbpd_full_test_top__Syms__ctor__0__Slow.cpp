@@ -5,7 +5,7 @@
 
 void Vbpd_full_test_top__Syms::Vbpd_full_test_top__Syms__ctor__0() {
     // Check resources
-    Verilated::stackCheck(474);
+    Verilated::stackCheck(498);
     // Setup sub module instances
     // Configure time unit / time precision
     _vm_contextp__->timeunit(-12);

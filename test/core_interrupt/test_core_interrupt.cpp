@@ -13,6 +13,8 @@ static constexpr uint32_t RESET_PC = 0x1c000000;
 static constexpr uint32_t HANDLER_PC = 0x1c001000;
 static constexpr uint32_t NOP = 0x03400000;
 static constexpr uint32_t ERTN = 0x06483800;
+static constexpr uint32_t IDLE = 0x06488000;
+static constexpr uint32_t B_SELF = 0x50000000;
 
 static constexpr unsigned CSR_CRMD = 0x000;
 static constexpr unsigned CSR_PRMD = 0x001;
@@ -111,6 +113,8 @@ struct RunResult {
     unsigned pending_bits = 0;
     bool irq_asserted = false;
     bool irq_asserted_with_younger_uops = false;
+    bool idle_seen = false;
+    unsigned idle_cycles_before_irq = 0;
     int irq_assert_cycle = -1;
     unsigned irq_assert_rob_occupancy = 0;
     unsigned committed_before_irq = 0;
@@ -135,7 +139,10 @@ struct IrqControl {
     uint32_t trigger_begin_pc = 0;
     uint32_t trigger_end_pc = 0;
     unsigned trigger_after_commits = 0;
+    unsigned trigger_after_idle_cycles = 0;
     unsigned stop_after_handler_entries = 0;
+    uint32_t pause_after_fetch_pc = 0;
+    bool trigger_when_paused_and_empty = false;
 };
 
 static void tick(Vcore_interrupt_test_top* dut) {
@@ -196,14 +203,40 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
     bool clear_irq_after_tick = false;
     bool stop_after_tick = false;
     unsigned completed_trigger_commits = 0;
+    unsigned consecutive_idle_cycles = 0;
+    bool frontend_paused = false;
+    bool paused_fetch_committed = false;
 
     for (int cycle = 0; cycle < 2000; ++cycle) {
-        if (drive_fetch(dut, program))
-            last_activity = cycle;
+        if (!frontend_paused) {
+            const uint32_t offered_pc = dut->debug_pc;
+            if (drive_fetch(dut, program)) {
+                last_activity = cycle;
+                if (irq.pause_after_fetch_pc >= offered_pc) {
+                    const uint32_t delta =
+                        irq.pause_after_fetch_pc - offered_pc;
+                    const unsigned lane = delta / 4U;
+                    if (irq.pause_after_fetch_pc != 0 &&
+                        (delta & 3U) == 0 && lane < CORE_WIDTH &&
+                        (dut->fe_valid & (1U << lane)) != 0)
+                        frontend_paused = true;
+                }
+            }
+        } else {
+            dut->fe_valid = 0;
+            dut->eval();
+        }
 
         if (dut->interrupt_pending) {
             result.pending_seen = true;
             result.pending_bits |= dut->interrupt_pending_bits;
+        }
+
+        if (dut->core_idle) {
+            result.idle_seen = true;
+            ++consecutive_idle_cycles;
+        } else if (!result.irq_asserted) {
+            consecutive_idle_cycles = 0;
         }
 
         unsigned commit_mask = dut->commit_valids;
@@ -219,6 +252,9 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
                 packed_word(dut->commit_insts, lane),
             };
             result.commits.push_back(commit);
+            if (frontend_paused &&
+                commit.pc == irq.pause_after_fetch_pc)
+                paused_fetch_committed = true;
             if (result.handler_cycle < 0)
                 result.commits_before_handler.push_back(commit);
             if (commit.pc >= irq.trigger_begin_pc &&
@@ -238,6 +274,41 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
             result.irq_assert_rob_occupancy = dut->rob_occupancy;
             result.committed_before_irq = completed_trigger_commits;
             result.irq_asserted_with_younger_uops = true;
+            dut->hw_irq = 1;
+            dut->eval();
+            if (dut->interrupt_pending) {
+                result.pending_seen = true;
+                result.pending_bits |= dut->interrupt_pending_bits;
+            }
+            last_activity = cycle;
+        }
+
+        bool empty_boundary_irq =
+            irq.trigger_when_paused_and_empty &&
+            frontend_paused && !result.irq_asserted &&
+            paused_fetch_committed && dut->rob_empty;
+        if (empty_boundary_irq) {
+            result.irq_asserted = true;
+            result.irq_assert_cycle = cycle;
+            result.irq_assert_rob_occupancy = dut->rob_occupancy;
+            dut->hw_irq = 1;
+            dut->eval();
+            if (dut->interrupt_pending) {
+                result.pending_seen = true;
+                result.pending_bits |= dut->interrupt_pending_bits;
+            }
+            last_activity = cycle;
+        }
+
+        bool idle_irq =
+            irq.trigger_after_idle_cycles != 0 &&
+            !result.irq_asserted && dut->core_idle &&
+            consecutive_idle_cycles >= irq.trigger_after_idle_cycles;
+        if (idle_irq) {
+            result.irq_asserted = true;
+            result.irq_assert_cycle = cycle;
+            result.irq_assert_rob_occupancy = dut->rob_occupancy;
+            result.idle_cycles_before_irq = consecutive_idle_cycles;
             dut->hw_irq = 1;
             dut->eval();
             if (dut->interrupt_pending) {
@@ -268,6 +339,7 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
                 dut->redirect_flush_typ,
             });
             if (dut->redirect_pc == HANDLER_PC) {
+                frontend_paused = false;
                 ++result.handler_entries;
                 if (result.handler_cycle < 0)
                     result.handler_cycle = cycle;
@@ -278,6 +350,9 @@ static RunResult run_program(Vcore_interrupt_test_top* dut,
                         irq.stop_after_handler_entries) {
                     stop_after_tick = true;
                 }
+            } else if (frontend_paused) {
+                frontend_paused = false;
+                paused_fetch_committed = false;
             }
             last_activity = cycle;
         }
@@ -616,6 +691,142 @@ static bool test_held_high_interrupt_retriggers(
     return passed;
 }
 
+static bool test_predicted_self_branch_interrupt_boundary(
+    Vcore_interrupt_test_top* dut) {
+    Program program;
+    add_eentry_setup(&program);
+    program[RESET_PC + 12] = addi_w(11, 0, HW_IRQ0_LIE);
+    program[RESET_PC + 16] = csrwr(11, CSR_ECFG);
+    program[RESET_PC + 20] =
+        addi_w(12, 0, CRMD_DA | CRMD_IE);
+    program[RESET_PC + 24] = csrwr(12, CSR_CRMD);
+
+    program[RESET_PC + 28] = NOP;
+    const uint32_t loop_pc = RESET_PC + 32;
+    program[loop_pc] = B_SELF;
+    program[HANDLER_PC + 0] = csrrd(20, CSR_ERA);
+    program[HANDLER_PC + 4] = NOP;
+
+    RunResult result = run_program(
+        dut, program,
+        {
+            .initial_hw_irq = 0,
+            .clear_at_handler = true,
+            .pause_after_fetch_pc = loop_pc,
+            .trigger_when_paused_and_empty = true,
+        });
+
+    if (!result.irq_asserted) {
+        std::fprintf(stderr,
+                     "self-branch diagnostic: commits=%zu redirects=%zu "
+                     "finished=%d final_era=0x%08x\n",
+                     result.commits.size(), result.redirects.size(),
+                     result.finished, result.final_era);
+        for (const auto& commit : result.commits)
+            std::fprintf(stderr,
+                         "  commit cycle=%d pc=0x%08x inst=0x%08x\n",
+                         commit.cycle, commit.pc, commit.inst);
+        for (const auto& redirect : result.redirects)
+            std::fprintf(stderr,
+                         "  redirect cycle=%d pc=0x%08x typ=%u\n",
+                         redirect.cycle, redirect.pc,
+                         redirect.flush_typ);
+    }
+
+    bool passed = true;
+    passed &= check("self-branch IRQ is asserted at an empty ROB",
+                    result.irq_asserted &&
+                    result.irq_assert_rob_occupancy == 0);
+    passed &= check("self-branch IRQ reaches EENTRY once",
+                    redirect_count(result, HANDLER_PC) == 1);
+    passed &= check("predicted self-branch commits once before IRQ",
+                    commit_count(result.commits_before_handler,
+                                 loop_pc) == 1);
+    passed &= check_eq("predicted self-branch keeps its PC in ERA",
+                       result.last_write[20], loop_pc);
+    passed &= check("self-branch interrupt test reaches quiescence",
+                    result.finished);
+
+    if (passed)
+        std::printf(
+            "PASS: predicted self-branch interrupt boundary\n");
+    return passed;
+}
+
+static bool test_idle_interrupt_wakeup(
+    Vcore_interrupt_test_top* dut) {
+    Program program;
+    add_eentry_setup(&program);
+    program[RESET_PC + 12] = addi_w(11, 0, HW_IRQ0_LIE);
+    program[RESET_PC + 16] = csrwr(11, CSR_ECFG);
+    program[RESET_PC + 20] =
+        addi_w(12, 0, CRMD_DA | CRMD_IE);
+    program[RESET_PC + 24] = csrwr(12, CSR_CRMD);
+
+    const uint32_t idle_pc = RESET_PC + 28;
+    const uint32_t resume_pc = idle_pc + 4;
+    program[idle_pc] = IDLE;
+    program[resume_pc] = addi_w(1, 0, 0x25);
+    program[resume_pc + 4] = addi_w(2, 1, 1);
+    program[resume_pc + 8] = NOP;
+
+    program[HANDLER_PC + 0] = csrrd(20, CSR_ERA);
+    program[HANDLER_PC + 4] = ERTN;
+
+    RunResult result = run_program(
+        dut, program,
+        {
+            .initial_hw_irq = 0,
+            .clear_at_handler = true,
+            .trigger_after_idle_cycles = 5,
+        });
+
+    bool passed = true;
+    passed &= check("IDLE enters the core sleep state",
+                    result.idle_seen);
+    passed &= check("IDLE remains asleep before IRQ assertion",
+                    result.idle_cycles_before_irq >= 5);
+    passed &= check("IDLE wakeup IRQ is asserted",
+                    result.irq_asserted);
+    passed &= check("IDLE wakeup IRQ reaches CSR pending",
+                    result.pending_seen);
+    passed &= check("IDLE redirects exactly once to EENTRY",
+                    redirect_count(result, HANDLER_PC) == 1);
+
+    if (result.handler_cycle < 0) {
+        std::fprintf(stderr,
+                     "INT diagnostic: IDLE wakeup produced no handler\n");
+        return false;
+    }
+
+    passed &= check("IDLE instruction commits exactly once",
+                    commit_count(result.commits, idle_pc) == 1);
+    passed &= check("instruction after IDLE waits for interrupt",
+                    commit_count(result.commits_before_handler,
+                                 resume_pc) == 0);
+    passed &= check_eq("IDLE wakeup saves PC+4 in ERA",
+                       result.last_write[20], resume_pc);
+    passed &= check("ERTN redirects to the instruction after IDLE",
+                    has_redirect_after(result, resume_pc,
+                                       result.handler_cycle));
+    passed &= check("first resumed instruction commits once",
+                    commit_count(result.commits, resume_pc) == 1);
+    passed &= check("second resumed instruction commits once",
+                    commit_count(result.commits, resume_pc + 4) == 1);
+    passed &= check_eq("first resumed instruction result",
+                       result.last_write[1], 0x25);
+    passed &= check_eq("second resumed instruction result",
+                       result.last_write[2], 0x26);
+    passed &= check("IDLE wakeup run reaches quiescence",
+                    result.finished);
+    passed &= check("ERTN restores interrupt enable after IDLE",
+                    result.final_ie);
+
+    if (passed)
+        std::printf("PASS: IDLE interrupt wakeup\n");
+    return passed;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
     auto* dut = new Vcore_interrupt_test_top;
@@ -624,7 +835,9 @@ int main(int argc, char** argv) {
     passed &= test_global_interrupt_mask(dut);
     passed &= test_local_interrupt_mask(dut);
     passed &= test_empty_rob_interrupt_boundary(dut);
+    passed &= test_predicted_self_branch_interrupt_boundary(dut);
     passed &= test_precise_interrupt_and_ertn(dut);
+    passed &= test_idle_interrupt_wakeup(dut);
     passed &= test_held_high_interrupt_retriggers(dut);
 
     dut->final();

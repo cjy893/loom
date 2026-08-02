@@ -31,15 +31,17 @@ constexpr uint32_t mul_w(unsigned rd, unsigned rj, unsigned rk) {
     return r_op(0x001c0000U, rd, rj, rk);
 }
 
-constexpr uint32_t branch_i26(uint32_t opcode, int byte_offset) {
-    const unsigned imm26 =
-        static_cast<unsigned>(byte_offset >> 2) & 0x03ffffffU;
-    return opcode | ((imm26 & 0xffffU) << 10) |
-           (imm26 >> 16);
+constexpr uint32_t branch_i16(uint32_t opcode, unsigned rj,
+                              unsigned rd, int byte_offset) {
+    const unsigned imm16 =
+        static_cast<unsigned>(byte_offset >> 2) & 0xffffU;
+    return opcode | (imm16 << 10) | ((rj & 0x1fU) << 5) |
+           (rd & 0x1fU);
 }
 
-constexpr uint32_t b(int byte_offset) {
-    return branch_i26(0x50000000U, byte_offset);
+constexpr uint32_t beq(unsigned rj, unsigned rd,
+                       int byte_offset) {
+    return branch_i16(0x58000000U, rj, rd, byte_offset);
 }
 
 struct Instruction {
@@ -443,7 +445,7 @@ bool test_redirect_flushes_buffered_path(
     const std::vector<Instruction> program = {
         {addi_w(1, 0, 1), "addi.w r1, r0, 1"},
         {addi_w(2, 0, 2), "addi.w r2, r0, 2"},
-        {b(16), "b +16"},
+        {beq(0, 0, 16), "beq r0, r0, +16"},
         {addi_w(20, 0, 20), "wrong-path addi.w"},
         {mul_w(21, 0, 0), "wrong-path mul.w"},
         {addi_w(22, 0, 22), "wrong-path addi.w"},

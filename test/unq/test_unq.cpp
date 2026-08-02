@@ -9,6 +9,9 @@ enum {
     OP_DIV = 2,
     OP_CNT = 3,
     OP_ERTN = 4,
+    OP_DBAR = 5,
+    OP_IBAR = 6,
+    OP_IDLE = 7,
 };
 enum {
     MULDIV_MUL_W = 0,
@@ -31,6 +34,7 @@ static void clear_inputs(Vunq_test_top* dut) {
     dut->src1_data = 0;
     dut->src2_data = 0;
     dut->csr_rdata = 0;
+    dut->mem_barrier_ready = 1;
     dut->counter_value = 0;
     dut->counter_id_value = 0;
     dut->uop_br_mask = 0;
@@ -131,6 +135,53 @@ int main(int argc, char** argv) {
     expect_eq("ERTN marker survives UNQ", dut->res_is_ertn, 1);
     expect_eq("ERTN has no result data", dut->res_data, 0);
     finish_result(dut);
+
+    dut->mem_barrier_ready = 0;
+    start_op(dut, OP_DBAR, 0, 22, 0, 0);
+    expect_eq("DBAR waits while LSU is not empty", dut->res_valid, 0);
+    expect_eq("DBAR holds UNQ while waiting", dut->iss_ready, 0);
+    for (unsigned cycle = 0; cycle < 3; ++cycle) {
+        eval_cycle(dut);
+        expect_eq("DBAR remains blocked by LSU", dut->res_valid, 0);
+        expect_eq("DBAR retains UNQ ownership", dut->iss_ready, 0);
+    }
+    dut->mem_barrier_ready = 1;
+    dut->eval();
+    expect_eq("DBAR does not bypass the completion register", dut->res_valid, 0);
+    expect_eq("DBAR still owns UNQ before registered completion", dut->iss_ready, 0);
+    eval_cycle(dut);
+    expect_eq("DBAR completes when LSU drains", dut->res_valid, 1);
+    expect_eq("DBAR completion identity", dut->res_rob_idx, 22);
+    expect_eq("DBAR marker survives UNQ", dut->res_is_dbar, 1);
+    finish_result(dut);
+    expect_eq("UNQ accepts work after DBAR", dut->iss_ready, 1);
+
+    dut->mem_barrier_ready = 0;
+    start_op(dut, OP_IBAR, 0, 23, 0, 0);
+    expect_eq("IBAR waits while LSU is not empty", dut->res_valid, 0);
+    expect_eq("IBAR holds UNQ while waiting", dut->iss_ready, 0);
+    for (unsigned cycle = 0; cycle < 3; ++cycle) {
+        eval_cycle(dut);
+        expect_eq("IBAR remains blocked by LSU", dut->res_valid, 0);
+        expect_eq("IBAR retains UNQ ownership", dut->iss_ready, 0);
+    }
+    dut->mem_barrier_ready = 1;
+    dut->eval();
+    expect_eq("IBAR does not bypass the completion register", dut->res_valid, 0);
+    expect_eq("IBAR still owns UNQ before registered completion", dut->iss_ready, 0);
+    eval_cycle(dut);
+    expect_eq("IBAR completes when LSU drains", dut->res_valid, 1);
+    expect_eq("IBAR completion identity", dut->res_rob_idx, 23);
+    expect_eq("IBAR marker survives UNQ", dut->res_is_ibar, 1);
+    finish_result(dut);
+    expect_eq("UNQ accepts work after IBAR", dut->iss_ready, 1);
+
+    start_op(dut, OP_IDLE, 0, 24, 0, 0);
+    expect_eq("IDLE completes for ROB retirement", dut->res_valid, 1);
+    expect_eq("IDLE completion identity", dut->res_rob_idx, 24);
+    expect_eq("IDLE marker survives UNQ", dut->res_is_idle, 1);
+    finish_result(dut);
+    expect_eq("UNQ accepts work after IDLE", dut->iss_ready, 1);
 
     start_op(dut, OP_MUL, MULDIV_MUL_W, 4, uint32_t(-7), 9);
     unsigned mul_cycles = wait_for_result(dut, 5);

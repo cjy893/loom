@@ -45,6 +45,9 @@ module core_top_reference #(
     logic [3:0] ifu_fetch_valid;
     logic [3:0][31:0] ifu_fetch_pc;
     logic [3:0][31:0] ifu_fetch_insts;
+    logic [3:0][FTQ_ADDR_SZ-1:0] ifu_fetch_ftq_idx;
+    logic [3:0] ifu_fetch_predicted_taken;
+    logic [3:0][31:0] ifu_fetch_predicted_npc;
     logic [3:0] ifu_fetch_xcpt_valid;
     logic [3:0][5:0] ifu_fetch_xcpt_code;
     logic ifu_fetch_ready;
@@ -53,15 +56,43 @@ module core_top_reference #(
     logic [1:0] buffer_deq_valid;
     logic [1:0][31:0] buffer_deq_pc;
     logic [1:0][31:0] buffer_deq_insts;
+    logic [1:0][FTQ_ADDR_SZ-1:0] buffer_deq_ftq_idx;
+    logic [1:0] buffer_deq_predicted_taken;
+    logic [1:0][31:0] buffer_deq_predicted_npc;
     logic [1:0] buffer_deq_xcpt_valid;
     logic [1:0][5:0] buffer_deq_xcpt_code;
     logic buffer_deq_ready;
 
     logic core_fe_ready;
     logic core_redirect_valid;
+    logic core_frontend_flush_valid;
     logic [31:0] core_redirect_pc;
+    logic [FTQ_ADDR_SZ-1:0] core_redirect_ftq_idx;
+    logic core_redirect_taken;
+    logic [$clog2(ICACHE_BLOCK_BYTES)-1:0] core_redirect_pc_lob;
+    logic [2:0] core_redirect_cfi_type;
+    logic ftq_commit_valid;
+    logic [FTQ_ADDR_SZ-1:0] ftq_commit_idx;
+    logic [ALU_WIDTH-1:0] ftq_exec_query_valid;
+    logic [ALU_WIDTH-1:0][FTQ_ADDR_SZ-1:0] ftq_exec_query_idx;
+    logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_pc;
+    logic [ALU_WIDTH-1:0] ftq_exec_query_resp_valid;
+    logic [ALU_WIDTH-1:0][31:0] ftq_exec_query_next_pc;
+    logic [ALU_WIDTH-1:0] ftq_exec_query_cfi_match;
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
+
+    always_comb begin
+        ftq_commit_valid = 1'b0;
+        ftq_commit_idx = '0;
+
+        for (int lane = 0; lane < 2; lane++) begin
+            if (core_commit.valids[lane]) begin
+                ftq_commit_valid = 1'b1;
+                ftq_commit_idx = core_commit.uops[lane].ftq_idx;
+            end
+        end
+    end
 
     ifu #(
         .FETCH_WIDTH(4),
@@ -71,6 +102,19 @@ module core_top_reference #(
         .rst_n,
         .redirect_valid(core_redirect_valid),
         .redirect_pc(core_redirect_pc),
+        .flush_valid(core_frontend_flush_valid),
+        .branch_redirect_ftq_idx(core_redirect_ftq_idx),
+        .branch_redirect_taken(core_redirect_taken),
+        .branch_redirect_pc_lob(core_redirect_pc_lob),
+        .branch_redirect_cfi_type(core_redirect_cfi_type),
+        .ftq_commit_valid,
+        .ftq_commit_idx,
+        .exec_query_valid(ftq_exec_query_valid),
+        .exec_query_idx(ftq_exec_query_idx),
+        .exec_query_pc(ftq_exec_query_pc),
+        .exec_query_resp_valid(ftq_exec_query_resp_valid),
+        .exec_query_next_pc(ftq_exec_query_next_pc),
+        .exec_query_cfi_match(ftq_exec_query_cfi_match),
         .xlate_req_valid(),
         .xlate_req_ready(1'b1),
         .xlate_req_vaddr(ifu_xlate_req_vaddr),
@@ -95,6 +139,9 @@ module core_top_reference #(
         .fetch_valid(ifu_fetch_valid),
         .fetch_insts(ifu_fetch_insts),
         .fetch_pc(ifu_fetch_pc),
+        .fetch_ftq_idx(ifu_fetch_ftq_idx),
+        .fetch_predicted_taken(ifu_fetch_predicted_taken),
+        .fetch_predicted_npc(ifu_fetch_predicted_npc),
         .fetch_ready(ifu_fetch_ready)
     );
 
@@ -111,6 +158,12 @@ module core_top_reference #(
         .enq_insts(ifu_fetch_insts),
         .enq_xcpt_valid(ifu_fetch_xcpt_valid),
         .enq_xcpt_code(ifu_fetch_xcpt_code),
+        .enq_ftq_idx(ifu_fetch_ftq_idx),
+        .enq_predicted_taken(ifu_fetch_predicted_taken),
+        .enq_predicted_npc(ifu_fetch_predicted_npc),
+        .deq_ftq_idx(buffer_deq_ftq_idx),
+        .deq_predicted_taken(buffer_deq_predicted_taken),
+        .deq_predicted_npc(buffer_deq_predicted_npc),
         .deq_xcpt_valid(buffer_deq_xcpt_valid),
         .deq_xcpt_code(buffer_deq_xcpt_code),
         .enq_ready(ifu_fetch_ready),
@@ -133,11 +186,19 @@ module core_top_reference #(
         .fe_valid(buffer_deq_valid),
         .fe_insts(buffer_deq_insts),
         .fe_pcs(buffer_deq_pc),
+        .fe_ftq_idx(buffer_deq_ftq_idx),
+        .fe_predicted_taken(buffer_deq_predicted_taken),
+        .fe_predicted_npc(buffer_deq_predicted_npc),
         .fe_xcpt_valid(buffer_deq_xcpt_valid),
         .fe_xcpt_code(buffer_deq_xcpt_code),
         .fe_ready(core_fe_ready),
         .fe_redirect_valid(core_redirect_valid),
         .fe_redirect_pc(core_redirect_pc),
+        .fe_flush_valid(core_frontend_flush_valid),
+        .fe_redirect_ftq_idx(core_redirect_ftq_idx),
+        .fe_redirect_taken(core_redirect_taken),
+        .fe_redirect_pc_lob(core_redirect_pc_lob),
+        .fe_redirect_cfi_type(core_redirect_cfi_type),
         .ifu_xlate_req_valid(1'b0),
         .ifu_xlate_req_ready(),
         .ifu_xlate_req_vaddr('0),
@@ -150,6 +211,12 @@ module core_top_reference #(
         .ifu_xlate_resp_xcpt_valid(),
         .ifu_xlate_resp_xcpt_code(),
         .ifu_xlate_resp_badvaddr(),
+        .ftq_exec_query_valid,
+        .ftq_exec_query_idx,
+        .ftq_exec_query_pc,
+        .ftq_exec_query_resp_valid,
+        .ftq_exec_query_next_pc,
+        .ftq_exec_query_cfi_match,
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,

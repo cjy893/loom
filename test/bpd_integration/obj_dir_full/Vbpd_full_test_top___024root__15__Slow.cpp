@@ -4,6 +4,7 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
+VL_ATTR_COLD void Vbpd_full_test_top___024root___eval_triggers_vec__stl(Vbpd_full_test_top___024root* vlSelf);
 #ifdef VL_DEBUG
 VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__stl(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
 #endif  // VL_DEBUG
@@ -21,7 +22,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__9(Vbpd_full_t
 VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__10(Vbpd_full_test_top___024root* vlSelf);
 VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__11(Vbpd_full_test_top___024root* vlSelf);
 VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__12(Vbpd_full_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__13(Vbpd_full_test_top___024root* vlSelf);
+void Vbpd_full_test_top___024root___ico_comb__TOP__4(Vbpd_full_test_top___024root* vlSelf);
 VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__14(Vbpd_full_test_top___024root* vlSelf);
 
 VL_ATTR_COLD bool Vbpd_full_test_top___024root___eval_phase__stl(Vbpd_full_test_top___024root* vlSelf) {
@@ -31,12 +32,7 @@ VL_ATTR_COLD bool Vbpd_full_test_top___024root___eval_phase__stl(Vbpd_full_test_
     // Locals
     CData/*0:0*/ __VstlExecute;
     // Body
-    {
-        // Inlined CFunc: _eval_triggers_vec__stl
-        vlSelfRef.__VstlTriggered[0U] = ((0xfffffffffffffffeULL 
-                                          & vlSelfRef.__VstlTriggered[0U]) 
-                                         | (IData)((IData)(vlSelfRef.__VstlFirstIteration)));
-    }
+    Vbpd_full_test_top___024root___eval_triggers_vec__stl(vlSelf);
 #ifdef VL_DEBUG
     if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
         Vbpd_full_test_top___024root___dump_triggers__stl(vlSelfRef.__VstlTriggered, "stl"s);
@@ -60,32 +56,27 @@ VL_ATTR_COLD bool Vbpd_full_test_top___024root___eval_phase__stl(Vbpd_full_test_
                 Vbpd_full_test_top___024root___stl_sequent__TOP__10(vlSelf);
                 Vbpd_full_test_top___024root___stl_sequent__TOP__11(vlSelf);
                 Vbpd_full_test_top___024root___stl_sequent__TOP__12(vlSelf);
-                Vbpd_full_test_top___024root___stl_sequent__TOP__13(vlSelf);
+                Vbpd_full_test_top___024root___ico_comb__TOP__4(vlSelf);
                 Vbpd_full_test_top___024root___stl_sequent__TOP__14(vlSelf);
                 {
                     // Inlined CFunc: _stl_sequent__TOP__15
+                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28 
+                        = ((IData)(vlSelfRef.f1_is_br) 
+                           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31));
                     vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate 
                         = ((~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit)) 
-                           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0));
+                           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3));
+                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0 
+                        = (1U & (- (IData)(((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28)) 
+                                            & (IData)(vlSelfRef.f1_is_br)))));
+                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 
+                        = (1U & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
+                                 | ((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
+                                     >> 7U) | ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
+                                               >> 1U))));
                 }
             }
         }
     }
     return (__VstlExecute);
 }
-
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__1(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__2(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__3(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___dump_triggers__ico\n"); );
-    // Body
-    Vbpd_full_test_top___024root___dump_triggers__ico__0(triggers, tag);
-    Vbpd_full_test_top___024root___dump_triggers__ico__1(triggers, tag);
-    Vbpd_full_test_top___024root___dump_triggers__ico__2(triggers, tag);
-    Vbpd_full_test_top___024root___dump_triggers__ico__3(triggers, tag);
-}
-#endif  // VL_DEBUG

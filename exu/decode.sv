@@ -697,6 +697,40 @@ module decode(
                         uop.lsrc1_rtype = RT_FIX;
                         uop.lsrc2_rtype = RT_FIX;
                     end
+                end else if (inst[31:15] == 17'b00000110010010001) begin
+                    if (status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.is_idle = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+
+                        uop.ldst = '0;
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst[31:15] == 17'b00111000011100100) begin
+                    uop.iq_type = IQ_UNQ;
+                    uop.is_unique = 1'b1;
+                    uop.is_dbar = 1'b1;
+
+                    uop.ldst = '0;
+                    uop.dst_rtype = RT_X;
+                    uop.lsrc1_rtype = RT_X;
+                    uop.lsrc2_rtype = RT_X;
+                end else if (inst[31:15] == 17'b00111000011100101) begin
+                    uop.iq_type = IQ_UNQ;
+                    uop.is_unique = 1'b1;
+                    uop.is_ibar = 1'b1;
+                    uop.flush_on_commit = 1'b1;
+
+                    uop.ldst = '0;
+                    uop.dst_rtype = RT_X;
+                    uop.lsrc1_rtype = RT_X;
+                    uop.lsrc2_rtype = RT_X;
                 end else begin
                     uop.exception = 1'b1;
                     uop.exc_cause = ECODE_INE;

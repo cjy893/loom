@@ -393,6 +393,7 @@ void test_direct_load(Testbench& tb, Vlsu_dmmu_test_top* dut) {
     tb.check_eq("direct load DCache paddr", dut->dcache_req_addr, vaddr);
     tb.check_eq("direct load DCache tag", dut->dcache_req_idx, tag);
     tb.check_eq("direct load DCache ROB", dut->dcache_req_rob_idx, rob);
+    tb.check("direct load is cacheable", dut->dcache_req_cacheable == 1);
     tb.check("direct load has no translation exception",
              dut->xlate_xcpt_valid == 0);
 
@@ -440,6 +441,7 @@ void test_store_precommit_translation(Testbench& tb,
                 dut->dcache_req_addr, vaddr);
     tb.check_eq("store DCache tag", dut->dcache_req_idx, tag);
     tb.check_eq("store DCache ROB", dut->dcache_req_rob_idx, rob);
+    tb.check("direct store is cacheable", dut->dcache_req_cacheable == 1);
     tb.check_eq("halfword store aligned data",
                 dut->dcache_req_data, 0xbeef'0000u);
     tb.check_eq("halfword store byte mask", dut->dcache_req_mask, 0xcu);
@@ -497,6 +499,8 @@ void test_mapped_load(Testbench& tb, Vlsu_dmmu_test_top* dut) {
                 dut->dcache_req_addr,
                 translated_paddr(vaddr, ppn, 12));
     tb.check_eq("mapped load tag", dut->dcache_req_idx, tag);
+    tb.check("mapped CC load is cacheable",
+             dut->dcache_req_cacheable == 1);
 
     tb.accept_dcache_request();
     dut->dcache_resp_is_store = 0;

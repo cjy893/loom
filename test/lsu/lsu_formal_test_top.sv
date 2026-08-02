@@ -231,6 +231,7 @@ module lsu_formal_test_top (
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
+        .dmem_req_cacheable(),
         .dmem_req_addr,
         .dmem_req_data,
         .dmem_req_mask,

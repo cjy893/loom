@@ -4,27 +4,20 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___ico_comb__TOP__0(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___ico_comb__TOP__0\n"); );
+void Vbpd_full_test_top___024root___ico_sequent__TOP__0(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___ico_sequent__TOP__0\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.bpd_full_test_top__DOT__restore_packed[0U] 
-        = (((IData)(vlSelfRef.restore_old_history) 
-            << 8U) | (((IData)(vlSelfRef.restore_saw_nt) 
-                       << 7U) | (IData)(vlSelfRef.restore_ras_idx)));
-    vlSelfRef.bpd_full_test_top__DOT__restore_packed[1U] 
-        = (((IData)(vlSelfRef.restore_old_history) 
-            >> 0x00000018U) | ((IData)((vlSelfRef.restore_old_history 
-                                        >> 0x00000020U)) 
-                               << 8U));
-    vlSelfRef.bpd_full_test_top__DOT__restore_packed[2U] 
-        = ((IData)((vlSelfRef.restore_old_history >> 0x00000020U)) 
-           >> 0x00000018U);
+    vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__invalidate_set 
+        = ((0x000003e0U & (((IData)(4U) + vlSelfRef.update_pc) 
+                           << 3U)) | (0x0000001fU & 
+                                      (vlSelfRef.update_pc 
+                                       >> 2U)));
 }
 
-void Vbpd_full_test_top___024root___ico_comb__TOP__1(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___ico_comb__TOP__1\n"); );
+void Vbpd_full_test_top___024root___ico_comb__TOP__0(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___ico_comb__TOP__0\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body

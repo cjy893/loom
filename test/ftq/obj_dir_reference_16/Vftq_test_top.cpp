@@ -31,10 +31,8 @@ Vftq_test_top::Vftq_test_top(VerilatedContext* _vcontextp__, const char* _vcname
     , brupdate_b2_mispredict{vlSymsp->TOP.brupdate_b2_mispredict}
     , brupdate_b2_ftq_idx{vlSymsp->TOP.brupdate_b2_ftq_idx}
     , brupdate_b2_taken{vlSymsp->TOP.brupdate_b2_taken}
-    , brupdate_b2_br_mask{vlSymsp->TOP.brupdate_b2_br_mask}
-    , brupdate_b2_cfi_is_br{vlSymsp->TOP.brupdate_b2_cfi_is_br}
-    , brupdate_b2_cfi_is_call{vlSymsp->TOP.brupdate_b2_cfi_is_call}
-    , brupdate_b2_cfi_is_ret{vlSymsp->TOP.brupdate_b2_cfi_is_ret}
+    , brupdate_b2_pc_lob{vlSymsp->TOP.brupdate_b2_pc_lob}
+    , brupdate_b2_cfi_type{vlSymsp->TOP.brupdate_b2_cfi_type}
     , bpd_update_valid{vlSymsp->TOP.bpd_update_valid}
     , bpd_update_is_mispredict_update{vlSymsp->TOP.bpd_update_is_mispredict_update}
     , bpd_update_is_repair_update{vlSymsp->TOP.bpd_update_is_repair_update}
@@ -62,6 +60,11 @@ Vftq_test_top::Vftq_test_top(VerilatedContext* _vcontextp__, const char* _vcname
     , query_cfi_taken{vlSymsp->TOP.query_cfi_taken}
     , query_ras_idx{vlSymsp->TOP.query_ras_idx}
     , query_start_bank{vlSymsp->TOP.query_start_bank}
+    , exec_query_valid{vlSymsp->TOP.exec_query_valid}
+    , exec_query_idx{vlSymsp->TOP.exec_query_idx}
+    , exec_query_resp_valid{vlSymsp->TOP.exec_query_resp_valid}
+    , exec_query_cfi_match{vlSymsp->TOP.exec_query_cfi_match}
+    , flush_valid{vlSymsp->TOP.flush_valid}
     , enq_pc{vlSymsp->TOP.enq_pc}
     , enq_next_pc{vlSymsp->TOP.enq_next_pc}
     , enq_ras_top{vlSymsp->TOP.enq_ras_top}
@@ -72,7 +75,10 @@ Vftq_test_top::Vftq_test_top(VerilatedContext* _vcontextp__, const char* _vcname
     , bpd_update_meta{vlSymsp->TOP.bpd_update_meta}
     , ras_repair_addr{vlSymsp->TOP.ras_repair_addr}
     , query_pc{vlSymsp->TOP.query_pc}
+    , query_next_pc{vlSymsp->TOP.query_next_pc}
     , query_ras_top{vlSymsp->TOP.query_ras_top}
+    , exec_query_pc{vlSymsp->TOP.exec_query_pc}
+    , exec_query_next_pc{vlSymsp->TOP.exec_query_next_pc}
     , enq_ghist{vlSymsp->TOP.enq_ghist}
     , bpd_update_ghist{vlSymsp->TOP.bpd_update_ghist}
     , ghist_restore{vlSymsp->TOP.ghist_restore}

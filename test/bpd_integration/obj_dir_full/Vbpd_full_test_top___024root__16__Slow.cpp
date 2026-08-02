@@ -4,6 +4,22 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
+VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
+VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__1(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
+VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__2(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
+VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__3(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
+
+#ifdef VL_DEBUG
+VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___dump_triggers__ico\n"); );
+    // Body
+    Vbpd_full_test_top___024root___dump_triggers__ico__0(triggers, tag);
+    Vbpd_full_test_top___024root___dump_triggers__ico__1(triggers, tag);
+    Vbpd_full_test_top___024root___dump_triggers__ico__2(triggers, tag);
+    Vbpd_full_test_top___024root___dump_triggers__ico__3(triggers, tag);
+}
+#endif  // VL_DEBUG
+
 bool Vbpd_full_test_top___024root___trigger_anySet__ico(const VlUnpacked<QData/*63:0*/, 2> &in);
 
 VL_ATTR_COLD void Vbpd_full_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {

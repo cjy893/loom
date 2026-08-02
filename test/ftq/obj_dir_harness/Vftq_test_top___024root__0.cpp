@@ -78,21 +78,13 @@ void Vftq_test_top___024root___eval_debug_assertions(Vftq_test_top___024root* vl
     if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_taken & 0xfeU)))) {
         Verilated::overWidthError("brupdate_b2_taken");
     }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_br_mask 
-                      & 0xf0U)))) {
-        Verilated::overWidthError("brupdate_b2_br_mask");
+    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_pc_lob 
+                      & 0xc0U)))) {
+        Verilated::overWidthError("brupdate_b2_pc_lob");
     }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_br 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_br");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_call 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_call");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_is_ret 
-                      & 0xfeU)))) {
-        Verilated::overWidthError("brupdate_b2_cfi_is_ret");
+    if (VL_UNLIKELY(((vlSelfRef.brupdate_b2_cfi_type 
+                      & 0xf8U)))) {
+        Verilated::overWidthError("brupdate_b2_cfi_type");
     }
     if (VL_UNLIKELY(((vlSelfRef.query_valid & 0xfeU)))) {
         Verilated::overWidthError("query_valid");

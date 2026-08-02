@@ -39,6 +39,7 @@ module core_interrupt_lsu_test_top (
     output logic                         stq_empty,
     output logic                         stq_uncommitted_ready,
     output logic                         stq_committed_valid,
+    output logic                         br_kill,
     output logic                         br_mispredict,
 
     output logic [1:0]                   commit_valids,
@@ -56,6 +57,12 @@ module core_interrupt_lsu_test_top (
 
     uop_t dmem_req_uop;
     commit_signal_t core_commit;
+    logic [3:0][31:0] sequential_predicted_npc;
+
+    for (genvar lane = 0; lane < 4; lane++) begin : gen_predicted_npc
+        assign sequential_predicted_npc[lane] =
+            debug_pc + 32'((lane + 1) * 4);
+    end
 
     loom_core #(
         .RESET_PC(RESET_PC)
@@ -65,11 +72,19 @@ module core_interrupt_lsu_test_top (
         .fe_valid,
         .fe_insts,
         .fe_pcs('0),
+        .fe_ftq_idx('0),
+        .fe_predicted_taken('0),
+        .fe_predicted_npc(sequential_predicted_npc),
         .fe_xcpt_valid('0),
         .fe_xcpt_code('0),
         .fe_ready,
         .fe_redirect_valid(redirect_valid),
         .fe_redirect_pc(redirect_pc),
+        .fe_flush_valid(),
+        .fe_redirect_ftq_idx(),
+        .fe_redirect_taken(),
+        .fe_redirect_pc_lob(),
+        .fe_redirect_cfi_type(),
         .ifu_xlate_req_valid(1'b0),
         .ifu_xlate_req_ready(),
         .ifu_xlate_req_vaddr('0),
@@ -82,6 +97,12 @@ module core_interrupt_lsu_test_top (
         .ifu_xlate_resp_xcpt_valid(),
         .ifu_xlate_resp_xcpt_code(),
         .ifu_xlate_resp_badvaddr(),
+        .ftq_exec_query_valid(),
+        .ftq_exec_query_idx(),
+        .ftq_exec_query_pc(),
+        .ftq_exec_query_resp_valid('0),
+        .ftq_exec_query_next_pc('0),
+        .ftq_exec_query_cfi_match('0),
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
@@ -147,6 +168,7 @@ module core_interrupt_lsu_test_top (
     assign interrupt_taken = core.rob_inst.interrupt_taken;
     assign redirect_flush_typ =
         core.rob_flush_w.valid ? core.rob_flush_w.flush_typ : FT_NONE;
+    assign br_kill = |core.brupdate_w.b1.mispredict_mask;
     assign br_mispredict = core.brupdate_w.b2.mispredict;
 
     assign ldq_empty = core.lsu_ldq_empty;

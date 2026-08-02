@@ -4,97 +4,72 @@
 
 #include "Vftq_test_top__pch.h"
 
-void Vftq_test_top___024root___nba_sequent__TOP__3(Vftq_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___nba_sequent__TOP__3\n"); );
+void Vftq_test_top___024root___eval_triggers_vec__ico__0(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___eval_triggers_vec__ico__1(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___eval_triggers_vec__ico__2(Vftq_test_top___024root* vlSelf);
+#ifdef VL_DEBUG
+VL_ATTR_COLD void Vftq_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
+#endif  // VL_DEBUG
+bool Vftq_test_top___024root___trigger_anySet__ico(const VlUnpacked<QData/*63:0*/, 2> &in);
+void Vftq_test_top___024root___ico_comb__TOP__1(Vftq_test_top___024root* vlSelf);
+void Vftq_test_top___024root___ico_comb__TOP__2(Vftq_test_top___024root* vlSelf);
+
+bool Vftq_test_top___024root___eval_phase__ico(Vftq_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___eval_phase__ico\n"); );
     Vftq_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
+    // Locals
+    CData/*0:0*/ __VicoExecute;
     // Body
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v2) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v2][11U] 
-            = ((0xffffff3fU & vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                [vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v2][11U]) 
-               | ((IData)(vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v2) 
-                  << 6U));
+    {
+        // Inlined CFunc: _eval_triggers_vec__ico
+        Vftq_test_top___024root___eval_triggers_vec__ico__0(vlSelf);
+        Vftq_test_top___024root___eval_triggers_vec__ico__1(vlSelf);
+        Vftq_test_top___024root___eval_triggers_vec__ico__2(vlSelf);
     }
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v3) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v3][10U] 
-            = ((0x7fffffffU & vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                [vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v3][10U]) 
-               | ((IData)(vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v3) 
-                  << 0x0000001fU));
+#ifdef VL_DEBUG
+    if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
+        Vftq_test_top___024root___dump_triggers__ico(vlSelfRef.__VicoTriggered, "ico"s);
     }
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v4) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v4][10U] 
-            = (0x40000000U | vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-               [vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v4][10U]);
-    }
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v5) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v5][11U] 
-            = ((0xfffffffbU & vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                [vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v5][11U]) 
-               | ((IData)(vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v5) 
-                  << 2U));
-    }
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v6) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v6][11U] 
-            = ((0xfffffffdU & vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                [vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v6][11U]) 
-               | ((IData)(vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v6) 
-                  << 1U));
-    }
-    if (vlSelfRef.__VdlySet__ftq_test_top__DOT__dut__DOT__entries_q__v7) {
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][0U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[0U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][1U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[1U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][2U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[2U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][3U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[3U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][4U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[4U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][5U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[5U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][6U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[6U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][7U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[7U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][8U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[8U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][9U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[9U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][10U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[10U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][11U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[11U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][12U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[12U];
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q[vlSelfRef.__VdlyDim0__ftq_test_top__DOT__dut__DOT__entries_q__v7][13U] 
-            = vlSelfRef.__VdlyVal__ftq_test_top__DOT__dut__DOT__entries_q__v7[13U];
-    }
-    vlSelfRef.bpd_update_valid = vlSelfRef.ftq_test_top__DOT__dut__DOT__bpd_update_valid_q;
-    vlSelfRef.enq_idx = vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q;
-    if (vlSelfRef.rst_n) {
-        vlSelfRef.enq_ready = (1U & (~ ((IData)(vlSelfRef.redirect_valid) 
-                                        | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_busy_q) 
-                                           | ((4U >= (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q)) 
-                                              && (1U 
-                                                  & ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__entry_valid_q) 
-                                                     >> (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q))))))));
-        if (vlSelfRef.commit_valid) {
-            vlSelfRef.ftq_test_top__DOT__dut__DOT__commit_end_q 
-                = vlSelfRef.commit_ftq_idx;
+#endif
+    __VicoExecute = Vftq_test_top___024root___trigger_anySet__ico(vlSelfRef.__VicoTriggered);
+    if (__VicoExecute) {
+        {
+            // Inlined CFunc: _eval_ico
+            if ((0x0000000040100002ULL & vlSelfRef.__VicoTriggered[0U])) {
+                {
+                    // Inlined CFunc: _ico_comb__TOP__0
+                    vlSelfRef.enq_ready = ((~ ((IData)(vlSelfRef.flush_valid) 
+                                               | ((IData)(vlSelfRef.redirect_valid) 
+                                                  | ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_busy_q) 
+                                                     | ((4U 
+                                                         >= (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q)) 
+                                                        && (1U 
+                                                            & ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__entry_valid_q) 
+                                                               >> (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__enq_ptr_q)))))))) 
+                                           & (IData)(vlSelfRef.rst_n));
+                }
+            }
+            if ((0x000000000c800000ULL & vlSelfRef.__VicoTriggered[0U])) {
+                Vftq_test_top___024root___ico_comb__TOP__1(vlSelf);
+                Vftq_test_top___024root___ico_comb__TOP__2(vlSelf);
+            }
         }
-    } else {
-        vlSelfRef.enq_ready = 0U;
-        vlSelfRef.ftq_test_top__DOT__dut__DOT__commit_end_q = 0U;
     }
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0 = (7U 
-                                                & (vlSelfRef.ftq_test_top__DOT__dut__DOT__entries_q
-                                                   [
-                                                   ((IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_ptr_q) 
-                                                    & (- (IData)(
-                                                                 (4U 
-                                                                  >= (IData)(vlSelfRef.ftq_test_top__DOT__dut__DOT__repair_ptr_q)))))][11U] 
-                                                   >> 3U));
+    return (__VicoExecute);
+}
+
+bool Vftq_test_top___024root___trigger_anySet__act(const VlUnpacked<QData/*63:0*/, 1> &in) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vftq_test_top___024root___trigger_anySet__act\n"); );
+    // Locals
+    IData/*31:0*/ n;
+    // Body
+    n = 0U;
+    do {
+        if (in[n]) {
+            return (1U);
+        }
+        n = ((IData)(1U) + n);
+    } while ((1U > n));
+    return (0U);
 }

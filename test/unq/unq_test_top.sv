@@ -14,6 +14,7 @@ module unq_test_top (
     input  logic [31:0] src1_data,
     input  logic [31:0] src2_data,
     input  logic [31:0] csr_rdata,
+    input  logic        mem_barrier_ready,
     input  logic [63:0] counter_value,
     input  logic [31:0] counter_id_value,
     input  logic [3:0]  uop_br_mask,
@@ -30,7 +31,10 @@ module unq_test_top (
     output logic        res_valid,
     output logic [31:0] res_data,
     output logic [5:0]  res_rob_idx,
-    output logic        res_is_ertn
+    output logic        res_is_ertn,
+    output logic        res_is_dbar,
+    output logic        res_is_ibar,
+    output logic        res_is_idle
 );
     uop_t iss_uop;
     exe_unit_resp_t res;
@@ -50,6 +54,9 @@ module unq_test_top (
             3'd2: iss_uop.fu_code[FC_DIV] = 1'b1;
             3'd3: iss_uop.is_rdcnt = 1'b1;
             3'd4: iss_uop.is_ertn = 1'b1;
+            3'd5: iss_uop.is_dbar = 1'b1;
+            3'd6: iss_uop.is_ibar = 1'b1;
+            3'd7: iss_uop.is_idle = 1'b1;
             default: begin end
         endcase
         brupdate = '0;
@@ -72,6 +79,7 @@ module unq_test_top (
         .csr_wdata,
         .csr_wmask(csr_wmask_unused),
         .csr_rdata,
+        .mem_barrier_ready,
         .counter_value,
         .counter_id_value,
         .res_valid,
@@ -83,4 +91,7 @@ module unq_test_top (
     assign res_data = res.data;
     assign res_rob_idx = res.uop.rob_idx;
     assign res_is_ertn = res.uop.is_ertn;
+    assign res_is_dbar = res.uop.is_dbar;
+    assign res_is_ibar = res.uop.is_ibar;
+    assign res_is_idle = res.uop.is_idle;
 endmodule

@@ -535,6 +535,48 @@ int main(int argc, char** argv) {
     expect_eq("faulting ERTN is not issued", dut->iq_type, 0);
     expect_eq("faulting ERTN has no marker", dut->is_ertn, 0);
 
+    // DBAR accepts every 15-bit hint value. It serializes through UNQ but
+    // does not require a frontend refetch after commit.
+    for (uint32_t hint : {0U, 1U, 0x1234U, 0x7fffU}) {
+        decode(dut, 0x3872'0000U | hint);
+        expect_eq("DBAR queue", dut->iq_type, IQ_UNQ);
+        expect_eq("DBAR marker", dut->is_dbar, 1);
+        expect_eq("DBAR is unique", dut->is_unique, 1);
+        expect_eq("DBAR does not refetch", dut->flush_on_commit, 0);
+        expect_eq("DBAR has no destination", dut->ldst, 0);
+        expect_eq("DBAR destination type", dut->dst_rtype, RT_X);
+        expect_eq("DBAR has no exception", dut->exception, 0);
+    }
+
+    // IBAR waits for the same memory-ordering boundary as DBAR, then forces
+    // the frontend to refetch the instruction following the barrier.
+    for (uint32_t hint : {0U, 1U, 0x1234U, 0x7fffU}) {
+        decode(dut, 0x3872'8000U | hint);
+        expect_eq("IBAR queue", dut->iq_type, IQ_UNQ);
+        expect_eq("IBAR marker", dut->is_ibar, 1);
+        expect_eq("IBAR is unique", dut->is_unique, 1);
+        expect_eq("IBAR refetches after commit", dut->flush_on_commit, 1);
+        expect_eq("IBAR has no destination", dut->ldst, 0);
+        expect_eq("IBAR destination type", dut->dst_rtype, RT_X);
+        expect_eq("IBAR has no exception", dut->exception, 0);
+    }
+
+    // IDLE is a serialized operation in PLV0. Its low 15 bits are a hint,
+    // while execution in another privilege level raises IPE.
+    for (uint32_t hint : {0U, 1U, 0x1234U, 0x7fffU}) {
+        decode(dut, 0x0648'8000U | hint);
+        expect_eq("IDLE queue", dut->iq_type, IQ_UNQ);
+        expect_eq("IDLE marker", dut->is_idle, 1);
+        expect_eq("IDLE is unique", dut->is_unique, 1);
+        expect_eq("IDLE refetches after wakeup", dut->flush_on_commit, 1);
+        expect_eq("IDLE has no destination", dut->ldst, 0);
+        expect_eq("IDLE destination type", dut->dst_rtype, RT_X);
+        expect_eq("IDLE has no exception in PLV0", dut->exception, 0);
+    }
+
+    for (unsigned plv : {1U, 2U, 3U})
+        expect_privilege_fault(dut, 0x0648'8000U, plv, "idle");
+
     // Real RDCNT encodings from nscscc_func/obj/test.s.
     decode(dut, 0x0000600d);
     expect_eq("rdcntvl queue", dut->iq_type, IQ_UNQ);
