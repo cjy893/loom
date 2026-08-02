@@ -3,11 +3,23 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 TEST_DIR="$ROOT/test/core_top_axi"
+VERILATOR=${VERILATOR:-verilator}
+VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
+MDIR=${CORE_TOP_AXI_OBJ_DIR:-"$TEST_DIR/obj_dir"}
 
 rtl=(
   "$ROOT/common/params_pkg.sv"
   "$ROOT/common/consts_pkg.sv"
   "$ROOT/common/types_pkg.sv"
+  "$ROOT/ifu/bpd/ubtb.sv"
+  "$ROOT/ifu/bpd/bim.sv"
+  "$ROOT/ifu/bpd/btb.sv"
+  "$ROOT/ifu/bpd/composer.sv"
+  "$ROOT/ifu/bpd/bpd_update_router.sv"
+  "$ROOT/ifu/bpd/f3_predecode.sv"
+  "$ROOT/ifu/bpd/ghist.sv"
+  "$ROOT/ifu/bpd/ras.sv"
+  "$ROOT/ifu/fetch_target_queue.sv"
   "$ROOT/ifu/ifu.sv"
   "$ROOT/ifu/fetcher_buffer.sv"
   "$ROOT/exu/decode.sv"
@@ -33,16 +45,27 @@ rtl=(
   "$ROOT/lsu/load_queue.sv"
   "$ROOT/lsu/store_queue.sv"
   "$ROOT/lsu/lsu.sv"
+  "$ROOT/mmu/addr_trans.sv"
+  "$ROOT/mmu/dmmu.sv"
+  "$ROOT/mmu/immu.sv"
+  "$ROOT/mmu/tlb.sv"
+  "$ROOT/mmu/tlb_ctrl.sv"
+  "$ROOT/cache/icache.sv"
+  "$ROOT/cache/dcache.sv"
+  "$ROOT/cache/cacop_ctrl.sv"
   "$ROOT/exu/loom_core.sv"
   "$ROOT/core_top.sv"
 )
 
-verilator --cc --build -j 1 -Wno-fatal \
+"$VERILATOR" --cc -Wno-fatal \
   -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
-  --Mdir "$TEST_DIR/obj_dir" \
+  --Mdir "$MDIR" \
   --top-module core_top \
   --exe "$TEST_DIR/test_core_top_axi.cpp" \
-  -CFLAGS "-std=c++17" \
+  -CFLAGS "-std=c++17 -O0" \
   "${rtl[@]}"
 
-"$TEST_DIR/obj_dir/Vcore_top"
+make -C "$MDIR" -f Vcore_top.mk -j 1 \
+  VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+
+"$MDIR/Vcore_top"

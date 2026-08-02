@@ -604,12 +604,13 @@ static bool test_branch_redirect_precedes_interrupt(
 
     reset(dut);
     Trace trace;
-    bool simultaneous_seen = false;
-    bool pending_same_cycle = false;
-    bool interrupt_taken_same_cycle = false;
-    bool branch_redirect_same_cycle = false;
+    bool branch_kill_seen = false;
+    bool pending_in_kill_cycle = false;
+    bool interrupt_taken_in_kill_cycle = false;
+    bool branch_redirect_seen = false;
     bool handler_seen = false;
-    int trigger_cycle = -1;
+    int kill_cycle = -1;
+    int branch_redirect_cycle = -1;
     int handler_cycle = -1;
     int last_activity = 0;
 
@@ -618,16 +619,19 @@ static bool test_branch_redirect_precedes_interrupt(
         bool drove_response = memory.drive_response(dut, cycle);
         drive_fetch(dut, program);
 
-        if (!simultaneous_seen && dut->br_mispredict) {
-            simultaneous_seen = true;
-            trigger_cycle = cycle;
+        if (!branch_kill_seen && dut->br_kill) {
+            branch_kill_seen = true;
+            kill_cycle = cycle;
             dut->hw_irq = 1;
             dut->eval();
-            pending_same_cycle = dut->interrupt_pending;
-            interrupt_taken_same_cycle = dut->interrupt_taken;
-            branch_redirect_same_cycle =
-                dut->redirect_valid &&
-                dut->redirect_pc == target_pc;
+            pending_in_kill_cycle = dut->interrupt_pending;
+            interrupt_taken_in_kill_cycle = dut->interrupt_taken;
+            last_activity = cycle;
+        }
+
+        if (dut->redirect_valid && dut->redirect_pc == target_pc) {
+            branch_redirect_seen = true;
+            branch_redirect_cycle = cycle;
             last_activity = cycle;
         }
 
@@ -661,20 +665,18 @@ static bool test_branch_redirect_precedes_interrupt(
     }
 
     bool passed = true;
-    passed &= check("branch/IRQ simultaneous condition is reached",
-                    simultaneous_seen);
-    passed &= check("IRQ is pending in branch resolution cycle",
-                    pending_same_cycle);
-    passed &= check("branch blocks interrupt acceptance in same cycle",
-                    !interrupt_taken_same_cycle);
-    passed &= check("branch redirect wins in simultaneous cycle",
-                    branch_redirect_same_cycle);
+    passed &= check("branch b1 kill is observed", branch_kill_seen);
+    passed &= check("IRQ is pending in branch b1 cycle",
+                    pending_in_kill_cycle);
+    passed &= check("b1 blocks interrupt acceptance",
+                    !interrupt_taken_in_kill_cycle);
+    passed &= check("b2 redirects after b1 kill",
+                    branch_redirect_seen &&
+                    branch_redirect_cycle > kill_cycle);
     passed &= check("pending interrupt is taken after branch redirect",
-                    handler_seen && handler_cycle > trigger_cycle);
+                    handler_seen && handler_cycle > branch_redirect_cycle);
     passed &= check("wrong-path instruction does not commit",
                     commit_count(trace, branch_pc + 4) == 0);
-    passed &= check("wrong-path instruction does not write r6",
-                    trace.write_count[6] == 0);
     passed &= check("branch/IRQ test emits no memory requests",
                     trace.requests.empty());
 

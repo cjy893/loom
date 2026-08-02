@@ -96,12 +96,18 @@ package loom_consts;
     localparam logic [3:0] MULDIV_MOD_W    = 4'd5;
     localparam logic [3:0] MULDIV_MOD_WU   = 4'd6;
 
-    localparam logic [5:0] ECODE_ADE = 6'd8;
-    localparam logic [5:0] ECODE_ALE = 6'd9;
+    localparam logic [5:0] ECODE_PIL = 6'h01;
+    localparam logic [5:0] ECODE_PIS = 6'h02;
+    localparam logic [5:0] ECODE_PIF = 6'h03;
+    localparam logic [5:0] ECODE_PME = 6'h04;
+    localparam logic [5:0] ECODE_PPI = 6'h07;
+    localparam logic [5:0] ECODE_ADE = 6'd08;
+    localparam logic [5:0] ECODE_ALE = 6'd09;
     localparam logic [5:0] ECODE_SYS = 6'd11;
     localparam logic [5:0] ECODE_BRK = 6'd12;
     localparam logic [5:0] ECODE_INE = 6'd13;
     localparam logic [5:0] ECODE_IPE = 6'd14;
+    localparam logic [5:0] ECODE_TLBR = 6'h3f;
 
     localparam logic [1:0] CSR_READ = 2'd0;
     localparam logic [1:0] CSR_WRITE = 2'd1;
@@ -111,4 +117,15 @@ package loom_consts;
     localparam logic [3:0] CNT_LOW = 4'd0;
     localparam logic [3:0] CNT_HIGH = 4'd1;
     localparam logic [3:0] CNT_ID = 4'd2;
+
+    localparam logic [1:0] ACCESS_FETCH = 2'd0;
+    localparam logic [1:0] ACCESS_LOAD  = 2'd1;
+    localparam logic [1:0] ACCESS_STORE = 2'd2;
+
+    localparam logic [2:0] TLB_CMD_NONE   = 3'd0;
+    localparam logic [2:0] TLB_CMD_SEARCH = 3'd1;
+    localparam logic [2:0] TLB_CMD_READ   = 3'd2;
+    localparam logic [2:0] TLB_CMD_WRITE  = 3'd3;
+    localparam logic [2:0] TLB_CMD_FILL   = 3'd4;
+    localparam logic [2:0] TLB_CMD_INV    = 3'd5;
 endpackage

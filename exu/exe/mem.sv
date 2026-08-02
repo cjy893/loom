@@ -41,9 +41,9 @@ module mem #(
     logic [31:0] exe_src1, exe_src2, exe_imm;
 
     always_comb begin
-        iss_br_killed = brupdate.b2.mispredict && |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
-        rrd_br_killed = brupdate.b2.mispredict && |(rrd_uop.br_mask & brupdate.b1.mispredict_mask);
-        exe_br_killed = brupdate.b2.mispredict && |(exe_uop.br_mask & brupdate.b1.mispredict_mask);
+        iss_br_killed = |(iss_uop.br_mask & brupdate.b1.mispredict_mask);
+        rrd_br_killed = |(rrd_uop.br_mask & brupdate.b1.mispredict_mask);
+        exe_br_killed = |(exe_uop.br_mask & brupdate.b1.mispredict_mask);
 
         iss_uop_updated = iss_uop;
         iss_uop_updated.br_mask = iss_uop.br_mask & ~brupdate.b1.resolve_mask;

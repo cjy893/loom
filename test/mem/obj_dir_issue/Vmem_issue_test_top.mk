@@ -48,7 +48,7 @@ VM_USER_CLASSES = \
 # User .cpp directories (from .cpp's on Verilator command line)
 VM_USER_DIR = \
   .. \
-  ../../.. \
+  ../../../../../ip/mycpu \
 
 ### Default rules...
 # Include list of all generated classes

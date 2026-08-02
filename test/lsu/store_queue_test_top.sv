@@ -65,6 +65,8 @@ module store_queue_test_top (
     output logic                         query_forward_valid,
     output logic [XLEN-1:0]              query_forward_data,
 
+    output logic                         xlate_done,
+
     output logic                         stq_empty
 );
     localparam int TAG_WIDTH = STQ_ADDR_SZ + 2;
@@ -90,6 +92,13 @@ module store_queue_test_top (
     uop_t query_uop;
     uop_t store_req_uop;
     br_update_info_t brupdate;
+
+    logic xlate_req_valid, xlate_req_ready;
+    logic [TAG_WIDTH-1:0] xlate_req_tag, xlate_resp_tag;
+    logic [XLEN-1:0] xlate_req_vaddr, xlate_resp_paddr;
+    logic xlate_resp_valid;
+    logic [1:0] xlate_resp_mat;
+    logic xlate_resp_cacheable;
 
     always_comb begin
         enq_valid[0] = enq0_valid;
@@ -148,6 +157,18 @@ module store_queue_test_top (
     assign store_req_rob_idx = store_req_uop.rob_idx;
     assign store_req_br_mask = store_req_uop.br_mask;
     assign store_req_mem_size = store_req_uop.mem_size;
+    assign xlate_done = xlate_resp_valid;
+
+    lsq_identity_xlate #(.TAG_WIDTH(TAG_WIDTH)) xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(xlate_req_valid), .req_ready(xlate_req_ready),
+        .req_tag(xlate_req_tag), .req_vaddr(xlate_req_vaddr),
+        .req_access(ACCESS_STORE),
+        .resp_valid(xlate_resp_valid), .resp_ready(1'b1),
+        .resp_tag(xlate_resp_tag), .resp_paddr(xlate_resp_paddr),
+        .resp_access(), .resp_mat(xlate_resp_mat),
+        .resp_cacheable(xlate_resp_cacheable)
+    );
 
     store_queue dut (
         .clk,
@@ -168,10 +189,24 @@ module store_queue_test_top (
         .store_req_valid,
         .store_req_ready,
         .store_req_addr,
+        .store_req_cacheable(),
         .store_req_data,
         .store_req_mask,
         .store_req_idx,
         .store_req_uop,
+        .xlate_req_valid,
+        .xlate_req_ready,
+        .xlate_req_vaddr,
+        .xlate_req_tag,
+        .xlate_resp_valid,
+        .xlate_resp_accept(xlate_resp_valid),
+        .xlate_resp_tag,
+        .xlate_resp_paddr,
+        .xlate_resp_mat,
+        .xlate_resp_cacheable,
+        .xlate_resp_xcpt(1'b0),
+        .xlate_resp_match(),
+        .xlate_resp_uop(),
         .store_ack_valid,
         .store_ack_idx,
         .commit_valid,

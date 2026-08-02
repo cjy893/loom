@@ -165,5 +165,6 @@ module core_top_elf_axi_test_top #(
     assign core_dmem_req_is_store = dut.dmem_req_is_store;
     assign axi_read_state = dut.read_state_q;
     assign axi_write_state = dut.write_state_q;
-    assign dmem_outstanding = dut.dmem_outstanding_q;
+    assign dmem_outstanding =
+        rst_n && !dut.dmem_req_ready && !dut.dmem_resp_valid;
 endmodule

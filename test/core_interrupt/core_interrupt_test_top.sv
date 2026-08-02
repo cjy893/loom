@@ -18,6 +18,7 @@ module core_interrupt_test_top (
     input  logic                         ipi_irq,
     output logic                         interrupt_pending,
     output logic [12:0]                  interrupt_pending_bits,
+    output logic                         core_idle,
 
     output logic                         rob_empty,
     output logic [6:0]                   rob_occupancy,
@@ -37,6 +38,26 @@ module core_interrupt_test_top (
     localparam logic [31:0] RESET_PC = 32'h1c00_0000;
 
     commit_signal_t core_commit;
+    logic [3:0] predicted_taken;
+    logic [3:0][31:0] predicted_npc;
+
+    always_comb begin
+        for (int lane = 0; lane < 4; lane++) begin
+            logic [31:0] lane_pc;
+            lane_pc = debug_pc + 32'(lane * 4);
+            predicted_taken[lane] = 1'b0;
+            predicted_npc[lane] = lane_pc + 32'd4;
+
+            if (fe_valid[lane] &&
+                (fe_insts[lane][31:26] == 6'b010100 ||
+                 fe_insts[lane][31:26] == 6'b010101)) begin
+                predicted_taken[lane] = 1'b1;
+                predicted_npc[lane] = lane_pc +
+                    {{4{fe_insts[lane][25]}},
+                     fe_insts[lane][25:0], 2'b00};
+            end
+        end
+    end
 
     loom_core #(
         .RESET_PC(RESET_PC)
@@ -46,12 +67,41 @@ module core_interrupt_test_top (
         .fe_valid,
         .fe_insts,
         .fe_pcs('0),
+        .fe_ftq_idx('0),
+        .fe_predicted_taken(predicted_taken),
+        .fe_predicted_npc(predicted_npc),
+        .fe_xcpt_valid('0),
+        .fe_xcpt_code('0),
         .fe_ready,
         .fe_redirect_valid(redirect_valid),
         .fe_redirect_pc(redirect_pc),
+        .fe_flush_valid(),
+        .fe_redirect_ftq_idx(),
+        .fe_redirect_taken(),
+        .fe_redirect_pc_lob(),
+        .fe_redirect_cfi_type(),
+        .ifu_xlate_req_valid(1'b0),
+        .ifu_xlate_req_ready(),
+        .ifu_xlate_req_vaddr('0),
+        .ifu_xlate_resp_valid(),
+        .ifu_xlate_resp_ready(1'b1),
+        .ifu_xlate_resp_vaddr(),
+        .ifu_xlate_resp_paddr(),
+        .ifu_xlate_resp_mat(),
+        .ifu_xlate_resp_cacheable(),
+        .ifu_xlate_resp_xcpt_valid(),
+        .ifu_xlate_resp_xcpt_code(),
+        .ifu_xlate_resp_badvaddr(),
+        .ftq_exec_query_valid(),
+        .ftq_exec_query_idx(),
+        .ftq_exec_query_pc(),
+        .ftq_exec_query_resp_valid('0),
+        .ftq_exec_query_next_pc('0),
+        .ftq_exec_query_cfi_match('0),
         .dmem_req_valid(),
         .dmem_req_ready(1'b1),
         .dmem_req_is_store(),
+        .dmem_req_cacheable(),
         .dmem_req_addr(),
         .dmem_req_data(),
         .dmem_req_mask(),
@@ -62,6 +112,19 @@ module core_interrupt_test_top (
         .dmem_resp_is_store(1'b0),
         .dmem_resp_data('0),
         .dmem_resp_idx('0),
+        .icache_maint_valid(),
+        .icache_maint_ready(1'b1),
+        .icache_maint_mode(),
+        .icache_maint_vaddr(),
+        .icache_maint_paddr(),
+        .icache_maint_done(1'b1),
+        .dcache_maint_valid(),
+        .dcache_maint_ready(1'b1),
+        .dcache_maint_op(),
+        .dcache_maint_mode(),
+        .dcache_maint_vaddr(),
+        .dcache_maint_paddr(),
+        .dcache_maint_done(1'b1),
         .hw_irq,
         .ipi_irq,
         .csr_req_valid(),
@@ -116,6 +179,7 @@ module core_interrupt_test_top (
 
     assign interrupt_pending = core.csr_interrupt_pending_w;
     assign interrupt_pending_bits = core.csr_interrupt_pending_bits_w;
+    assign core_idle = core.core_idle_q;
     assign csr_current_plv = core.csr_current_plv_w;
     assign csr_current_ie = core.csr_current_ie_w;
     assign csr_era = core.csr_ertn_target_w;

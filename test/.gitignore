@@ -1,4 +1,5 @@
 */obj_dir/
+*/obj_dir_[0-9]*/
 */obj_dir_reference/
 */obj_dir_qselect/
 */obj_dir_preprocess/

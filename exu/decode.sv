@@ -81,6 +81,10 @@ module decode(
     logic [4:0] funct3;
     logic [13:0] csr_addr;
 
+    logic [1:0] cacop_mode;
+    logic [2:0] cacop_cache;
+    logic       cacop_supported;
+
     assign op_31_26 = inst[31:26];
     assign bit29 = inst[29]; assign bit28 = inst[28];
     assign bit27 = inst[27]; assign bit26 = inst[26];
@@ -99,6 +103,10 @@ module decode(
     assign op_21_15 = inst[21:15];
     assign funct3   = inst[17:15];
     assign csr_addr = inst[23:10];
+
+    assign cacop_mode = rd[4:3];
+    assign cacop_cache = rd[2:0];
+    assign cacop_supported = (cacop_mode != 2'b11) && ((cacop_cache == 3'd0) || (cacop_cache == 3'd1));
 
     // 跳转辅助
     logic need_jump;
@@ -569,7 +577,42 @@ module decode(
             // ============================================================
             INSTR_CACHE: begin
                 // 判断具体子指令
-                if(inst == 32'h0648_3800) begin
+                if(inst[31:22] == 10'b0000011000) begin
+                    // CACOP
+                    if(!cacop_supported) begin
+                        uop.iq_type = IQ_ALU;
+                        uop.fu_code[FC_ALU] = 1'b1;
+                        uop.op1_sel = OP1_ZERO;
+                        uop.op2_sel = OP2_ZERO;
+                        uop.fcn_op = ALU_ADD;
+
+                        uop.ldst = '0;
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end else if((cacop_mode != 2'b10) && (status_prv != 2'b00)) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_cacop = 1'b1;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+
+                        uop.lsrc1 = rj;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2 = '0;
+                        uop.lsrc2_rtype = RT_X;
+
+                        uop.op1_sel = OP1_SRC1;
+                        uop.op2_sel = OP2_IMM;
+                        uop.imm_sel = IMM_I12;
+                        uop.imm_packed = {{14{i12[11]}}, i12};
+
+                        uop.ldst = '0;
+                        uop.dst_rtype = RT_X;
+                    end
+                end else if(inst == 32'h0648_3800) begin
                     if(status_prv != 2'b00) begin
                         uop.exception = 1'b1;
                         uop.exc_cause = ECODE_IPE;
@@ -583,6 +626,111 @@ module decode(
                         uop.lsrc1_rtype = RT_X;
                         uop.lsrc2_rtype = RT_X;
                     end
+                end else if(inst == 32'h0648_2800) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.tlb_cmd = TLB_CMD_SEARCH;
+
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst == 32'h0648_2c00) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.tlb_cmd = TLB_CMD_READ;
+
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst == 32'h0648_3000) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.tlb_cmd = TLB_CMD_WRITE;
+
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst == 32'h0648_3400) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.tlb_cmd = TLB_CMD_FILL;
+
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst[31:15] == 17'b00000110010010011 && rd <= 6) begin
+                    if(status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+                        uop.tlb_cmd = TLB_CMD_INV;
+
+                        uop.lsrc1 = rj;
+                        uop.lsrc2 = rk;
+                        uop.lsrc1_rtype = RT_FIX;
+                        uop.lsrc2_rtype = RT_FIX;
+                    end
+                end else if (inst[31:15] == 17'b00000110010010001) begin
+                    if (status_prv != 2'b00) begin
+                        uop.exception = 1'b1;
+                        uop.exc_cause = ECODE_IPE;
+                    end else begin
+                        uop.iq_type = IQ_UNQ;
+                        uop.is_unique = 1'b1;
+                        uop.is_idle = 1'b1;
+                        uop.flush_on_commit = 1'b1;
+
+                        uop.ldst = '0;
+                        uop.dst_rtype = RT_X;
+                        uop.lsrc1_rtype = RT_X;
+                        uop.lsrc2_rtype = RT_X;
+                    end
+                end else if(inst[31:15] == 17'b00111000011100100) begin
+                    uop.iq_type = IQ_UNQ;
+                    uop.is_unique = 1'b1;
+                    uop.is_dbar = 1'b1;
+
+                    uop.ldst = '0;
+                    uop.dst_rtype = RT_X;
+                    uop.lsrc1_rtype = RT_X;
+                    uop.lsrc2_rtype = RT_X;
+                end else if (inst[31:15] == 17'b00111000011100101) begin
+                    uop.iq_type = IQ_UNQ;
+                    uop.is_unique = 1'b1;
+                    uop.is_ibar = 1'b1;
+                    uop.flush_on_commit = 1'b1;
+
+                    uop.ldst = '0;
+                    uop.dst_rtype = RT_X;
+                    uop.lsrc1_rtype = RT_X;
+                    uop.lsrc2_rtype = RT_X;
                 end else begin
                     uop.exception = 1'b1;
                     uop.exc_cause = ECODE_INE;

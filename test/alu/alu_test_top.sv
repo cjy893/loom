@@ -14,8 +14,13 @@ module alu_test_top (
     input  logic [31:0] imm,
     input  logic [5:0] rob_idx,
     input  logic       is_br,
+    input  logic       is_b_bl,
+    input  logic       is_jirl,
     input  logic [3:0] br_type,
     input  logic       predicted_taken,
+    input  logic       ftq_resp_valid,
+    input  logic [31:0] ftq_resp_next_pc,
+    input  logic       ftq_resp_cfi_match,
     input  logic [3:0] uop_br_mask,
     input  logic [3:0] resolve_mask,
     input  logic [3:0] mispredict_mask,
@@ -28,6 +33,7 @@ module alu_test_top (
     output logic [5:0]  result_rob_idx,
     output logic        brinfo_valid,
     output logic        branch_taken,
+    output logic [31:0] branch_target,
     output logic        mispredict
 );
     uop_t uop;
@@ -45,6 +51,8 @@ module alu_test_top (
         uop.pdst = 6'd32;
         uop.dst_rtype = RT_FIX;
         uop.is_br = is_br;
+        uop.is_b_bl = is_b_bl;
+        uop.is_jirl = is_jirl;
         uop.br_type = br_type;
         uop.taken = predicted_taken;
         uop.br_mask = uop_br_mask;
@@ -62,6 +70,9 @@ module alu_test_top (
         .src1_data(src1),
         .src2_data(src2),
         .imm_data(imm),
+        .ftq_resp_valid,
+        .ftq_resp_next_pc,
+        .ftq_resp_cfi_match,
         .res_valid(result_valid),
         .res(response),
         .wakeup_valid,
@@ -75,5 +86,6 @@ module alu_test_top (
     assign result = response.data;
     assign result_rob_idx = response.uop.rob_idx;
     assign branch_taken = brinfo.taken;
+    assign branch_target = brinfo.jirl_target;
     assign mispredict = brinfo.mispredict;
 endmodule

@@ -29,6 +29,26 @@ module lsu #(
     input uop_t [DGEN_WIDTH-1:0] dgen_uops,
     input logic [DGEN_WIDTH-1:0] [XLEN-1:0] dgen_data,
 
+    output logic                    xlate_req_valid,
+    input  logic                    xlate_req_ready,
+    output logic [LSU_ADDR_SZ+1:0]  xlate_req_tag,
+    output logic [XLEN-1:0]         xlate_req_vaddr,
+    output logic [1:0]              xlate_req_access,
+
+    input  logic                    xlate_resp_valid,
+    output logic                    xlate_resp_ready,
+    input  logic [LSU_ADDR_SZ+1:0]  xlate_resp_tag,
+    input  logic [1:0]              xlate_resp_access,
+    input  logic [XLEN-1:0]         xlate_resp_paddr,
+    input  logic [1:0]              xlate_resp_mat,
+    input  logic                    xlate_resp_cacheable,
+    input  logic                    xlate_resp_xcpt_valid,
+    input  logic [5:0]              xlate_resp_xcpt_code,
+    input  logic [XLEN-1:0]         xlate_resp_badvaddr,
+
+    output exception_t              xlate_xcpt,
+    input  logic                    xlate_xcpt_ready,
+
     input logic [COMMIT_WIDTH-1:0] commit_valid,
     input uop_t [COMMIT_WIDTH-1:0] commit_uops,
     input logic [ROB_ADDR_SZ-1:0] rob_head_idx,
@@ -42,6 +62,7 @@ module lsu #(
     output logic dmem_req_valid,
     input logic dmem_req_ready,
     output logic dmem_req_is_store,
+    output logic dmem_req_cacheable,
     output logic [XLEN-1:0] dmem_req_addr,
     output logic [XLEN-1:0] dmem_req_data,
     output logic [XLEN/8-1:0] dmem_req_mask,
@@ -86,12 +107,14 @@ module lsu #(
 
     logic ld_req_valid;
     logic ld_req_ready;
+    logic ld_req_cacheable;
     logic [XLEN-1:0] ld_req_addr;
     logic [LDQ_TAG_WIDTH-1:0] ld_req_idx;
     uop_t ld_req_uop;
 
     logic st_req_valid;
     logic st_req_ready;
+    logic st_req_cacheable;
     logic [XLEN-1:0] st_req_addr;
     logic [XLEN-1:0] st_req_data;
     logic [XLEN/8-1:0] st_req_mask;
@@ -109,6 +132,26 @@ module lsu #(
     logic selected_is_store;
     logic selected_valid;
     logic dmem_req_fire;
+
+    logic ld_xlate_req_valid, ld_xlate_req_ready;
+    logic [XLEN-1:0] ld_xlate_req_vaddr;
+    logic [LDQ_TAG_WIDTH-1:0] ld_xlate_req_tag;
+
+    logic st_xlate_req_valid, st_xlate_req_ready;
+    logic [XLEN-1:0] st_xlate_req_vaddr;
+    logic [STQ_TAG_WIDTH-1:0] st_xlate_req_tag;
+
+    logic ld_xlate_resp_valid, ld_xlate_resp_match;
+    logic st_xlate_resp_valid, st_xlate_resp_match;
+    uop_t ld_xlate_resp_uop, st_xlate_resp_uop;
+    logic xlate_resp_accept;
+
+    logic xlate_arb_locked;
+    logic xlate_locked_is_store;
+    logic xlate_prefer_store;
+    logic xlate_selected_is_store;
+    logic xlate_selected_valid;
+    logic xlate_req_fire;
 
     assign ldq_enq_valid = dis_valid & dis_uses_ldq;
     assign ldq_enq_fire = dis_fire & ldq_enq_valid;
@@ -146,6 +189,66 @@ module lsu #(
     end
 
     always_comb begin
+        if(xlate_arb_locked)
+            xlate_selected_is_store = xlate_locked_is_store;
+        else begin
+            case({st_xlate_req_valid, ld_xlate_req_valid})
+                2'b10: xlate_selected_is_store = 1'b1;
+                2'b11: xlate_selected_is_store = xlate_prefer_store;
+                default: xlate_selected_is_store = 1'b0;
+            endcase
+        end
+
+        xlate_req_valid = 1'b0;
+        xlate_req_tag = '0;
+        xlate_req_vaddr = '0;
+        xlate_req_access = ACCESS_LOAD;
+        ld_xlate_req_ready = 1'b0;
+        st_xlate_req_ready = 1'b0;
+
+        if(xlate_selected_is_store) begin
+            xlate_req_valid = st_xlate_req_valid;
+            xlate_req_tag[STQ_TAG_WIDTH-1:0] = st_xlate_req_tag;
+            xlate_req_vaddr = st_xlate_req_vaddr;
+            xlate_req_access = ACCESS_STORE;
+            st_xlate_req_ready = xlate_req_ready;
+        end else begin
+            xlate_req_valid = ld_xlate_req_valid;
+            xlate_req_tag[LDQ_TAG_WIDTH-1:0] = ld_xlate_req_tag;
+            xlate_req_vaddr = ld_xlate_req_vaddr;
+            xlate_req_access = ACCESS_LOAD;
+            ld_xlate_req_ready = xlate_req_ready;
+        end
+
+        xlate_selected_valid = xlate_selected_is_store ?
+                                st_xlate_req_valid :
+                                ld_xlate_req_valid;
+        xlate_req_fire = xlate_req_valid && xlate_req_ready;
+    end
+
+    always_comb begin
+        ld_xlate_resp_valid = xlate_resp_valid && xlate_resp_access == ACCESS_LOAD;
+
+        st_xlate_resp_valid = xlate_resp_valid && xlate_resp_access == ACCESS_STORE;
+
+        xlate_xcpt = '0;
+
+        if(ld_xlate_resp_match) begin
+            xlate_xcpt.uop = ld_xlate_resp_uop;
+        end else if(st_xlate_resp_match) begin
+            xlate_xcpt.uop = st_xlate_resp_uop;
+        end
+
+        xlate_xcpt.valid = xlate_resp_valid && xlate_resp_xcpt_valid && (ld_xlate_resp_match || st_xlate_resp_match) && !flush_pipeline;
+        xlate_xcpt.cause = xlate_resp_xcpt_code;
+        xlate_xcpt.badvaddr = xlate_resp_badvaddr;
+
+        xlate_resp_ready = !xlate_resp_xcpt_valid || !(ld_xlate_resp_match || st_xlate_resp_match) || xlate_xcpt_ready;
+
+        xlate_resp_accept = xlate_resp_valid && xlate_resp_ready;
+    end
+
+    always_comb begin
         if(arb_locked) begin
             selected_is_store = locked_is_store;
         end else begin
@@ -159,6 +262,7 @@ module lsu #(
         dmem_req_valid = 1'b0;
         dmem_req_is_store = selected_is_store;
         dmem_req_addr = '0;
+        dmem_req_cacheable = 1'b0;
         dmem_req_data = '0;
         dmem_req_mask = '0;
         dmem_req_size = '0;
@@ -170,6 +274,7 @@ module lsu #(
         if(selected_is_store) begin
             dmem_req_valid = st_req_valid;
             dmem_req_addr = st_req_addr;
+            dmem_req_cacheable = st_req_cacheable;
             dmem_req_data = st_req_data;
             dmem_req_mask = st_req_mask;
             dmem_req_size = st_req_uop.mem_size;
@@ -179,6 +284,7 @@ module lsu #(
         end else begin
             dmem_req_valid = ld_req_valid;
             dmem_req_addr = ld_req_addr;
+            dmem_req_cacheable = ld_req_cacheable;
             dmem_req_size = ld_req_uop.mem_size;
             dmem_req_idx[LDQ_TAG_WIDTH-1:0] = ld_req_idx;
             dmem_req_uop = ld_req_uop;
@@ -194,6 +300,28 @@ module lsu #(
         ld_resp_idx = dmem_resp_idx[LDQ_TAG_WIDTH-1:0];
         st_ack_valid = dmem_resp_valid && dmem_resp_is_store;
         st_ack_idx = dmem_resp_idx[STQ_TAG_WIDTH-1:0];
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            xlate_arb_locked <= 1'b0;
+            xlate_locked_is_store <= 1'b0;
+            xlate_prefer_store <= 1'b0;
+        end else if(flush_pipeline) begin
+            xlate_arb_locked <= 1'b0;
+            xlate_locked_is_store <= 1'b0;
+            xlate_prefer_store <= 1'b0;
+        end else begin
+            if(xlate_arb_locked) begin
+                if(!xlate_selected_valid || xlate_req_fire)
+                    xlate_arb_locked <= 1'b0;
+            end else if(xlate_req_valid && !xlate_req_ready) begin
+                xlate_arb_locked <= 1'b1;
+                xlate_locked_is_store <= xlate_selected_is_store;
+            end
+
+            if(xlate_req_fire) xlate_prefer_store <= !xlate_selected_is_store;
+        end
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -244,11 +372,25 @@ module lsu #(
         .dmem_req_valid(ld_req_valid),
         .dmem_req_ready(ld_req_ready),
         .dmem_req_addr(ld_req_addr),
+        .dmem_req_cacheable(ld_req_cacheable),
         .dmem_req_idx(ld_req_idx),
         .dmem_req_uop(ld_req_uop),
         .dmem_resp_valid(ld_resp_valid),
         .dmem_resp_idx(ld_resp_idx),
         .dmem_resp_data(dmem_resp_data),
+        .xlate_req_valid     (ld_xlate_req_valid),
+        .xlate_req_ready     (ld_xlate_req_ready),
+        .xlate_req_vaddr     (ld_xlate_req_vaddr),
+        .xlate_req_tag       (ld_xlate_req_tag),
+        .xlate_resp_valid    (ld_xlate_resp_valid),
+        .xlate_resp_accept   (xlate_resp_accept),
+        .xlate_resp_tag      (xlate_resp_tag[LDQ_TAG_WIDTH-1:0]),
+        .xlate_resp_paddr    (xlate_resp_paddr),
+        .xlate_resp_mat      (xlate_resp_mat),
+        .xlate_resp_cacheable(xlate_resp_cacheable),
+        .xlate_resp_xcpt     (xlate_resp_xcpt_valid),
+        .xlate_resp_match    (ld_xlate_resp_match),
+        .xlate_resp_uop      (ld_xlate_resp_uop),
         .load_wb_valid,
         .load_wb_resp,
         .commit_valid,
@@ -290,10 +432,24 @@ module lsu #(
         .store_req_valid(st_req_valid),
         .store_req_ready(st_req_ready),
         .store_req_addr(st_req_addr),
+        .store_req_cacheable(st_req_cacheable),
         .store_req_data(st_req_data),
         .store_req_mask(st_req_mask),
         .store_req_idx(st_req_idx),
         .store_req_uop(st_req_uop),
+        .xlate_req_valid     (st_xlate_req_valid),
+        .xlate_req_ready     (st_xlate_req_ready),
+        .xlate_req_vaddr     (st_xlate_req_vaddr),
+        .xlate_req_tag       (st_xlate_req_tag),
+        .xlate_resp_valid    (st_xlate_resp_valid),
+        .xlate_resp_accept   (xlate_resp_accept),
+        .xlate_resp_tag      (xlate_resp_tag[STQ_TAG_WIDTH-1:0]),
+        .xlate_resp_paddr    (xlate_resp_paddr),
+        .xlate_resp_mat      (xlate_resp_mat),
+        .xlate_resp_cacheable(xlate_resp_cacheable),
+        .xlate_resp_xcpt     (xlate_resp_xcpt_valid),
+        .xlate_resp_match    (st_xlate_resp_match),
+        .xlate_resp_uop      (st_xlate_resp_uop),
         .store_ack_valid(st_ack_valid),
         .store_ack_idx(st_ack_idx),
         .commit_valid,

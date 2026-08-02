@@ -1,4 +1,5 @@
 import loom_params::*;
+import loom_consts::*;
 import loom_types::*;
 
 // Temporary scalar adapter used by test/lsu. The production LSU will replace
@@ -51,6 +52,13 @@ module lsu_test (
     uop_t dmem_req_uop_unused;
     logic ldq_empty_unused;
 
+    logic xlate_req_valid, xlate_req_ready;
+    logic [TAG_WIDTH-1:0] xlate_req_tag, xlate_resp_tag;
+    logic [XLEN-1:0] xlate_req_vaddr, xlate_resp_paddr;
+    logic xlate_resp_valid;
+    logic [1:0] xlate_resp_mat;
+    logic xlate_resp_cacheable;
+
     always_comb begin
         enq_valid[0] = ldq_enq_valid;
         enq_uops[0] = ldq_enq_uop;
@@ -69,6 +77,17 @@ module lsu_test (
 
     assign ldq_enq_ready = enq_ready[0];
     assign ldq_enq_idx = enq_idx[0];
+
+    lsq_identity_xlate #(.TAG_WIDTH(TAG_WIDTH)) xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(xlate_req_valid), .req_ready(xlate_req_ready),
+        .req_tag(xlate_req_tag), .req_vaddr(xlate_req_vaddr),
+        .req_access(ACCESS_LOAD),
+        .resp_valid(xlate_resp_valid), .resp_ready(1'b1),
+        .resp_tag(xlate_resp_tag), .resp_paddr(xlate_resp_paddr),
+        .resp_access(), .resp_mat(xlate_resp_mat),
+        .resp_cacheable(xlate_resp_cacheable)
+    );
 
     load_queue #(
         .NUM_ENTRIES(LDQ_ENTRIES),
@@ -100,10 +119,24 @@ module lsu_test (
         .dmem_req_ready,
         .dmem_req_addr,
         .dmem_req_idx,
+        .dmem_req_cacheable(),
         .dmem_req_uop(dmem_req_uop_unused),
         .dmem_resp_valid,
         .dmem_resp_idx,
         .dmem_resp_data,
+        .xlate_req_valid,
+        .xlate_req_ready,
+        .xlate_req_vaddr,
+        .xlate_req_tag,
+        .xlate_resp_valid,
+        .xlate_resp_accept(xlate_resp_valid),
+        .xlate_resp_tag,
+        .xlate_resp_paddr,
+        .xlate_resp_mat,
+        .xlate_resp_cacheable,
+        .xlate_resp_xcpt(1'b0),
+        .xlate_resp_match(),
+        .xlate_resp_uop(),
         .load_wb_valid,
         .load_wb_resp,
         .commit_valid,

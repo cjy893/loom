@@ -40,6 +40,8 @@ package loom_types;
 
         logic is_dbar;
         logic is_ibar;
+        logic is_idle;
+        logic is_cacop;
         logic is_invtlb;
         logic is_llsc;
         logic is_ertn;
@@ -99,6 +101,7 @@ package loom_types;
         logic predicated;
 
         logic [2:0] csr_cmd;
+        logic [2:0] tlb_cmd;
 
         logic ldst_is_src1;
 
@@ -239,6 +242,11 @@ package loom_types;
         logic start_bank;
         logic [RAS_IDX_SZ-1:0] ras_idx;
         global_history_t ghist;
+
+        logic cfi_taken;
+        logic cfi_mispredicted;
+        logic cfi_npc_plus4;
+        logic [31:0] ras_top;
     } ftq_entry_t;
 
     typedef struct {
@@ -260,10 +268,11 @@ package loom_types;
         logic use_matrix_issue;
     } issue_params_t;
 
-        typedef struct packed {
+    typedef struct packed {
         logic taken;
         logic is_br;
         logic is_b_bl;
+        logic is_jirl;
         logic [31:0] predicted_pc;
     } branch_prediction_t;
 
@@ -320,4 +329,83 @@ package loom_types;
         logic [31:0] target;
         logic [NBANKS-1:0] [BPD_MAX_META_LENGTH-1:0] meta;
     } bpd_update_t;
+
+    function automatic global_history_t update_global_history(
+        input global_history_t snapshot,
+        input logic [FETCH_WIDTH-1:0] br_mask,
+        input logic cfi_valid,
+        input logic [$clog2(FETCH_WIDTH)-1:0] cfi_idx,
+        input logic cfi_taken,
+        input logic cfi_is_br,
+        input logic cfi_is_call,
+        input logic cfi_is_ret,
+        input logic [31:0] pc
+    );
+        global_history_t result;
+        logic [GLOBAL_HISTORY_LENGTH-1:0] base_history;
+        logic [FETCH_WIDTH-1:0] not_taken_mask;
+        logic first_bank_saw_nt;
+        logic second_bank_saw_nt;
+        logic cfi_in_first_bank;
+        logic last_bank_in_block;
+
+        if (snapshot.new_saw_branch_taken)
+            base_history = {snapshot.old_history[GLOBAL_HISTORY_LENGTH-2:0], 1'b1};
+        else if (snapshot.new_saw_branch_not_taken)
+            base_history = {snapshot.old_history[GLOBAL_HISTORY_LENGTH-2:0], 1'b0};
+        else
+            base_history = snapshot.old_history;
+
+        not_taken_mask = '0;
+        for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
+            if (br_mask[lane] &&
+                (!cfi_valid || lane <= int'(cfi_idx)) &&
+                !(cfi_valid && cfi_is_br && cfi_taken &&
+                    lane == int'(cfi_idx)))
+                not_taken_mask[lane] = 1'b1;
+        end
+
+        first_bank_saw_nt = snapshot.current_saw_branch_not_taken;
+        second_bank_saw_nt = 1'b0;
+        for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
+            if (lane < BANK_WIDTH)
+                first_bank_saw_nt |= not_taken_mask[lane];
+            else
+                second_bank_saw_nt |= not_taken_mask[lane];
+        end
+
+        cfi_in_first_bank =
+            cfi_valid && cfi_taken && int'(cfi_idx) < BANK_WIDTH;
+
+        last_bank_in_block =
+            int'(pc[$clog2(ICACHE_BLOCK_BYTES)-1:$clog2(BANK_BYTES)]) ==
+            (ICACHE_BLOCK_BYTES / BANK_BYTES - 1);
+
+        result = snapshot;
+        result.current_saw_branch_not_taken = 1'b0;
+        result.new_saw_branch_not_taken = 1'b0;
+        result.new_saw_branch_taken = 1'b0;
+
+        if ((NBANKS == 1) || cfi_in_first_bank || last_bank_in_block) begin
+            result.old_history = base_history;
+            result.new_saw_branch_not_taken = first_bank_saw_nt;
+            result.new_saw_branch_taken = cfi_is_br && cfi_in_first_bank;
+        end else begin
+            result.old_history = first_bank_saw_nt
+                ? {base_history[GLOBAL_HISTORY_LENGTH-2:0], 1'b0}
+                : base_history;
+            result.new_saw_branch_not_taken = second_bank_saw_nt;
+            result.new_saw_branch_taken =
+                cfi_valid && cfi_taken && cfi_is_br && !cfi_in_first_bank;
+        end
+
+        if (cfi_valid && cfi_is_call)
+            result.ras_idx = snapshot.ras_idx == RAS_IDX_SZ'(RAS_ENTRIES-1)
+                ? '0 : snapshot.ras_idx + 1'b1;
+        else if (cfi_valid && cfi_is_ret)
+            result.ras_idx = snapshot.ras_idx == '0
+                ? RAS_IDX_SZ'(RAS_ENTRIES-1) : snapshot.ras_idx - 1'b1;
+
+        update_global_history = result;
+    endfunction
 endpackage

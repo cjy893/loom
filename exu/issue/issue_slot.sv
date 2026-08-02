@@ -33,11 +33,7 @@ module issue_slot #(
 
     logic killed;
     always_comb begin
-        killed = 1'b0;
-        if(brupdate.b2.mispredict) begin
-            if((slot_uop.br_mask & brupdate.b1.mispredict_mask) != '0) killed = 1'b1;
-        end
-        if(kill) killed = 1'b1;
+        killed = kill || |(slot_uop.br_mask & brupdate.b1.mispredict_mask);
     end
 
     uop_t next_uop;

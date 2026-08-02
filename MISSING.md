@@ -7,30 +7,52 @@
 | 参数定义 | `common/params_pkg.sv` | 完成 |
 | 常量编码 | `common/consts_pkg.sv` | 完成 |
 | 类型定义 | `common/types_pkg.sv` | 完成 |
-| 译码器 | `exu/decode.sv` | 指令分类完成，CACHE/TLB 子指令细节待补 |
-| ROB | `exu/rob.sv` | 提交、静态异常、ALE 动态异常（lxcpt）、精确异常 flush 完成；TLB 类动态异常待 TLB 引入 |
+| 译码器 | `exu/decode.sv` | 基础、扩展、CSR、TLB、CACOP、IDLE、DBAR/IBAR 译码已实现并纳入测试 |
+| ROB | `exu/rob.sv` | 提交、动态异常、精确异常/中断、ERTN、refetch 和恢复路径已实现 |
 | Map Table | `exu/rename/rename_maptable.sv` | 完成 |
 | Free List | `exu/rename/rename_freelist.sv` | 完成 |
 | Busy Table | `exu/rename/rename_busytable.sv` | 完成 |
 | Rename Stage | `exu/rename/rename_stage.sv` | 完成 |
 | Dispatch | `exu/dispatch.sv` | 完成（双路独立打包和逐入口反压） |
 | Issue Slot | `exu/issue/issue_slot.sv` | 基本完成，优化项见下 |
-| IFU | `ifu/ifu.sv` | 单 outstanding 基础版本，完整前端功能待补 |
-| Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换完成 |
+| IFU | `ifu/ifu.sv` | 单 outstanding IMMU+ICache、双 Composer F3 预测、RAS/GHist、FTQ 和恢复闭环已生产接入 |
+| Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换及 FTQ/taken 元数据到 uop/提交的传输已测试 |
+| 地址转换 | `mmu/`、TLB 相关模块 | IMMU/DMMU、地址转换和 TLB 基础路径已实现并测试 |
+| Cache | ICache/DCache 相关模块 | ICache、DCache、AXI 路径和 CACOP 基础功能已实现并测试 |
+| 分支预测组件 | `ifu/bpd/` | UBTB、BIM、BTB、Composer、RAS、GHist、F3 predecode、update router 已通过独立/集成测试 |
+| FTQ | `ifu/fetch_target_queue.sv` | 已接入生产 IFU、核心 commit/brupdate、注册执行查询和架构全 flush；参数化与闭环测试通过 |
 | 乱序内核 | `exu/loom_core.sv` | Fetch Buffer 直连 Decode 边界已验证，由 `core_top.sv` 负责 SoC 接口 |
 | SRT-4 除法器 | `exu/exe/div/`（`srt4_core` + `divider` 符号包装层） | 完成，接入 `unq.sv`，`test/div` 契约测试通过 |
 
 ---
 
-## 前端缺口
+## 前端状态与剩余缺口
 
 | 项目 | 当前状态 | 剩余工作 |
 |------|---------|---------|
-| 取指并发 | IFU 只允许一个未完成请求 | 接入 I-Cache 后支持所需的并发和 replay |
-| 分支预测 | 当前依靠执行后重定向 | 实现预测器、FTQ 和预测目标校验 |
-| 地址转换 | 当前直接使用物理测试地址 | 实现 ITLB、取指异常和权限检查 |
-| 重定向接口 | `loom_core` 通过公开端口输出分支/ROB 重定向，并接收异常和 ERTN 目标 | 接入正式 CSR 后提供真实异常入口和 ERA 返回地址 |
-| 核心输入 | `loom_core` 保留逐 lane 完成掩码 | 上游必须在 `valid && ready` 前保持包内容稳定 |
+| 取指并发 | IFU+IMMU+ICache 当前只允许一个未完成请求 | 后续增加 tag/FTQ index/frontend epoch、多 outstanding 和 replay |
+| 分支预测 | 双 Composer、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 性能分析后决定是否启用 F1/F2 早重定向 |
+| 预测元数据 | 真实 FTQ index、predicted-taken 和 predicted-npc 已经 IFU→Fetch Buffer→`loom_core`→uop 传递 | 多 outstanding 时扩展请求身份，不改变逐 lane 元数据契约 |
+| GHist/RAS | fetch-wide 双 bank 更新、branch rewind repair 及异常/中断/ERTN 全清空已接入并测试 | F1/F2 早重定向时重新验证投机更新时间点 |
+| FTQ 闭环 | 与 Fetch Buffer 原子分配，已接 commit、brupdate、branch rewind、BPD 训练和架构全 flush | 多 outstanding 时把请求 tag/epoch 与 FTQ 身份绑定 |
+| 目标校验 | 条件分支比较方向，B/BL 使用 F3 直接目标，JIRL 使用注册 FTQ next-PC 查询 | 后续性能优化不得改变执行级校验契约 |
+| 地址转换 | IMMU/ITLB 基础路径已接入 | 多 outstanding 时补请求身份、epoch 和迟到响应丢弃 |
+| 重定向接口 | branch rewind 与异常/中断/ERTN 全前端清空语义已区分并通过 Cache/AXI 在途恢复测试 | 多 outstanding 时扩展 epoch 比较和 replay |
+| 核心输入 | `loom_core` 保留逐 lane 完成掩码，包稳定性和部分接收已测试 | 继续维持 `valid && ready` 前包内容稳定的契约 |
+
+### 已实现的分支预测生产接入边界
+
+- BPD/FTQ 归 `ifu.sv` 管理；`core_top.sv` 只连接 IFU、Fetch Buffer、`loom_core` 和 SoC 接口。
+- 两个 Composer 分别服务两个取指 bank；Composer 只包含 UBTB/BIM/BTB，RAS、GHist、F3 predecode 和 FTQ 直接归 IFU 控制。
+- 当前生产版本采用 F3 已对齐预测，不启用 F1/F2 早重定向；指令、lane、FTQ index、taken、predicted-npc 和 meta 保持一一对应。
+- 非 bank 对齐重定向需保留正确的逐 lane valid/元数据关系。Fetch Buffer 可以压缩稀疏 lane，但入队前不得错误平移 meta。
+- Fetch Buffer 接受 fetch packet 与 FTQ 分配必须是同一事务；任何一侧未 ready 时两侧状态都不能推进。
+- core redirect 必须高于预测 next PC。branch mispredict 从对应 FTQ 项恢复，异常、中断和 ERTN 使用全前端清空语义。
+- ALU 发起的 FTQ 查询结果必须寄存并与执行级 uop 对齐；JIRL 还需要 FTQ 提供预测 next PC 才能验证目标。
+- `test/core_ifu/` 已覆盖预测训练、RAS/GHist repair、随机反压和全前端 flush；
+  `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
+- 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
+- F1/F2 早重定向、多 outstanding 取指以及更激进的 replay 属于性能阶段，实施前先增加性能统计。
 
 ---
 
@@ -58,28 +80,19 @@
 
 ---
 
-## Decode 缺口
+## Decode 剩余缺口
 
-### 1. CACHE/TLB 子指令未细分
+### 已完成
 
-当前 `INSTR_CACHE` 只处理了 ERTN 和 CACOP，以下子指令的 uop 字段未填充：
+- TLBSRCH、TLBRD、TLBWR、TLBFILL、INVTLB 已细分为对应 `tlb_cmd`，并带 PLV 检查。
+- CACOP 已区分支持范围、地址源和权限行为；ERTN、IDLE、DBAR、IBAR 已产生对应 uop 标记。
+- 上述译码已由 `test/decode/` 覆盖，并有核心级 TLB、CACOP 和 advance 指令测试。
 
-| 指令 | 编码 | 需要设什么 |
-|------|------|-----------|
-| TLBSRCH | `32'h0648_2800` | `fu_code[FC_CSR]=1`, TLB 查找操作 |
-| TLBRD | `32'h0648_2c00` | `fu_code[FC_CSR]=1`, TLB 读 |
-| TLBWR | `32'h0648_3000` | `fu_code[FC_CSR]=1`, TLB 写 |
-| TLBFILL | `32'h0648_3400` | `fu_code[FC_CSR]=1`, TLB 填充 |
-| INVTLB | `inst[31:15]==17'b00000110010010011` | `fu_code[FC_CSR]=1`, 无效化 TLB 条目 |
-| IDLE | `32'h0648_8000` | `is_unique=1`, 等中断 |
-| DBAR | `inst[31:15]==17'b00111000011100100` | `is_dbar=1`, 数据屏障 |
-| IBAR | `inst[31:15]==17'b00111000011100101` | `is_ibar=1`, 指令屏障 |
+### 仍需补充
 
-### 2. 特权级检查
-
-- CSR 和 ERTN 已检查 `status_prv`，非 PLV0 执行时产生 `ECODE_IPE`
-- 尚未实现的 CACHE/TLB 特权指令当前按 `ECODE_INE` 处理
-- 实现 CACHE/TLB/IDLE 时仍需按各指令权限补充 `ECODE_IPE` 检查
+- 将全部已支持基础/扩展/特权指令纳入穷举编码与非法编码边界测试，避免只覆盖代表性机器码。
+- 对照最终采用的 LA32 架构版本复核 CACOP hint、INVTLB op 和屏障 hint 的保留编码行为。
+- 后续新增指令时继续维持“Decode 分类、UNQ/LSU 执行、ROB 精确提交”三层测试。
 
 ---
 
@@ -118,9 +131,9 @@
 
 | 项目 | 说明 | 何时需要 |
 |------|------|---------|
-| `OP1_PC` 未连接 | ALU 内部 `OP1_PC` 分支 op1='0，`pcaddu12i` 等指令的 PC 值需由顶层填入 `src1_data` | `loom_core.sv` 连线时处理 |
-| 立即数扩展在顶层 | 当前 `imm_data` 由顶层扩展好喂入（`IMM_I12`、`IMM_I16_S2`、`IMM_U20_S12` 等），未在 ALU 内部扩展 | `loom_core.sv` 连线时处理 |
-| B/BL/JIRL 强制 mispredict | 无条件转移始终 `mispredict=1`，因为没有分支预测器验证目标地址。前端+FTQ 写完后改为比较预测目标和实际目标 | 前端+FTQ 写完后改 |
+| `OP1_PC` | ALU 已直接选择 `exe_uop.pc`，不再依赖顶层伪造 `src1_data` | 完成 |
+| 立即数扩展在核心集成层 | `loom_core.sv` 已按 `imm_sel` 扩展 `imm_packed` 后送入执行单元，这是当前确定的模块边界 | 完成 |
+| 分支预测目标校验 | 条件分支、B/BL 和 JIRL 已使用 taken/F3 目标/注册 FTQ next-PC 判断误预测 | 完成；后续保持执行级校验契约 |
 | `br_mask` 更新未做 | `res.uop.br_mask` 未用 `GetNewBrMask(brupdate)` 清已解析分支位。不影响功能（提交或 flush 时会清），但多占用 br_tag 槽位 | 后续优化 |
 | `squash_iss` / `child_rebusy` / `pred_wakeup` | 省略。跟 issue_slot 优化项对应，等 issue_slot 补齐后同步加 | issue_slot 优化项完成后补 |
 
@@ -216,22 +229,24 @@ store 提交、双队列并发反压、flush 迟到响应，以及正式 LSU 仲
 
 ---
 
-## 待写模块（按依赖顺序）
+## 主要模块状态（按依赖顺序）
 
 ```
-[  ] rob.sv            — 补异常输出
+[✓] rob.sv            — 提交、异常/中断、ERTN、refetch 和恢复；CSR replay 仍待补
 [✓] rename/           — 寄存器重命名 (maptable + freelist + busytable + stage)
 [✓] dispatch.sv       — 分发到 Issue Queue
 [✓] issue_slot.sv     — 单槽位 (优化项见上)
-[  ] issue_unit.sv    — 发射队列 (唤醒 + 选择)
+[✓] issue_unit_collapsing.sv — 当前发射、唤醒和基础压缩策略；性能优化项见上
 [✓] branch_mask.sv     — 分支标签分配 + br_mask 生成
-[  ] alu_exe_unit.sv / mem_exe_unit.sv / unq_exe_unit.sv — 执行单元
-[  ] regfile_banked.sv — 物理寄存器文件
-[  ] frontend.sv + ftq.sv + fetch_buffer.sv + bpd/* — 前端 + 分支预测
-[✓] lsu.sv / [  ] dcache.sv — 访存单元 / 数据缓存
-[x] exu/loom_core.sv — 乱序内核连线
+[✓] alu.sv / mem.sv / unq.sv — 执行单元；分支方向和 B/BL/JIRL 目标校验已接 FTQ
+[✓] regfile.sv       — 物理寄存器文件及旁路
+[✓] ifu.sv + fetcher_buffer.sv + bpd/* + fetch_target_queue.sv
+    — F3 预测、元数据、训练、branch rewind 和架构全 flush 生产闭环完成；多 outstanding 待补
+[✓] lsu.sv / dcache.sv / icache.sv — 访存与缓存基础路径
+[✓] mmu/* + TLB      — 地址转换基础路径；多 outstanding 身份/epoch 待补
+[✓] exu/loom_core.sv — 乱序内核连线及前端 FTQ/taken/pc_lob 元数据传输
 ```
 
 ---
 
-*最后更新: 2026-07-27*
+*最后更新: 2026-08-02*

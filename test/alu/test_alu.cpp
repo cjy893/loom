@@ -20,13 +20,51 @@ static void clear_inputs(Valu_test_top* dut) {
     dut->src1 = dut->src2 = dut->imm = 0;
     dut->rob_idx = 0;
     dut->is_br = 0;
+    dut->is_b_bl = 0;
+    dut->is_jirl = 0;
     dut->br_type = 0;
     dut->predicted_taken = 0;
+    dut->ftq_resp_valid = 0;
+    dut->ftq_resp_next_pc = 0;
+    dut->ftq_resp_cfi_match = 0;
     dut->uop_br_mask = 0;
     dut->resolve_mask = 0;
     dut->mispredict_mask = 0;
     dut->br_mispredict = 0;
     dut->kill = 0;
+}
+
+static void check_jirl(Valu_test_top* dut, const char* name,
+                       bool predicted_taken, bool response_valid,
+                       bool cfi_match, uint32_t predicted_target,
+                       bool expected_mispredict) {
+    constexpr uint32_t src1 = 0x1c001000;
+    constexpr uint32_t imm = 0x24;
+    constexpr uint32_t actual_target = src1 + imm;
+
+    clear_inputs(dut);
+    dut->valid = 1;
+    dut->is_jirl = 1;
+    dut->predicted_taken = predicted_taken;
+    dut->src1 = src1;
+    dut->imm = imm;
+    eval_cycle(dut);
+
+    // The FTQ performs a registered read, so its response accompanies the
+    // JIRL while the uop advances from RRD into EXE.
+    dut->valid = 0;
+    dut->ftq_resp_valid = response_valid;
+    dut->ftq_resp_next_pc = predicted_target;
+    dut->ftq_resp_cfi_match = cfi_match;
+    eval_cycle(dut);
+
+    expect_eq(name, dut->mispredict, expected_mispredict);
+    expect_eq("JIRL response valid", dut->brinfo_valid, 1);
+    expect_eq("JIRL taken", dut->branch_taken, 1);
+    expect_eq("JIRL resolved target", dut->branch_target, actual_target);
+
+    clear_inputs(dut);
+    eval_cycle(dut);
 }
 
 static uint32_t execute(Valu_test_top* dut, unsigned op, uint32_t src1,
@@ -89,6 +127,43 @@ int main(int argc, char** argv) {
     expect_eq("branch response valid", dut->brinfo_valid, 1);
     expect_eq("branch taken", dut->branch_taken, 1);
     expect_eq("branch mispredict", dut->mispredict, 1);
+
+    // A direct B/BL target is derived from the instruction itself, so a
+    // predicted-taken B/BL must not trigger recovery.
+    clear_inputs(dut);
+    dut->valid = 1;
+    dut->is_b_bl = 1;
+    dut->predicted_taken = 1;
+    eval_cycle(dut);
+    dut->valid = 0;
+    eval_cycle(dut);
+    expect_eq("predicted B/BL response valid", dut->brinfo_valid, 1);
+    expect_eq("predicted B/BL taken", dut->branch_taken, 1);
+    expect_eq("predicted B/BL is not a mispredict", dut->mispredict, 0);
+
+    // A B/BL reaching the backend without a taken prediction must redirect.
+    clear_inputs(dut);
+    dut->valid = 1;
+    dut->is_b_bl = 1;
+    dut->predicted_taken = 0;
+    eval_cycle(dut);
+    dut->valid = 0;
+    eval_cycle(dut);
+    expect_eq("unpredicted B/BL response valid", dut->brinfo_valid, 1);
+    expect_eq("unpredicted B/BL taken", dut->branch_taken, 1);
+    expect_eq("unpredicted B/BL mispredict", dut->mispredict, 1);
+
+    constexpr uint32_t jirl_target = 0x1c001024;
+    check_jirl(dut, "correctly predicted JIRL", true, true, true,
+               jirl_target, false);
+    check_jirl(dut, "JIRL target mismatch", true, true, true,
+               jirl_target + 4, true);
+    check_jirl(dut, "JIRL CFI mismatch", true, true, false,
+               jirl_target, true);
+    check_jirl(dut, "JIRL missing FTQ response", true, false, false,
+               0, true);
+    check_jirl(dut, "unpredicted JIRL", false, true, true,
+               jirl_target, true);
 
     // A wrong-path uop presented during recovery must not enter RRD.
     clear_inputs(dut);

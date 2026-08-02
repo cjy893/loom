@@ -15,6 +15,10 @@ enum : uint32_t {
     CSR_BADV      = 0x007,
     CSR_BADI      = 0x008,
     CSR_EENTRY    = 0x00c,
+    CSR_TLBIDX    = 0x010,
+    CSR_TLBEHI    = 0x011,
+    CSR_TLBELO0   = 0x012,
+    CSR_TLBELO1   = 0x013,
     CSR_ASID      = 0x018,
     CSR_CPUID     = 0x020,
     CSR_PRCFG1    = 0x021,
@@ -41,6 +45,7 @@ enum : uint32_t {
 
 constexpr uint32_t CORE_ID = 0x12345678;
 constexpr uint32_t ECODE_INT = 0x00;
+constexpr uint32_t ECODE_PIF = 0x03;
 constexpr uint32_t ECODE_ADE = 0x08;
 constexpr uint32_t ECODE_ALE = 0x09;
 constexpr uint32_t ECODE_TLBR = 0x3f;
@@ -56,6 +61,13 @@ void clear_inputs(Vcsr_file_test_top* dut) {
     dut->csr_commit_valid = 0;
     dut->csr_commit_rob_idx = 0;
     dut->csr_flush_pending = 0;
+    dut->tlb_update_valid = 0;
+    dut->tlb_update_mask = 0;
+    dut->tlb_update_tlbidx = 0;
+    dut->tlb_update_tlbehi = 0;
+    dut->tlb_update_tlbelo0 = 0;
+    dut->tlb_update_tlbelo1 = 0;
+    dut->tlb_update_asid = 0;
     dut->xcpt_valid = 0;
     dut->xcpt_inst = 0;
     dut->xcpt_pc = 0;
@@ -169,6 +181,30 @@ void pulse_exception(Vcsr_file_test_top* dut, uint32_t pc,
     dut->eval();
 }
 
+uint32_t merge_arch(uint32_t old_value, uint32_t new_value,
+                    uint32_t arch_mask) {
+    return (old_value & ~arch_mask) | (new_value & arch_mask);
+}
+
+void pulse_tlb_update(Vcsr_file_test_top* dut, uint32_t update_mask,
+                      uint32_t tlbidx, uint32_t tlbehi,
+                      uint32_t tlbelo0, uint32_t tlbelo1,
+                      uint32_t asid, bool flush = false) {
+    dut->tlb_update_valid = 1;
+    dut->tlb_update_mask = update_mask;
+    dut->tlb_update_tlbidx = tlbidx;
+    dut->tlb_update_tlbehi = tlbehi;
+    dut->tlb_update_tlbelo0 = tlbelo0;
+    dut->tlb_update_tlbelo1 = tlbelo1;
+    dut->tlb_update_asid = asid;
+    dut->csr_flush_pending = flush;
+    eval_cycle(dut);
+    dut->tlb_update_valid = 0;
+    dut->tlb_update_mask = 0;
+    dut->csr_flush_pending = 0;
+    dut->eval();
+}
+
 void test_reset_and_response_protocol(Vcsr_file_test_top* dut) {
     reset_clean(dut);
 
@@ -178,6 +214,10 @@ void test_reset_and_response_protocol(Vcsr_file_test_top* dut) {
     expect_eq("reset has no interrupt", dut->interrupt_pending, 0);
     expect_eq("reset accepts a CSR request", dut->csr_req_ready, 1);
     expect_eq("reset has no CSR response", dut->csr_resp_valid, 0);
+    expect_eq("TLBIDX reset value", dut->tlbidx_value, 0x80000000);
+    expect_eq("TLBEHI reset value", dut->tlbehi_value, 0);
+    expect_eq("TLBELO0 reset value", dut->tlbelo0_value, 0);
+    expect_eq("TLBELO1 reset value", dut->tlbelo1_value, 0);
 
     uint32_t crmd = issue_request(
         dut, 1, CSR_CRMD, CSR_READ, 0, 0, true);
@@ -289,6 +329,109 @@ void test_commands_and_architectural_masks(Vcsr_file_test_top* dut) {
     write_csr(dut, CSR_EUEN, 0xffffffffU, 24);
     expect_eq("unsupported EUEN bits remain zero",
               read_csr(dut, CSR_EUEN, 25), 0);
+}
+
+void test_tlb_sideband_updates(Vcsr_file_test_top* dut) {
+    constexpr uint32_t TLBIDX_MASK = 0xbf00001f;
+    constexpr uint32_t TLBEHI_MASK = 0xffffe000;
+    constexpr uint32_t TLBELO_MASK = 0x0fffff7f;
+    constexpr uint32_t ASID_MASK = 0x000003ff;
+
+    reset_clean(dut);
+
+    uint32_t expected_tlbidx =
+        merge_arch(0x80000000, 0x3512341b, TLBIDX_MASK);
+    uint32_t expected_tlbehi =
+        merge_arch(0, 0x12345678, TLBEHI_MASK);
+    uint32_t expected_tlbelo0 =
+        merge_arch(0, 0xfedcba98, TLBELO_MASK);
+    uint32_t expected_tlbelo1 =
+        merge_arch(0, 0x89abcdef, TLBELO_MASK);
+    uint32_t expected_asid =
+        merge_arch(0, 0xfffff5a5, ASID_MASK);
+
+    pulse_tlb_update(
+        dut, 0x1f, 0x3512341b, 0x12345678,
+        0xfedcba98, 0x89abcdef, 0xfffff5a5);
+
+    expect_eq("sideband updates TLBIDX with architectural mask",
+              dut->tlbidx_value, expected_tlbidx);
+    expect_eq("sideband updates TLBEHI with architectural mask",
+              dut->tlbehi_value, expected_tlbehi);
+    expect_eq("sideband updates TLBELO0 with architectural mask",
+              dut->tlbelo0_value, expected_tlbelo0);
+    expect_eq("sideband updates TLBELO1 with architectural mask",
+              dut->tlbelo1_value, expected_tlbelo1);
+    expect_eq("sideband updates ASID with architectural mask",
+              dut->asid_value, expected_asid);
+
+    expect_eq("sideband TLBIDX is visible through CSR read",
+              read_csr(dut, CSR_TLBIDX, 43), expected_tlbidx);
+    expect_eq("sideband TLBEHI is visible through CSR read",
+              read_csr(dut, CSR_TLBEHI, 44), expected_tlbehi);
+    expect_eq("sideband TLBELO0 is visible through CSR read",
+              read_csr(dut, CSR_TLBELO0, 45), expected_tlbelo0);
+    expect_eq("sideband TLBELO1 is visible through CSR read",
+              read_csr(dut, CSR_TLBELO1, 46), expected_tlbelo1);
+    expect_eq("sideband ASID read includes ASIDBITS",
+              read_csr(dut, CSR_ASID, 47),
+              0x000a0000 | expected_asid);
+
+    const uint32_t old_tlbidx = dut->tlbidx_value;
+    const uint32_t old_tlbelo0 = dut->tlbelo0_value;
+    const uint32_t old_asid = dut->asid_value;
+    expected_tlbehi =
+        merge_arch(expected_tlbehi, 0x87654321, TLBEHI_MASK);
+    expected_tlbelo1 =
+        merge_arch(expected_tlbelo1, 0x76543210, TLBELO_MASK);
+
+    pulse_tlb_update(
+        dut, 0x0a, 0xffffffff, 0x87654321,
+        0xffffffff, 0x76543210, 0xffffffff);
+
+    expect_eq("selective update preserves masked-off TLBIDX",
+              dut->tlbidx_value, old_tlbidx);
+    expect_eq("selective update changes selected TLBEHI",
+              dut->tlbehi_value, expected_tlbehi);
+    expect_eq("selective update preserves masked-off TLBELO0",
+              dut->tlbelo0_value, old_tlbelo0);
+    expect_eq("selective update changes selected TLBELO1",
+              dut->tlbelo1_value, expected_tlbelo1);
+    expect_eq("selective update preserves masked-off ASID",
+              dut->asid_value, old_asid);
+
+    expected_tlbidx =
+        merge_arch(expected_tlbidx, 0xa5000012, TLBIDX_MASK);
+
+    issue_request(
+        dut, 48, CSR_SAVE0, CSR_WRITE,
+        0x5a5aa5a5, 0xffffffffU);
+    consume_response(dut);
+    expect_eq("CSR transaction is pending before update/flush",
+              dut->csr_req_ready, 0);
+
+    pulse_tlb_update(
+        dut, 0x01, 0xa5000012, 0, 0, 0, 0, true);
+    expect_eq("TLB update is not discarded by same-cycle flush",
+              dut->tlbidx_value, expected_tlbidx);
+    expect_eq("same-cycle flush still cancels pending CSR transaction",
+              dut->csr_req_ready, 1);
+    expect_eq("flushed CSR write has no side effect during TLB update",
+              read_csr(dut, CSR_SAVE0, 49), 0);
+
+    dut->tlb_update_valid = 1;
+    dut->tlb_update_mask = 0x02;
+    dut->tlb_update_tlbehi = 0xdeadbeef;
+    dut->xcpt_valid = 1;
+    dut->xcpt_pc = 0x1c012345;
+    dut->xcpt_code = ECODE_PIF;
+    eval_cycle(dut);
+    dut->tlb_update_valid = 0;
+    dut->tlb_update_mask = 0;
+    dut->xcpt_valid = 0;
+    dut->eval();
+    expect_eq("PIF exception overrides same-cycle sideband TLBEHI",
+              dut->tlbehi_value, 0x1c012000);
 }
 
 void test_bad_address_subcodes(Vcsr_file_test_top* dut) {
@@ -458,6 +601,7 @@ int main(int argc, char** argv) {
     test_reset_and_response_protocol(dut);
     test_commit_gating_and_flush(dut);
     test_commands_and_architectural_masks(dut);
+    test_tlb_sideband_updates(dut);
     test_bad_address_subcodes(dut);
     test_precise_exception_and_ertn(dut);
     test_counter_timer_and_interrupts(dut);

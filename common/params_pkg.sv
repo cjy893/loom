@@ -113,7 +113,7 @@ package loom_params;
 
     localparam int BTB_SETS = 32;
     localparam int BTB_WAYS = 2;
-    localparam int BTB_TAG_SZ = 22;
+    localparam int BTB_TAG_SZ = 25;
 
     localparam int PG_LEVELS = 2;
     localparam int PMP_ENTRIES = 8;

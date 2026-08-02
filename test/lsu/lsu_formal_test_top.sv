@@ -99,6 +99,15 @@ module lsu_formal_test_top (
     uop_t dmem_req_uop;
     br_update_info_t brupdate;
 
+    logic xlate_req_valid, xlate_req_ready;
+    logic [LSU_ADDR_SZ+1:0] xlate_req_tag, xlate_resp_tag;
+    logic [XLEN-1:0] xlate_req_vaddr, xlate_resp_paddr;
+    logic [1:0] xlate_req_access, xlate_resp_access;
+    logic xlate_resp_valid, xlate_resp_ready;
+    logic [1:0] xlate_resp_mat;
+    logic xlate_resp_cacheable;
+    exception_t xlate_xcpt_unused;
+
     always_comb begin
         dis_valid[0] = dis0_valid;
         dis_valid[1] = dis1_valid;
@@ -161,6 +170,17 @@ module lsu_formal_test_top (
     assign load_wb_ldq_idx = load_wb_resp.uop.ldq_idx;
     assign dmem_req_rob_idx = dmem_req_uop.rob_idx;
 
+    lsq_identity_xlate #(.TAG_WIDTH(LSU_ADDR_SZ + 2)) xlate (
+        .clk, .rst_n, .flush(flush_pipeline),
+        .req_valid(xlate_req_valid), .req_ready(xlate_req_ready),
+        .req_tag(xlate_req_tag), .req_vaddr(xlate_req_vaddr),
+        .req_access(xlate_req_access),
+        .resp_valid(xlate_resp_valid), .resp_ready(xlate_resp_ready),
+        .resp_tag(xlate_resp_tag), .resp_paddr(xlate_resp_paddr),
+        .resp_access(xlate_resp_access), .resp_mat(xlate_resp_mat),
+        .resp_cacheable(xlate_resp_cacheable)
+    );
+
     lsu #(
         .DISPATCH_WIDTH(2),
         .AGEN_WIDTH(1),
@@ -184,6 +204,23 @@ module lsu_formal_test_top (
         .dgen_valid(dgen_valid_vec),
         .dgen_uops,
         .dgen_data(dgen_data_vec),
+        .xlate_req_valid,
+        .xlate_req_ready,
+        .xlate_req_tag,
+        .xlate_req_vaddr,
+        .xlate_req_access,
+        .xlate_resp_valid,
+        .xlate_resp_ready,
+        .xlate_resp_tag,
+        .xlate_resp_access,
+        .xlate_resp_paddr,
+        .xlate_resp_mat,
+        .xlate_resp_cacheable,
+        .xlate_resp_xcpt_valid(1'b0),
+        .xlate_resp_xcpt_code('0),
+        .xlate_resp_badvaddr('0),
+        .xlate_xcpt(xlate_xcpt_unused),
+        .xlate_xcpt_ready(1'b1),
         .commit_valid(commit_valid_vec),
         .commit_uops,
         .rob_head_idx,
@@ -194,6 +231,7 @@ module lsu_formal_test_top (
         .dmem_req_valid,
         .dmem_req_ready,
         .dmem_req_is_store,
+        .dmem_req_cacheable(),
         .dmem_req_addr,
         .dmem_req_data,
         .dmem_req_mask,

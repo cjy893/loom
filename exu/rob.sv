@@ -139,7 +139,7 @@ module rob #(
     always_comb begin
         lxcpt_row = get_row(lxcpt.uop.rob_idx);
         lxcpt_bank = get_bank(lxcpt.uop.rob_idx);
-        lxcpt_br_killed = brupdate.b2.mispredict && |(lxcpt.uop.br_mask & brupdate.b1.mispredict_mask);
+        lxcpt_br_killed = |(lxcpt.uop.br_mask & brupdate.b1.mispredict_mask);
         lxcpt_live = lxcpt.valid && rob_val[lxcpt_bank][lxcpt_row] && !lxcpt_br_killed &&
                      rob_state != S_ROLLBACK && rob_uop[lxcpt_bank][lxcpt_row].rob_idx == lxcpt.uop.rob_idx;
     end
@@ -158,8 +158,13 @@ module rob #(
         end
     end
 
+    logic branch_recovery_pending;
+    assign branch_recovery_pending =
+        (|brupdate.b1.mispredict_mask) || brupdate.b2.mispredict;
+
     assign interrupt_taken = interrupt_pending && (rob_state == S_NORMAL) && !first_head_exception &&
-                             !exception_throw_d1 && !exception_throw_d2 && !brupdate.b2.mispredict && !lxcpt_live;
+                             !exception_throw_d1 && !exception_throw_d2 &&
+                             !branch_recovery_pending && !lxcpt_live;
 
     logic [CORE_WIDTH-1:0] can_commit;
     logic [CORE_WIDTH-1:0] can_throw_exception;
@@ -177,7 +182,8 @@ module rob #(
         debug_gpr_seen = 1'b0;
 
         for(int w = 0; w < CORE_WIDTH; w++) begin
-            can_commit[w] = rob_head_vals[w] && !rob_head_bsy[w] && !csr_stall && !brupdate.b2.mispredict;
+            can_commit[w] = rob_head_vals[w] && !rob_head_bsy[w] && !csr_stall &&
+                            !branch_recovery_pending;
             can_throw_exception[w] = rob_head_vals[w] && rob_head_exception[w];
             will_commit[w] = can_commit[w] && !can_throw_exception[w] && !block_commit;
 
@@ -359,7 +365,7 @@ module rob #(
                     rob_uop[w][rob_tail] <= enq_uops[w];
                     rob_wdata[w][rob_tail] <= '0;
                     rob_exc_cause[w][rob_tail] <= enq_uops[w].exc_cause;
-                    rob_exc_badvaddr[w][rob_tail] <= '0;
+                    rob_exc_badvaddr[w][rob_tail] <= enq_uops[w].pc[XLEN-1:0];
                 end
 
                 if(lxcpt_live && lxcpt_bank == w) begin

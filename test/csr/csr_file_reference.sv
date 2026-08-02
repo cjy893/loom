@@ -6,6 +6,7 @@ module csr_file_reference #(
     parameter int CSR_ADDR_WIDTH = 14,
     parameter int ROB_IDX_WIDTH = ROB_ADDR_SZ,
     parameter int NUM_HW_IRQS = 8,
+    parameter int ASID_BITS = 10,
     parameter logic [31:0] CORE_ID = 32'd0,
     parameter logic [31:0] RESET_CRMD = 32'h0000_0008,
     parameter logic [63:0] RESET_STABLE_COUNTER = 64'd0
@@ -26,7 +27,15 @@ module csr_file_reference #(
     input logic csr_commit_valid,
     input logic [ROB_IDX_WIDTH-1:0] csr_commit_rob_idx,
     input logic csr_flush_pending,
+    input logic tlb_update_valid,
+    input logic [4:0] tlb_update_mask,
+    input logic [31:0] tlb_update_tlbidx,
+    input logic [31:0] tlb_update_tlbehi,
+    input logic [31:0] tlb_update_tlbelo0,
+    input logic [31:0] tlb_update_tlbelo1,
+    input logic [31:0] tlb_update_asid,
     input logic xcpt_valid,
+    input logic [31:0] xcpt_inst,
     input logic [31:0] xcpt_pc,
     input logic [5:0] xcpt_code,
     input logic [8:0] xcpt_esubcode,
@@ -44,9 +53,15 @@ module csr_file_reference #(
     output logic [31:0] asid_value,
     output logic [31:0] dmw0_value,
     output logic [31:0] dmw1_value,
+    output logic [31:0] tlbidx_value,
+    output logic [31:0] tlbehi_value,
+    output logic [31:0] tlbelo0_value,
+    output logic [31:0] tlbelo1_value,
     output logic [31:0] era_value,
     output logic [31:0] eentry_value,
-    output logic [31:0] tlbrentry_value
+    output logic [31:0] tlbrentry_value,
+    output logic [63:0] counter_value,
+    output logic [31:0] tid_value
 );
     localparam logic [1:0] CSR_READ = 2'd0;
     localparam logic [5:0] ECODE_PIL = 6'h01;
@@ -211,9 +226,15 @@ module csr_file_reference #(
     assign asid_value = asid_q;
     assign dmw0_value = dmw0_q;
     assign dmw1_value = dmw1_q;
+    assign tlbidx_value = tlbidx_q;
+    assign tlbehi_value = tlbehi_q;
+    assign tlbelo0_value = tlbelo0_q;
+    assign tlbelo1_value = tlbelo1_q;
     assign era_value = era_q;
     assign eentry_value = eentry_q;
     assign tlbrentry_value = tlbrentry_q;
+    assign counter_value = stable_counter_q;
+    assign tid_value = tid_q;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -401,7 +422,30 @@ module csr_file_reference #(
                         default: begin end
                     endcase
                 end
-            end else if (csr_flush_pending) begin
+            end else if (tlb_update_valid) begin
+                if (tlb_update_mask[0])
+                    tlbidx_q <= merge_write(
+                        tlbidx_q, tlb_update_tlbidx,
+                        32'hffff_ffff, write_mask(14'h010));
+                if (tlb_update_mask[1])
+                    tlbehi_q <= merge_write(
+                        tlbehi_q, tlb_update_tlbehi,
+                        32'hffff_ffff, write_mask(14'h011));
+                if (tlb_update_mask[2])
+                    tlbelo0_q <= merge_write(
+                        tlbelo0_q, tlb_update_tlbelo0,
+                        32'hffff_ffff, write_mask(14'h012));
+                if (tlb_update_mask[3])
+                    tlbelo1_q <= merge_write(
+                        tlbelo1_q, tlb_update_tlbelo1,
+                        32'hffff_ffff, write_mask(14'h013));
+                if (tlb_update_mask[4])
+                    asid_q <= merge_write(
+                        asid_q, tlb_update_asid,
+                        32'hffff_ffff, write_mask(14'h018));
+            end
+
+            if (csr_flush_pending) begin
                 pending_q <= 1'b0;
                 resp_valid_q <= 1'b0;
             end

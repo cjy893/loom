@@ -8,10 +8,11 @@ This suite fixes the initial contract for `ifu/fetcher_buffer.sv`:
 - `enq_ready` accepts the complete set of currently valid input lanes or
   rejects all of them.
 - A scalar `deq_ready` consumes every asserted output lane atomically.
-- Space released by a same-cycle dequeue is visible to `enq_ready`.
+- Space released by a dequeue is visible to `enq_ready` on the next cycle.
 - Output valid bits and payload remain stable while dequeue is stalled.
-- `flush` has priority over enqueue and dequeue, masks output immediately,
-  and leaves the queue empty after the active edge.
+- `flush` has priority over enqueue and dequeue and rejects enqueue
+  immediately. Existing queue output may remain visible until the active
+  edge, after which the queue is empty.
 
 Directed tests cover four-to-two width conversion, sparse-lane compaction,
 partial final output, backpressure, full capacity, simultaneous dequeue and

@@ -20,10 +20,19 @@ constexpr int FETCH_WIDTH = 4;
 constexpr int COMMIT_WIDTH = 2;
 constexpr uint32_t RESET_PC = 0x1c000000U;
 constexpr uint32_t NUM_ADDRESS = 0xbfaff050U;
+constexpr uint32_t LED_RG0_ADDRESS = 0xbfaff030U;
+constexpr uint32_t CONFREG_CR0_ADDRESS = 0xbfaf8000U;
+constexpr uint32_t CONFREG_CR1_ADDRESS = 0xbfaf8010U;
 constexpr uint32_t SWITCH_ADDRESS = 0xbfaff060U;
 constexpr uint32_t SW_INTER_ADDRESS = 0xbfaff090U;
 constexpr uint32_t SIMU_FLAG_ADDRESS = 0xbfafff20U;
 constexpr uint32_t TIMER_ADDRESS = 0xbfafe000U;
+constexpr uint32_t UART_STATUS_WORD_ADDRESS = 0xbfe001e4U;
+
+constexpr bool matches_dmw_alias(uint32_t address, uint32_t virtual_address) {
+    return address == virtual_address ||
+           address == (virtual_address & 0x1fffffffU);
+}
 
 struct Options {
     std::string elf_path;
@@ -31,6 +40,7 @@ struct Options {
     uint64_t max_cycles = 500000;
     uint64_t watchdog_cycles = 5000;
     uint64_t target_commits = 0;
+    uint32_t watch_pc = 0;
     unsigned target_tests = 1;
     unsigned imem_latency = 2;
     unsigned dmem_latency = 3;
@@ -38,6 +48,7 @@ struct Options {
     bool trace = false;
     bool allow_exceptions = false;
     bool differential = false;
+    bool performance = false;
     uint64_t diff_corrupt = 0;
 };
 
@@ -59,6 +70,7 @@ struct CommitRecord {
     uint64_t cycle = 0;
     uint32_t pc = 0;
     uint32_t inst = 0;
+    uint32_t wdata = 0;
     unsigned ldst = 0;
     unsigned rob_idx = 0;
 };
@@ -103,12 +115,14 @@ void print_usage(const char* executable) {
         "  --disasm FILE          annotate diagnostics with test.s\n"
         "  --target-tests N       pass after NUM reports N tests (default 1)\n"
         "  --target-commits N     pass after N commits instead\n"
+        "  --watch-pc N           print each commit at one instruction PC\n"
         "  --max-cycles N         simulation limit (default 500000)\n"
         "  --watchdog N           no-commit timeout (default 5000)\n"
         "  --imem-latency N       request-to-response cycles (default 2)\n"
         "  --dmem-latency N       request-to-response cycles (default 3)\n"
         "  --stress               add deterministic request backpressure\n"
         "  --allow-exceptions     continue through architectural exceptions\n"
+        "  --performance          finish on the NSCSCC performance result\n"
         "  --differential         lockstep-compare commits against la32_ref\n"
         "  --diff-selftest-corrupt N\n"
         "                         intentionally desync the reference at the Nth\n"
@@ -137,6 +151,9 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--target-commits") {
             options.target_commits =
                 parse_unsigned(argument, require_value());
+        } else if (argument == "--watch-pc") {
+            options.watch_pc = static_cast<uint32_t>(
+                parse_unsigned(argument, require_value()));
         } else if (argument == "--max-cycles") {
             options.max_cycles =
                 parse_unsigned(argument, require_value());
@@ -153,6 +170,8 @@ Options parse_options(int argc, char** argv) {
             options.stress = true;
         } else if (argument == "--allow-exceptions") {
             options.allow_exceptions = true;
+        } else if (argument == "--performance") {
+            options.performance = true;
         } else if (argument == "--differential") {
             options.differential = true;
         } else if (argument == "--diff-selftest-corrupt") {
@@ -225,8 +244,10 @@ void reset(Vcore_elf_test_top* dut) {
 
 class ImemModel {
 public:
-    ImemModel(const ElfImage& image, unsigned latency, bool stress)
-        : image_(image), latency_(latency), stress_(stress) {}
+    ImemModel(const ElfImage& image, unsigned latency, bool stress,
+              bool allow_unmapped)
+        : image_(image), latency_(latency), stress_(stress),
+          allow_unmapped_(allow_unmapped) {}
 
     void drive(Vcore_elf_test_top* dut, uint64_t cycle) {
         dut->imem_req_ready =
@@ -258,7 +279,8 @@ public:
         pending_ = true;
         request_address_ = request_address;
         due_cycle_ = cycle + latency_;
-        if (!image_.contains(request_address, FETCH_WIDTH * 4)) {
+        if (!allow_unmapped_ &&
+            !image_.contains(request_address, FETCH_WIDTH * 4)) {
             invalid_address_ = request_address;
             invalid_request_ = true;
         }
@@ -275,6 +297,7 @@ private:
     const ElfImage& image_;
     unsigned latency_ = 0;
     bool stress_ = false;
+    bool allow_unmapped_ = false;
     bool pending_ = false;
     bool response_active_ = false;
     bool invalid_request_ = false;
@@ -321,9 +344,16 @@ public:
             image_->write_word_masked(request.address, request.data,
                                       request.mask);
             uint32_t base = request.address & ~uint32_t{3};
-            if (base == NUM_ADDRESS) {
-                num_value_ = image_->read_word(NUM_ADDRESS);
+            if (matches_dmw_alias(base, NUM_ADDRESS)) {
+                num_value_ = image_->read_word(base);
                 num_write_ = true;
+            } else if (matches_dmw_alias(base, LED_RG0_ADDRESS)) {
+                led_rg0_value_ = image_->read_word(base);
+            } else if (matches_dmw_alias(base, CONFREG_CR0_ADDRESS)) {
+                cpu_count_ = image_->read_word(base);
+            } else if (matches_dmw_alias(base, CONFREG_CR1_ADDRESS)) {
+                soc_count_ = image_->read_word(base);
+                performance_complete_ = true;
             }
         } else {
             ++loads_;
@@ -350,6 +380,10 @@ public:
 
     bool num_write() const { return num_write_; }
     uint32_t num_value() const { return num_value_; }
+    bool performance_complete() const { return performance_complete_; }
+    bool performance_passed() const { return led_rg0_value_ == 1; }
+    uint32_t cpu_count() const { return cpu_count_; }
+    uint32_t soc_count() const { return soc_count_; }
     uint64_t loads() const { return loads_; }
     uint64_t stores() const { return stores_; }
     std::size_t pending_responses() const { return responses_.size(); }
@@ -377,14 +411,16 @@ public:
 private:
     uint32_t read_word(uint32_t address, uint64_t cycle) const {
         uint32_t base = address & ~uint32_t{3};
-        if (base == SWITCH_ADDRESS)
+        if (matches_dmw_alias(base, SWITCH_ADDRESS))
             return 0x000000ffU;
-        if (base == SW_INTER_ADDRESS)
+        if (matches_dmw_alias(base, SW_INTER_ADDRESS))
             return 0x0000aaaaU;
-        if (base == SIMU_FLAG_ADDRESS)
+        if (matches_dmw_alias(base, SIMU_FLAG_ADDRESS))
             return 0xffffffffU;
-        if (base == TIMER_ADDRESS)
+        if (matches_dmw_alias(base, TIMER_ADDRESS))
             return static_cast<uint32_t>(cycle);
+        if (matches_dmw_alias(base, UART_STATUS_WORD_ADDRESS))
+            return 0x00002000U;
         return image_->read_word(base);
     }
 
@@ -395,6 +431,10 @@ private:
     std::deque<DmemResponse> responses_;
     bool num_write_ = false;
     uint32_t num_value_ = 0;
+    uint32_t led_rg0_value_ = 0;
+    uint32_t cpu_count_ = 0;
+    uint32_t soc_count_ = 0;
+    bool performance_complete_ = false;
     uint64_t loads_ = 0;
     uint64_t stores_ = 0;
     std::deque<DmemAccess> recent_;
@@ -480,13 +520,17 @@ int main(int argc, char** argv) {
     auto* dut = new Vcore_elf_test_top;
     reset(dut);
 
-    ImemModel imem(image, options.imem_latency, options.stress);
+    ImemModel imem(image, options.imem_latency, options.stress,
+                   options.performance);
     DmemModel dmem(&image, options.dmem_latency, options.stress,
                     options.trace);
     std::deque<CommitRecord> recent;
     uint64_t commit_count = 0;
     uint64_t redirect_count = 0;
     uint64_t exception_count = 0;
+    uint64_t watch_count = 0;
+    uint64_t watch_issue_count = 0;
+    uint64_t watch_mispredict_count = 0;
     uint64_t last_commit_cycle = 0;
     std::array<uint64_t, 64> last_wakeup_cycle{};
     std::array<unsigned, 64> last_wakeup_port{};
@@ -564,6 +608,43 @@ int main(int argc, char** argv) {
         dmem.drive(dut, cycle);
         dut->eval();
 
+        if (options.watch_pc != 0) {
+            for (int lane = 0; lane < 3; ++lane) {
+                if ((dut->core_alu_issue & (1U << lane)) == 0 ||
+                    dut->core_alu_issue_pc[lane] !=
+                        options.watch_pc)
+                    continue;
+                ++watch_issue_count;
+                std::printf(
+                    "ISSUE pc=%08x src1=%08x src2=%08x psrc1=p%u "
+                    "psrc2=p%u pred=%u tag=%u mask=0x%x occurrence=%llu "
+                    "cycle=%llu\n",
+                    options.watch_pc,
+                    dut->core_alu_issue_src1[lane],
+                    dut->core_alu_issue_src2[lane],
+                    packed_field(dut->core_alu_issue_psrc1, lane, 6),
+                    packed_field(dut->core_alu_issue_psrc2, lane, 6),
+                    (dut->core_alu_issue_pred_taken >> lane) & 1U,
+                    packed_field(dut->core_alu_issue_br_tag, lane, 2),
+                    packed_field(dut->core_alu_issue_br_mask, lane, 4),
+                    static_cast<unsigned long long>(watch_issue_count),
+                    static_cast<unsigned long long>(cycle));
+            }
+
+            if (dut->branch_b2_mispredict &&
+                dut->branch_b2_pc == options.watch_pc) {
+                ++watch_mispredict_count;
+                std::printf(
+                    "MISPREDICT pc=%08x pred=%u actual=%u tag=%u mask=0x%x "
+                    "occurrence=%llu cycle=%llu redirect=%08x\n",
+                    dut->branch_b2_pc, dut->branch_b2_pred_taken,
+                    dut->branch_b2_actual_taken, dut->branch_b2_tag,
+                    dut->branch_b2_mask,
+                    static_cast<unsigned long long>(watch_mispredict_count),
+                    static_cast<unsigned long long>(cycle), dut->redirect_pc);
+            }
+        }
+
         bool imem_request_fire =
             dut->imem_req_valid && dut->imem_req_ready;
         uint32_t imem_request_address = dut->imem_req_addr;
@@ -612,6 +693,7 @@ int main(int argc, char** argv) {
                 cycle,
                 packed_word(dut->commit_pc, lane),
                 packed_word(dut->commit_inst, lane),
+                packed_word(dut->commit_wdata, lane),
                 packed_field(dut->commit_ldst, lane, 5),
                 packed_field(dut->commit_rob_idx, lane, 6),
             };
@@ -622,6 +704,18 @@ int main(int argc, char** argv) {
             if (recent.size() > 24)
                 recent.pop_front();
 
+            if (options.watch_pc != 0 && record.pc == options.watch_pc) {
+                ++watch_count;
+                std::printf(
+                    "WATCH pc=%08x wdata=%08x occurrence=%llu "
+                    "commit=%llu cycle=%llu\n",
+                    record.pc,
+                    record.wdata,
+                    static_cast<unsigned long long>(watch_count),
+                    static_cast<unsigned long long>(commit_count),
+                    static_cast<unsigned long long>(cycle));
+            }
+
             if (options.trace)
                 print_commit(record, disassembly);
             else if (commit_count % 10000 == 0)
@@ -630,7 +724,8 @@ int main(int argc, char** argv) {
                             static_cast<unsigned long long>(cycle),
                             record.pc);
 
-            if (commit_count <= expected_prefix.size() &&
+            if (!options.performance &&
+                commit_count <= expected_prefix.size() &&
                 record.pc != expected_prefix[commit_count - 1]) {
                 failure = "startup commit-PC prefix mismatch";
                 break;
@@ -866,7 +961,16 @@ int main(int argc, char** argv) {
             failure = message;
         }
 
-        if (failure.empty() && dmem.num_write()) {
+        if (failure.empty() && options.performance &&
+            dmem.performance_complete()) {
+            if (dmem.performance_passed()) {
+                passed = true;
+            } else {
+                failure = "NSCSCC performance workload reported an error";
+            }
+        }
+
+        if (failure.empty() && !options.performance && dmem.num_write()) {
             uint32_t status = dmem.num_value();
             unsigned test_number = status >> 24;
             unsigned passed_tests = status & 0x00ffffffU;
@@ -945,13 +1049,14 @@ int main(int argc, char** argv) {
     if (passed) {
         std::printf(
             "PASS: core_elf commits=%llu redirects=%llu exceptions=%llu "
-            "loads=%llu stores=%llu NUM=0x%08x\n",
+            "loads=%llu stores=%llu NUM=0x%08x CPU_COUNT=0x%08x "
+            "SOC_COUNT=0x%08x\n",
             static_cast<unsigned long long>(commit_count),
             static_cast<unsigned long long>(redirect_count),
             static_cast<unsigned long long>(exception_count),
             static_cast<unsigned long long>(dmem.loads()),
             static_cast<unsigned long long>(dmem.stores()),
-            dmem.num_value());
+            dmem.num_value(), dmem.cpu_count(), dmem.soc_count());
         if (options.differential) {
             std::printf(
                 "DIFF-PASS: compares=%llu exceptions=%llu "
@@ -971,12 +1076,12 @@ int main(int argc, char** argv) {
         std::fprintf(
             stderr,
             "State: redirects=%llu exceptions=%llu loads=%llu stores=%llu "
-            "NUM=0x%08x\n",
+            "NUM=0x%08x CPU_COUNT=0x%08x SOC_COUNT=0x%08x\n",
             static_cast<unsigned long long>(redirect_count),
             static_cast<unsigned long long>(exception_count),
             static_cast<unsigned long long>(dmem.loads()),
             static_cast<unsigned long long>(dmem.stores()),
-            dmem.num_value());
+            dmem.num_value(), dmem.cpu_count(), dmem.soc_count());
         if (options.differential) {
             std::fprintf(
                 stderr,
