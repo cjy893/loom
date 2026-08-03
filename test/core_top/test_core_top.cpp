@@ -292,8 +292,10 @@ class RequestStabilityMonitor {
 public:
     void observe(Vcore_top_contract_test_top* dut) {
         if (hold_imem_) {
+            // An unaccepted fetch may be canceled by an internal redirect.
+            // If the offer remains valid, however, its address must not move.
             bool stable =
-                dut->imem_req_valid &&
+                !dut->imem_req_valid ||
                 dut->imem_req_addr == imem_addr_;
             if (!stable && imem_protocol_ok_) {
                 std::fprintf(stderr,

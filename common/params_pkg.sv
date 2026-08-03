@@ -40,7 +40,7 @@ package loom_params;
     localparam int RXQ_ENTRIES = 4;
     localparam int RCQ_ENTRIES = 8;
 
-    localparam int NUM_INT_PHYS_REGS = 48;
+    localparam int NUM_INT_PHYS_REGS = 56;
     localparam int NUM_FP_PHYS_REGS = 48;
     localparam int NUM_IMM_PHYS_REGS = 48;
     localparam int IPREG_SZ = $clog2(NUM_INT_PHYS_REGS);

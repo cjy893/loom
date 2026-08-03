@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     dut->rst_n = 0;
     eval_cycle(dut);
     dut->rst_n = 1;
-    for (int pair = 0; pair < 7; pair++) {
+    for (int pair = 0; pair < 11; pair++) {
         dut->in_valid = 3;
         dut->in_ldst_0 = 1;
         dut->in_ldst_1 = 2;
@@ -108,9 +108,9 @@ int main(int argc, char** argv) {
 
     dut->in_valid = 1;
     dut->eval();
-    expect_eq("fifteenth allocation does not stall", dut->stalls, 0);
+    expect_eq("twenty-third allocation does not stall", dut->stalls, 0);
     eval_cycle(dut);
-    expect_eq("fifteenth allocation", dut->out_pdst_0, 46);
+    expect_eq("twenty-third allocation", dut->out_pdst_0, 54);
 
     // The current one-destination packet dispatches and a new two-destination
     // packet may enter Rename2. With one register left, that packet then stalls

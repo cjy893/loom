@@ -4,119 +4,85 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-#endif  // VL_DEBUG
-bool Vmem_issue_test_top___024root___eval_phase__ico(Vmem_issue_test_top___024root* vlSelf);
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__act(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
-#endif  // VL_DEBUG
-bool Vmem_issue_test_top___024root___eval_phase__act(Vmem_issue_test_top___024root* vlSelf);
-bool Vmem_issue_test_top___024root___eval_phase__nba(Vmem_issue_test_top___024root* vlSelf);
-
-void Vmem_issue_test_top___024root___eval(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval\n"); );
+void Vmem_issue_test_top___024root___nba_sequent__TOP__5(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___nba_sequent__TOP__5\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    IData/*31:0*/ __VicoIterCount;
-    IData/*31:0*/ __VnbaIterCount;
     // Body
-    __VicoIterCount = 0U;
-    do {
-        if (VL_UNLIKELY(((0x00002710U < __VicoIterCount)))) {
-#ifdef VL_DEBUG
-            Vmem_issue_test_top___024root___dump_triggers__ico(vlSelfRef.__VicoTriggered, "ico"s);
-#endif
-            VL_FATAL_MT("/mnt/e/nscscc/chiplab/IP/myCPU/test/mem/mem_issue_test_top.sv", 5, "", "DIDNOTCONVERGE: Input combinational region did not converge after '--converge-limit' of 10000 tries");
-        }
-        __VicoIterCount = ((IData)(1U) + __VicoIterCount);
-        vlSelfRef.__VicoPhaseResult = Vmem_issue_test_top___024root___eval_phase__ico(vlSelf);
-    } while (vlSelfRef.__VicoPhaseResult);
-    __VnbaIterCount = 0U;
-    do {
-        if (VL_UNLIKELY(((0x00002710U < __VnbaIterCount)))) {
-#ifdef VL_DEBUG
-            Vmem_issue_test_top___024root___dump_triggers__act(vlSelfRef.__VnbaTriggered, "nba"s);
-#endif
-            VL_FATAL_MT("/mnt/e/nscscc/chiplab/IP/myCPU/test/mem/mem_issue_test_top.sv", 5, "", "DIDNOTCONVERGE: NBA region did not converge after '--converge-limit' of 10000 tries");
-        }
-        __VnbaIterCount = ((IData)(1U) + __VnbaIterCount);
-        vlSelfRef.__VactIterCount = 0U;
-        do {
-            if (VL_UNLIKELY(((0x00002710U < vlSelfRef.__VactIterCount)))) {
-#ifdef VL_DEBUG
-                Vmem_issue_test_top___024root___dump_triggers__act(vlSelfRef.__VactTriggered, "act"s);
-#endif
-                VL_FATAL_MT("/mnt/e/nscscc/chiplab/IP/myCPU/test/mem/mem_issue_test_top.sv", 5, "", "DIDNOTCONVERGE: Active region did not converge after '--converge-limit' of 10000 tries");
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4 = ((~ 
+                                                 (0U 
+                                                  != 
+                                                  ((IData)(vlSelfRef.mispredict_mask) 
+                                                   & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
+                                                       << 2U) 
+                                                      | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
+                                                         >> 0x0000001eU))))) 
+                                                & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_valid));
+    vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_valid 
+        = ((IData)(vlSelfRef.rst_n) && ((1U & (~ (IData)(vlSelfRef.flush_pipeline))) 
+                                        && ((IData)(vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec) 
+                                            & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed)))));
+    if (vlSelfRef.rst_n) {
+        if ((1U & (~ (IData)(vlSelfRef.flush_pipeline)))) {
+            if (((IData)(vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec) 
+                 & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed)))) {
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[0U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[0U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[1U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[1U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[2U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[2U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[3U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[3U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[4U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[4U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[5U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[6U] 
+                    = vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[6U];
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
+                    = ((((~ (IData)(vlSelfRef.resolve_mask)) 
+                         & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                             << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                       >> 0x0000001eU))) 
+                        << 0x0000001eU) | (0x3fffffffU 
+                                           & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U]));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
+                    = ((0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U]) 
+                       | (3U & (((~ (IData)(vlSelfRef.resolve_mask)) 
+                                 & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                                     << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                               >> 0x0000001eU))) 
+                                >> 2U)));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
+                    = ((3U & vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U]) 
+                       | (0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U]));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[9U] 
+                    = ((3U & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[9U]) 
+                       | (0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[9U]));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[10U] 
+                    = ((3U & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[10U]) 
+                       | (0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[10U]));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[11U] 
+                    = ((3U & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U]) 
+                       | (0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[11U]));
+                vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[12U] 
+                    = ((3U & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U]) 
+                       | (0xfffffffcU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[12U]));
             }
-            vlSelfRef.__VactIterCount = ((IData)(1U) 
-                                         + vlSelfRef.__VactIterCount);
-            vlSelfRef.__VactPhaseResult = Vmem_issue_test_top___024root___eval_phase__act(vlSelf);
-        } while (vlSelfRef.__VactPhaseResult);
-        vlSelfRef.__VnbaPhaseResult = Vmem_issue_test_top___024root___eval_phase__nba(vlSelf);
-    } while (vlSelfRef.__VnbaPhaseResult);
+        }
+    }
+    vlSelfRef.dis_ready = (1U & (IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec));
+    vlSelfRef.dis_ready_1 = (1U & ((IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec) 
+                                   >> 1U));
+    vlSelfRef.dgen_rob_idx = vlSelfRef.agen_rob_idx;
+    vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid 
+        = ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
+            >> 0x00000011U) & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_complete = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready = 0U;
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__oldest_ready = 0U;
 }
-
-#ifdef VL_DEBUG
-void Vmem_issue_test_top___024root___eval_debug_assertions(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_debug_assertions\n"); );
-    Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
-    auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Body
-    if (VL_UNLIKELY(((vlSelfRef.clk & 0xfeU)))) {
-        Verilated::overWidthError("clk");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.rst_n & 0xfeU)))) {
-        Verilated::overWidthError("rst_n");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_valid & 0xfeU)))) {
-        Verilated::overWidthError("dis_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_rob_idx & 0xc0U)))) {
-        Verilated::overWidthError("dis_rob_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1 & 0xc0U)))) {
-        Verilated::overWidthError("dis_psrc1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2 & 0xc0U)))) {
-        Verilated::overWidthError("dis_psrc2");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_psrc1_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_psrc2_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_agen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_agen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_dgen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_dgen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_0 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_0 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_1 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_1 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.resolve_mask & 0xf0U)))) {
-        Verilated::overWidthError("resolve_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.mispredict_mask & 0xf0U)))) {
-        Verilated::overWidthError("mispredict_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.br_mispredict & 0xfeU)))) {
-        Verilated::overWidthError("br_mispredict");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.flush_pipeline & 0xfeU)))) {
-        Verilated::overWidthError("flush_pipeline");
-    }
-}
-#endif  // VL_DEBUG

@@ -60,6 +60,7 @@ module issue_test_top (
         .wakeup_valid,
         .wakeup_pdst,
         .brupdate,
+        .rob_head_idx('0),
         .flush_pipeline,
         .squash_grant
     );

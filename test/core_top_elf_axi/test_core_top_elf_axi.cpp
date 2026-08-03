@@ -27,6 +27,12 @@ constexpr uint32_t TIMER_ADDRESS = 0xbfafe000U;
 constexpr uint32_t UART_STATUS_WORD_ADDRESS = 0xbfe001e4U;
 constexpr unsigned COMMIT_WIDTH = 2;
 constexpr unsigned ALU_WIDTH = 3;
+constexpr unsigned IQ_MEM = 0x1;
+constexpr unsigned IQ_UNQ = 0x2;
+constexpr unsigned IQ_ALU = 0x4;
+constexpr unsigned FC_MUL = 3;
+constexpr unsigned FC_DIV = 4;
+constexpr unsigned FC_CSR = 5;
 
 bool is_mmio_alias(uint32_t address, uint32_t virtual_address) {
     return address == virtual_address ||
@@ -641,11 +647,41 @@ struct PerformanceStats {
     uint64_t rename_stall_cycles = 0;
     uint64_t dispatch_active_cycles = 0;
     uint64_t dispatch_blocked_cycles = 0;
+    std::array<uint64_t, 3> rename_free_count_cycles{};
+    std::array<uint64_t, 3> rename_alloc_need_cycles{};
+    uint64_t rename_short_free0_need1 = 0;
+    uint64_t rename_short_free0_need2 = 0;
+    uint64_t rename_short_free1_need2 = 0;
+    uint64_t block_recovery_cycles = 0;
+    uint64_t block_rob_cycles = 0;
+    uint64_t block_freelist_cycles = 0;
+    uint64_t block_unique_cycles = 0;
+    uint64_t block_idle_cycles = 0;
+    uint64_t block_ldq_cycles = 0;
+    uint64_t block_stq_cycles = 0;
+    uint64_t block_lsq_other_cycles = 0;
+    uint64_t block_alu_iq_cycles = 0;
+    uint64_t block_mem_iq_cycles = 0;
+    uint64_t block_unq_iq_cycles = 0;
+    uint64_t block_other_cycles = 0;
+    uint64_t unique_wait_cycles = 0;
+    uint64_t unique_wait_div_cycles = 0;
+    uint64_t unique_wait_csr_cycles = 0;
+    uint64_t unique_wait_other_cycles = 0;
+    uint64_t mul_dispatches = 0;
+    uint64_t div_dispatches = 0;
+    uint64_t csr_dispatches = 0;
+    uint64_t unique_dispatches = 0;
+    uint64_t unq_busy_cycles = 0;
+    uint64_t unq_issue_wait_cycles = 0;
     uint64_t branch_alloc_stall_cycles = 0;
     uint64_t rob_stall_cycles = 0;
     uint64_t alu_iq_full_cycles = 0;
     uint64_t mem_iq_full_cycles = 0;
     uint64_t unq_iq_full_cycles = 0;
+    uint64_t alu_iq_one_slot_cycles = 0;
+    uint64_t mem_iq_one_slot_cycles = 0;
+    uint64_t unq_iq_one_slot_cycles = 0;
     uint64_t branch_resolves = 0;
     uint64_t branch_mispredicts = 0;
     uint64_t branch_direction_mispredicts = 0;
@@ -719,17 +755,129 @@ struct PerformanceStats {
         ldq_nonempty_cycles += !dut->ldq_empty;
         stq_nonempty_cycles += !dut->stq_empty;
 
+        const unsigned dispatch_valid = dut->dispatch_valid & 0x3U;
+        const unsigned dispatch_fire = dut->dispatch_fire & 0x3U;
+        const bool dispatch_active = dispatch_valid != 0;
+        const bool dispatch_blocked =
+            dispatch_active && dispatch_fire != dispatch_valid;
+        const unsigned free_count =
+            std::min<unsigned>(dut->rename_free_count, 2);
+        const unsigned alloc_need =
+            std::min<unsigned>(dut->rename_alloc_need, 2);
+
         rename_stall_cycles += dut->rename_stalls != 0;
-        dispatch_active_cycles += dut->dispatch_valid != 0;
-        dispatch_blocked_cycles +=
-            dut->dispatch_valid != 0 &&
-            dut->dispatch_fire != dut->dispatch_valid;
+        dispatch_active_cycles += dispatch_active;
+        dispatch_blocked_cycles += dispatch_blocked;
+        ++rename_free_count_cycles[free_count];
+        if (dispatch_active)
+            ++rename_alloc_need_cycles[alloc_need];
+
+        if (dispatch_active && dut->rename_stalls != 0) {
+            rename_short_free0_need1 +=
+                free_count == 0 && alloc_need == 1;
+            rename_short_free0_need2 +=
+                free_count == 0 && alloc_need == 2;
+            rename_short_free1_need2 +=
+                free_count == 1 && alloc_need == 2;
+        }
+
+        unique_wait_cycles +=
+            dispatch_active && !dut->unique_dispatch_ready;
+        if (dispatch_active && !dut->unique_dispatch_ready) {
+            for (unsigned lane = 0; lane < COMMIT_WIDTH; ++lane) {
+                if ((dispatch_valid & dut->dispatch_unique &
+                     (1U << lane)) == 0) {
+                    continue;
+                }
+                const unsigned fu_code = packed_field(
+                    dut->dispatch_fu_code_detail, lane, 10);
+                if (fu_code & (1U << FC_DIV))
+                    ++unique_wait_div_cycles;
+                else if (fu_code & (1U << FC_CSR))
+                    ++unique_wait_csr_cycles;
+                else
+                    ++unique_wait_other_cycles;
+                break;
+            }
+        }
+
+        for (unsigned lane = 0; lane < COMMIT_WIDTH; ++lane) {
+            if ((dispatch_fire & (1U << lane)) == 0)
+                continue;
+            const unsigned fu_code = packed_field(
+                dut->dispatch_fu_code_detail, lane, 10);
+            mul_dispatches += (fu_code & (1U << FC_MUL)) != 0;
+            div_dispatches += (fu_code & (1U << FC_DIV)) != 0;
+            csr_dispatches += (fu_code & (1U << FC_CSR)) != 0;
+            unique_dispatches +=
+                (dut->dispatch_unique & (1U << lane)) != 0;
+        }
+
+        if (dispatch_blocked) {
+            if (dut->dispatch_flush_block ||
+                dut->dispatch_branch_block) {
+                ++block_recovery_cycles;
+            } else if (!dut->rob_ready) {
+                ++block_rob_cycles;
+            } else if (dut->rename_stalls != 0) {
+                ++block_freelist_cycles;
+            } else if (!dut->unique_dispatch_ready) {
+                ++block_unique_cycles;
+            } else if (dut->dispatch_core_idle) {
+                ++block_idle_cycles;
+            } else if (!dut->dispatch_enable) {
+                ++block_other_cycles;
+            } else {
+                int blocked_lane = -1;
+                for (unsigned lane = 0; lane < COMMIT_WIDTH; ++lane) {
+                    if ((dispatch_valid & (1U << lane)) != 0 &&
+                        (dispatch_fire & (1U << lane)) == 0) {
+                        blocked_lane = static_cast<int>(lane);
+                        break;
+                    }
+                }
+
+                if (blocked_lane < 0) {
+                    ++block_other_cycles;
+                } else if ((dut->dispatch_lsu_ready &
+                            (1U << blocked_lane)) == 0) {
+                    if (dut->dispatch_uses_ldq & (1U << blocked_lane))
+                        ++block_ldq_cycles;
+                    else if (dut->dispatch_uses_stq & (1U << blocked_lane))
+                        ++block_stq_cycles;
+                    else
+                        ++block_lsq_other_cycles;
+                } else {
+                    const unsigned iq_type = packed_field(
+                        dut->dispatch_iq_type_detail,
+                        static_cast<unsigned>(blocked_lane), 4);
+                    if (iq_type == IQ_ALU)
+                        ++block_alu_iq_cycles;
+                    else if (iq_type == IQ_MEM)
+                        ++block_mem_iq_cycles;
+                    else if (iq_type == IQ_UNQ)
+                        ++block_unq_iq_cycles;
+                    else
+                        ++block_other_cycles;
+                }
+            }
+        }
+
+        unq_busy_cycles += dut->unq_state != 0;
+        unq_issue_wait_cycles +=
+            dut->unq_issue_valid && !dut->unq_exec_ready;
         branch_alloc_stall_cycles +=
             dut->dispatch_valid != 0 && !dut->branch_alloc_ready;
         rob_stall_cycles += dut->dispatch_valid != 0 && !dut->rob_ready;
         alu_iq_full_cycles += dut->alu_iq_full;
         mem_iq_full_cycles += dut->mem_iq_full;
         unq_iq_full_cycles += dut->unq_iq_full;
+        alu_iq_one_slot_cycles +=
+            count_bits(dut->alu_iq_ready_detail & 0x3U) == 1;
+        mem_iq_one_slot_cycles +=
+            count_bits(dut->mem_iq_ready_detail & 0x3U) == 1;
+        unq_iq_one_slot_cycles +=
+            count_bits(dut->unq_iq_ready_detail & 0x3U) == 1;
         branch_resolves += count_bits(dut->branch_resolve_mask);
         for (unsigned port = 0; port < ALU_WIDTH; ++port) {
             if ((dut->branch_resolve_valid_detail & (1U << port)) == 0)
@@ -763,6 +911,13 @@ struct PerformanceStats {
     void print(unsigned windows, uint32_t reported_cycles) const {
         const uint64_t icache_lookups = icache_hits + icache_misses;
         const uint64_t dcache_lookups = dcache_hits + dcache_misses;
+        const uint64_t classified_dispatch_blocks =
+            block_recovery_cycles + block_rob_cycles +
+            block_freelist_cycles + block_unique_cycles +
+            block_idle_cycles + block_ldq_cycles + block_stq_cycles +
+            block_lsq_other_cycles + block_alu_iq_cycles +
+            block_mem_iq_cycles + block_unq_iq_cycles +
+            block_other_cycles;
 
         std::printf(
             "PERF: windows=%u cycles=%llu reported_cycles=%u "
@@ -815,10 +970,71 @@ struct PerformanceStats {
             100.0 * ratio(branch_alloc_stall_cycles, cycles),
             100.0 * ratio(rob_stall_cycles, cycles));
         std::printf(
-            "  iq_full%%: alu=%.2f mem=%.2f unq=%.2f\n",
+            "  rename_detail: free_count%%(0/1/2+)="
+            "%.2f/%.2f/%.2f alloc_need%%(0/1/2)="
+            "%.2f/%.2f/%.2f shortage(0<1/0<2/1<2)=%llu/%llu/%llu\n",
+            100.0 * ratio(rename_free_count_cycles[0], cycles),
+            100.0 * ratio(rename_free_count_cycles[1], cycles),
+            100.0 * ratio(rename_free_count_cycles[2], cycles),
+            100.0 * ratio(rename_alloc_need_cycles[0],
+                          dispatch_active_cycles),
+            100.0 * ratio(rename_alloc_need_cycles[1],
+                          dispatch_active_cycles),
+            100.0 * ratio(rename_alloc_need_cycles[2],
+                          dispatch_active_cycles),
+            static_cast<unsigned long long>(rename_short_free0_need1),
+            static_cast<unsigned long long>(rename_short_free0_need2),
+            static_cast<unsigned long long>(rename_short_free1_need2));
+        std::printf(
+            "  dispatch_block_share%%: recovery=%.2f rob=%.2f "
+            "freelist=%.2f unique=%.2f idle=%.2f "
+            "ldq=%.2f stq=%.2f lsq_other=%.2f "
+            "alu_iq=%.2f mem_iq=%.2f unq_iq=%.2f other=%.2f "
+            "classified=%llu/%llu\n",
+            100.0 * ratio(block_recovery_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_rob_cycles, dispatch_blocked_cycles),
+            100.0 * ratio(block_freelist_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_unique_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_idle_cycles, dispatch_blocked_cycles),
+            100.0 * ratio(block_ldq_cycles, dispatch_blocked_cycles),
+            100.0 * ratio(block_stq_cycles, dispatch_blocked_cycles),
+            100.0 * ratio(block_lsq_other_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_alu_iq_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_mem_iq_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_unq_iq_cycles,
+                          dispatch_blocked_cycles),
+            100.0 * ratio(block_other_cycles, dispatch_blocked_cycles),
+            static_cast<unsigned long long>(classified_dispatch_blocks),
+            static_cast<unsigned long long>(dispatch_blocked_cycles));
+        std::printf(
+            "  unique_unq: unique_wait=%llu(div/csr/other=%llu/%llu/%llu) "
+            "dispatch(mul/div/csr/unique)=%llu/%llu/%llu/%llu "
+            "unq_busy=%.2f%% issue_wait=%llu\n",
+            static_cast<unsigned long long>(unique_wait_cycles),
+            static_cast<unsigned long long>(unique_wait_div_cycles),
+            static_cast<unsigned long long>(unique_wait_csr_cycles),
+            static_cast<unsigned long long>(unique_wait_other_cycles),
+            static_cast<unsigned long long>(mul_dispatches),
+            static_cast<unsigned long long>(div_dispatches),
+            static_cast<unsigned long long>(csr_dispatches),
+            static_cast<unsigned long long>(unique_dispatches),
+            100.0 * ratio(unq_busy_cycles, cycles),
+            static_cast<unsigned long long>(unq_issue_wait_cycles));
+        std::printf(
+            "  iq_capacity%%: full(alu/mem/unq)=%.2f/%.2f/%.2f "
+            "one_slot=%.2f/%.2f/%.2f\n",
             100.0 * ratio(alu_iq_full_cycles, cycles),
             100.0 * ratio(mem_iq_full_cycles, cycles),
-            100.0 * ratio(unq_iq_full_cycles, cycles));
+            100.0 * ratio(unq_iq_full_cycles, cycles),
+            100.0 * ratio(alu_iq_one_slot_cycles, cycles),
+            100.0 * ratio(mem_iq_one_slot_cycles, cycles),
+            100.0 * ratio(unq_iq_one_slot_cycles, cycles));
         std::printf(
             "  dmmu: req=%llu stall=%llu state_idle=%.2f%% "
             "check=%.2f%% wait=%.2f%% response=%.2f%%\n",

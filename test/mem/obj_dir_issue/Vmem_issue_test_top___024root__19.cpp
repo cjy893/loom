@@ -4,65 +4,63 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-#ifdef VL_DEBUG
-void Vmem_issue_test_top___024root___eval_debug_assertions(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_debug_assertions\n"); );
+extern const VlWide<52>/*1663:0*/ Vmem_issue_test_top__ConstPool__CONST_he0520003_0;
+extern const VlWide<13>/*415:0*/ Vmem_issue_test_top__ConstPool__CONST_h75d095d1_0;
+
+void Vmem_issue_test_top___024root___nba_sequent__TOP__6(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___nba_sequent__TOP__6\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if (VL_UNLIKELY(((vlSelfRef.clk & 0xfeU)))) {
-        Verilated::overWidthError("clk");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.rst_n & 0xfeU)))) {
-        Verilated::overWidthError("rst_n");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_valid & 0xfeU)))) {
-        Verilated::overWidthError("dis_valid");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_rob_idx & 0xc0U)))) {
-        Verilated::overWidthError("dis_rob_idx");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1 & 0xc0U)))) {
-        Verilated::overWidthError("dis_psrc1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2 & 0xc0U)))) {
-        Verilated::overWidthError("dis_psrc2");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc1_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_psrc1_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_psrc2_busy & 0xfeU)))) {
-        Verilated::overWidthError("dis_psrc2_busy");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_agen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_agen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.dis_use_dgen & 0xfeU)))) {
-        Verilated::overWidthError("dis_use_dgen");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_0 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_0 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_0");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_valid_1 & 0xfeU)))) {
-        Verilated::overWidthError("wakeup_valid_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.wakeup_pdst_1 & 0xc0U)))) {
-        Verilated::overWidthError("wakeup_pdst_1");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.resolve_mask & 0xf0U)))) {
-        Verilated::overWidthError("resolve_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.mispredict_mask & 0xf0U)))) {
-        Verilated::overWidthError("mispredict_mask");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.br_mispredict & 0xfeU)))) {
-        Verilated::overWidthError("br_mispredict");
-    }
-    if (VL_UNLIKELY(((vlSelfRef.flush_pipeline & 0xfeU)))) {
-        Verilated::overWidthError("flush_pipeline");
-    }
+    VL_ASSIGN_W(1664, vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__uop_mux_terms, Vmem_issue_test_top__ConstPool__CONST_he0520003_0);
+    VL_ASSIGN_W(416, vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__selected_uop_bits, Vmem_issue_test_top__ConstPool__CONST_h75d095d1_0);
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | (0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U] 
+                                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[7U] 
+                                                >> 0x0000001eU)) 
+                                    & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                        << 0x00000017U) 
+                                       | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                          >> 9U))))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready)) 
+           | ((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed))) 
+               & (~ (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[3U] 
+                     >> 0x00000015U))) & (0x00020000U 
+                                          == (0x00024000U 
+                                              & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U]))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready)) 
+           | ((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed))) 
+               & (~ (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[3U] 
+                     >> 0x00000014U))) & (0x00040000U 
+                                          == (0x00042000U 
+                                              & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[8U]))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
+           | (1U & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready) 
+                    | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U] 
+                                       << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
+                                                 >> 0x0000001eU)) 
+                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         << 0x00000017U) 
+                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                           >> 9U))))) 
+              << 1U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready)) 
+           | ((IData)((((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                          >> 1U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
+                                       >> 1U))) & (~ 
+                                                   (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[16U] 
+                                                    >> 0x00000015U))) 
+                       & (0x00020000U == (0x00024000U 
+                                          & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U])))) 
+              << 1U));
 }
-#endif  // VL_DEBUG

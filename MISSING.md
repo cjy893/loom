@@ -57,10 +57,12 @@
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
 - 性能统计已覆盖 CoreMark、`fireye_A0`、`stream_copy`、`bitcount`、`crc32`、
   `fireye_C0` 和 `my_memcmp`。IFU 已在 live ICache 响应与 F2 对齐时同拍组包并启动
-  下一次翻译；最新四项 IPC 为 0.9077、0.6799、0.2672、0.6169。其中 `bitcount`
+  下一次翻译；上一轮统一测得四项 IPC 为 0.9077、0.6799、0.2672、0.6169。其中 `bitcount`
   和 `my_memcmp` 已约为参考核 IPC 的 0.8，当前主要相对缺口是仅约三分之一的
   `crc32` 和 `fireye_C0`。GShare 已接入真实 GHist，下一步重新测量上述 IPC 和逐分支
   误预测，再按实测阻塞跟踪 tagged 多 outstanding 前端及 LSU/数据侧并发。
+  解除三条 MUL 的 `is_unique` 后，包含 GShare 改动的当前 `fireye_C0` 新基线为
+  0.5152；该次测量不是单变量 A/B，其余用例仍需在同一版本统一重测。
 
 ---
 
@@ -76,6 +78,7 @@
 
 - `csr_replay` 是死端口（两个 core 均 tie '0）；CSR 目前靠 `is_unique` 全串行化 + `flush_on_commit` refetch 规避 RMW 冲突，功能正确但有性能代价
 - 仅当解除 CSR 串行化后才需要：冲突检测源（csr_file 有未提交写与读同地址）→ ROB mini-exception（标记后**不写 CSR**、到 head 触发 flush）→ 从自身 PC refetch（现有 FT_REFETCH 是 pc+4，需新增类型区分）
+- 2026-08-04 的六个低 IPC 性能窗口均未动态分发 CSR，当前实现 CSR replay 不会改善这些用例
 
 ### 4. 小缺口
 
@@ -101,6 +104,16 @@
 - 将全部已支持基础/扩展/特权指令纳入穷举编码与非法编码边界测试，避免只覆盖代表性机器码。
 - 对照最终采用的 LA32 架构版本复核 CACOP hint、INVTLB op 和屏障 hint 的保留编码行为。
 - 后续新增指令时继续维持“Decode 分类、UNQ/LSU 执行、ROB 精确提交”三层测试。
+
+---
+
+## Rename 性能缺口
+
+- 当前整数物理寄存器为 48 个，扣除 32 个架构映射后只有 16 个可供投机重命名。
+- `rename_stage` 在一个双发 packet 的 `alloc_need` 大于 `free_count` 时整包停顿；
+  `fireye_C0` 有 204235 个周期处于 free_count=1、alloc_need=2，未利用可分配的一个槽位。
+- 六个低 IPC 用例中，分发阻塞周期的 94.19% 至 99.99% 来自 freelist；下一步应先
+  扫描 48/56/64 个物理寄存器的 IPC、LUT/寄存器占用和时序，再评估前缀部分分配。
 
 ---
 
@@ -211,7 +224,7 @@ dec_uops[w].br_mask = br_mask_inst.br_mask[w];
 | 项目 | 说明 | 何时需要 |
 |------|------|---------|
 | ~~DIV 组合除法器~~ | 已替换为 `exu/exe/div/` 的 SRT-4 迭代除法器（无符号内核 + 符号包装层），可 kill、经 `test/div` 契约验证 | 完成 |
-| MUL/DIV 串行化 | 七种 LA32 乘除法语义已完成，但当前仍标记为 `is_unique`，会等待 ROB 清空后串行执行 | 完成长延迟并行执行和回滚验证后解除 |
+| DIV/MOD 串行化 | 三条 MUL 已解除 `is_unique`，并通过旧 load 并行分发、依赖、恢复和官方功能测试；四条 DIV/MOD 仍等待 ROB 清空后串行执行 | 先采集 DIV/MOD 动态占比，再决定是否解除 |
 | ~~DIV 拍数固定~~ | SRT-4 迭代除法器延迟随操作数变化（约 2–21 拍） | 完成 |
 | 无 fast wakeup | 多周期操作不拉快速 bypass，MUL/DIV 结果多等一拍 | 性能优化 |
 | `pipe_uop` 在 `kill` 时未刷新 | 多周期执行中发生 flush，`pipe_uop` 不会清。`res_valid` 已被 `state` 归零挡住 | 无害，可优化 |

@@ -103,6 +103,27 @@ module core_top_elf_axi_test_top #(
     output logic [1:0] rename_stalls,
     output logic [1:0] dispatch_valid,
     output logic [1:0] dispatch_fire,
+    output logic [1:0] rename_alloc_need,
+    output logic [1:0] rename_free_count,
+    output logic       dispatch_enable,
+    output logic       unique_dispatch_ready,
+    output logic       dispatch_flush_block,
+    output logic       dispatch_core_idle,
+    output logic       dispatch_branch_block,
+    output logic [1:0] dispatch_unique,
+    output logic [1:0] dispatch_exception,
+    output logic [7:0] dispatch_iq_type_detail,
+    output logic [19:0] dispatch_fu_code_detail,
+    output logic [63:0] dispatch_inst_detail,
+    output logic [1:0] dispatch_lsu_ready,
+    output logic [1:0] dispatch_uses_ldq,
+    output logic [1:0] dispatch_uses_stq,
+    output logic [1:0] alu_iq_ready_detail,
+    output logic [1:0] mem_iq_ready_detail,
+    output logic [1:0] unq_iq_ready_detail,
+    output logic [3:0] unq_state,
+    output logic       unq_issue_valid,
+    output logic       unq_exec_ready,
     output logic       branch_alloc_ready,
     output logic       rob_ready,
     output logic       alu_iq_full,
@@ -260,6 +281,39 @@ module core_top_elf_axi_test_top #(
     assign rename_stalls = dut.core_inst.rn_stalls;
     assign dispatch_valid = dut.core_inst.rn2_mask;
     assign dispatch_fire = dut.core_inst.dis_fire;
+    assign rename_alloc_need = dut.core_inst.rename.alloc_need;
+    assign rename_free_count = dut.core_inst.rename.fl_free_count;
+    assign dispatch_enable = dut.core_inst.dispatch_enable;
+    assign unique_dispatch_ready = dut.core_inst.unique_dispatch_ready;
+    assign dispatch_flush_block = dut.core_inst.rob_flush_frontend_w;
+    assign dispatch_core_idle = dut.core_inst.core_idle_q;
+    assign dispatch_branch_block =
+        (|dut.core_inst.brupdate_w.b1.mispredict_mask) ||
+        dut.core_inst.brupdate_w.b2.mispredict;
+    assign dispatch_unique = dut.core_inst.rn2_unique_q;
+    assign dispatch_exception = dut.core_inst.rn2_exception_q;
+    assign dispatch_lsu_ready = dut.core_inst.lsu_dis_ready;
+    assign dispatch_uses_ldq = dut.core_inst.rn2_uses_ldq_q;
+    assign dispatch_uses_stq = dut.core_inst.rn2_uses_stq_q;
+    assign alu_iq_ready_detail = dut.core_inst.alu_iq_dis_ready;
+    assign mem_iq_ready_detail = dut.core_inst.mem_iq_dis_ready;
+    assign unq_iq_ready_detail = dut.core_inst.unq_iq_dis_ready;
+    assign unq_state = dut.core_inst.unq_inst.state;
+    assign unq_issue_valid = dut.core_inst.unq_iss_valid;
+    assign unq_exec_ready = dut.core_inst.unq_exec_ready;
+    always_comb begin
+        dispatch_iq_type_detail = '0;
+        dispatch_fu_code_detail = '0;
+        dispatch_inst_detail = '0;
+        for (int lane = 0; lane < 2; lane++) begin
+            dispatch_iq_type_detail[lane * 4 +: 4] =
+                dut.core_inst.rn2_iq_type_q[lane];
+            dispatch_fu_code_detail[lane * 10 +: 10] =
+                dut.core_inst.rn2_uops_raw[lane].fu_code;
+            dispatch_inst_detail[lane * 32 +: 32] =
+                dut.core_inst.rn2_uops_raw[lane].inst;
+        end
+    end
     assign branch_alloc_ready = dut.core_inst.branch_alloc_ready;
     assign rob_ready = dut.core_inst.rob_ready_w;
     assign alu_iq_full = !(|dut.core_inst.alu_iq_dis_ready);

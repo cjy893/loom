@@ -13,6 +13,11 @@ The contract covers:
 - hardware-interrupt delivery;
 - two-wide architectural commit trace outputs.
 
+An instruction request that remains valid while stalled must keep its address
+stable. The IFU may withdraw an unaccepted request when an internal redirect
+cancels that wrong-path fetch; the black-box top does not expose the redirect
+as a separate cancellation signal.
+
 Run against the current verified test-only composition:
 
 ```bash

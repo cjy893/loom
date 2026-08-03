@@ -26,12 +26,42 @@ module rename_freelist #(
 );
     localparam int PREG_SZ = $clog2(PHYSICAL_REGS);
     localparam int FREE_COUNT_W = $clog2(ALLOC_PORTS+1);
+    localparam int PICK_GROUP_BITS = 8;
+    localparam int PICK_GROUPS =
+        (PHYSICAL_REGS + PICK_GROUP_BITS - 1) / PICK_GROUP_BITS;
+    localparam int PICK_PAD_BITS = PICK_GROUPS * PICK_GROUP_BITS;
 
-    function automatic logic [PREG_SZ-1:0] priority_encoder(logic [PHYSICAL_REGS-1:0] vec);
-        for(int i = 1; i < PHYSICAL_REGS; i++) begin
-            if(vec[i]) return i;
+    // Select the lowest set bit with short local and group encoders instead of
+    // a PHYSICAL_REGS-deep priority chain.
+    function automatic logic [PHYSICAL_REGS-1:0] pick_first_onehot(
+        input logic [PHYSICAL_REGS-1:0] vec
+    );
+        logic [PICK_PAD_BITS-1:0] padded_vec;
+        logic [PICK_PAD_BITS-1:0] padded_pick;
+        logic [PICK_GROUPS-1:0] group_valid;
+        logic [PICK_GROUPS-1:0] group_pick;
+
+        padded_vec = '0;
+        padded_pick = '0;
+        group_valid = '0;
+        padded_vec[PHYSICAL_REGS-1:0] = vec;
+
+        for (int g = 0; g < PICK_GROUPS; g++) begin
+            group_valid[g] =
+                |padded_vec[g*PICK_GROUP_BITS +: PICK_GROUP_BITS];
         end
-        return '0;
+
+        group_pick = group_valid & (~group_valid + PICK_GROUPS'(1));
+
+        for (int g = 0; g < PICK_GROUPS; g++) begin
+            padded_pick[g*PICK_GROUP_BITS +: PICK_GROUP_BITS] =
+                (padded_vec[g*PICK_GROUP_BITS +: PICK_GROUP_BITS] &
+                 (~padded_vec[g*PICK_GROUP_BITS +: PICK_GROUP_BITS] +
+                  PICK_GROUP_BITS'(1))) &
+                {PICK_GROUP_BITS{group_pick[g]}};
+        end
+
+        return padded_pick[PHYSICAL_REGS-1:0];
     endfunction
 
     logic [PHYSICAL_REGS-1:0] br_alloc_q [MAX_BR_COUNT-1:0];
@@ -46,30 +76,63 @@ module rename_freelist #(
     logic [PHYSICAL_REGS-1:0] free_vec;
     assign busy = (free_count == '0);
 
+    logic [ALLOC_PORTS:0][PHYSICAL_REGS-1:0] ranked_remaining;
+    logic [ALLOC_PORTS-1:0][PHYSICAL_REGS-1:0] ranked_pick;
+    logic [ALLOC_PORTS-1:0][PHYSICAL_REGS-1:0] alloc_pick;
+    logic [ALLOC_PORTS-1:0][FREE_COUNT_W-1:0] prior_alloc_count;
+    logic [ALLOC_PORTS-1:0][PREG_SZ-1:0]
+          [PHYSICAL_REGS-1:0] alloc_index_terms;
+    logic [ALLOC_PORTS-1:0][PREG_SZ-1:0] alloc_cand;
+
     always_comb begin
+        ranked_remaining = '0;
+        ranked_pick = '0;
+        alloc_pick = '0;
+        prior_alloc_count = '0;
+        alloc_index_terms = '0;
+        alloc_cand = '0;
         free_count = '0;
 
-        for(int i = 1; i < PHYSICAL_REGS; i++) begin
-            if(free_vec[i] && free_count < FREE_COUNT_W'(ALLOC_PORTS)) free_count = free_count + FREE_COUNT_W'(1);
-        end
-    end
+        ranked_remaining[0] = free_vec;
+        for (int rank = 0; rank < ALLOC_PORTS; rank++) begin
+            ranked_pick[rank] =
+                pick_first_onehot(ranked_remaining[rank]);
+            ranked_remaining[rank+1] =
+                ranked_remaining[rank] & ~ranked_pick[rank];
 
-    logic [ALLOC_PORTS-1:0] [PREG_SZ-1:0] alloc_cand;
-    always_comb begin
-        logic [PHYSICAL_REGS-1:0] taken_mask;
-        taken_mask = '0;
-        for(int i = 0; i < ALLOC_PORTS; i++) begin
-            alloc_cand[i] = priority_encoder(free_vec & ~taken_mask);
-            if(alloc_en[i]) begin
-                taken_mask[alloc_cand[i]] = 1'b1;
+            if (|ranked_pick[rank])
+                free_count = FREE_COUNT_W'(rank + 1);
+        end
+
+        // A lane's rank is the number of older lanes that allocate a pdst.
+        for (int w = 0; w < ALLOC_PORTS; w++) begin
+            for (int p = 0; p < w; p++) begin
+                prior_alloc_count[w] = prior_alloc_count[w] +
+                    FREE_COUNT_W'(alloc_en[p]);
+            end
+
+            for (int rank = 0; rank < ALLOC_PORTS; rank++) begin
+                if (prior_alloc_count[w] == FREE_COUNT_W'(rank))
+                    alloc_pick[w] = ranked_pick[rank];
+            end
+        end
+
+        // Encode one-hot candidates with parallel reduction trees.
+        for (int w = 0; w < ALLOC_PORTS; w++) begin
+            for (int b = 0; b < PREG_SZ; b++) begin
+                for (int r = 1; r < PHYSICAL_REGS; r++) begin
+                    alloc_index_terms[w][b][r] =
+                        alloc_pick[w][r] && (((r >> b) & 1) != 0);
+                end
+                alloc_cand[w][b] = |alloc_index_terms[w][b];
             end
         end
     end
 
     always_comb begin
         for(int w = 0; w < ALLOC_PORTS; w++) begin
-            alloc_mask[w] = 0;
-            if(alloc_en[w] && (alloc_cand[w] != '0)) alloc_mask[w][alloc_cand[w]] = 1'b1;
+            alloc_mask[w] =
+                alloc_pick[w] & {PHYSICAL_REGS{alloc_en[w]}};
         end
 
         alloc_suffix = '0;

@@ -5,6 +5,7 @@ import loom_types::*;
 module mem_issue_test_top (
     input  logic        clk,
     input  logic        rst_n,
+    input  logic [ROB_ADDR_SZ-1:0] rob_head_idx,
 
     input  logic        dis_valid,
     output logic        dis_ready,
@@ -15,6 +16,17 @@ module mem_issue_test_top (
     input  logic        dis_psrc2_busy,
     input  logic        dis_use_agen,
     input  logic        dis_use_dgen,
+    input  logic [3:0]  dis_br_mask,
+    input  logic        dis_valid_1,
+    output logic        dis_ready_1,
+    input  logic [5:0]  dis_rob_idx_1,
+    input  logic [5:0]  dis_psrc1_1,
+    input  logic [5:0]  dis_psrc2_1,
+    input  logic        dis_psrc1_busy_1,
+    input  logic        dis_psrc2_busy_1,
+    input  logic        dis_use_agen_1,
+    input  logic        dis_use_dgen_1,
+    input  logic [3:0]  dis_br_mask_1,
 
     input  logic        wakeup_valid_0,
     input  logic [5:0]  wakeup_pdst_0,
@@ -42,11 +54,12 @@ module mem_issue_test_top (
     output logic [31:0] dgen_data,
     output logic [5:0]  dgen_rob_idx
 );
-    uop_t [0:0] dis_uop;
+    uop_t [1:0] dis_uop;
     uop_t [0:0] iss_uop;
     uop_t agen_uop;
     uop_t dgen_uop;
-    logic [0:0] dis_ready_vec;
+    logic [1:0] dis_valid_vec;
+    logic [1:0] dis_ready_vec;
     logic [0:0] iss_valid_vec;
     logic [1:0] wakeup_valid;
     logic [1:0][5:0] wakeup_pdst;
@@ -63,6 +76,22 @@ module mem_issue_test_top (
         dis_uop[0].fu_code[FC_DGEN] = dis_use_dgen;
         dis_uop[0].uses_ldq = dis_use_agen && !dis_use_dgen;
         dis_uop[0].uses_stq = dis_use_dgen;
+        dis_uop[0].br_mask = dis_br_mask;
+
+        dis_uop[1] = '0;
+        dis_uop[1].rob_idx = dis_rob_idx_1;
+        dis_uop[1].psrc1 = dis_psrc1_1;
+        dis_uop[1].psrc2 = dis_psrc2_1;
+        dis_uop[1].psrc1_busy = dis_psrc1_busy_1;
+        dis_uop[1].psrc2_busy = dis_psrc2_busy_1;
+        dis_uop[1].fu_code[FC_AGEN] = dis_use_agen_1;
+        dis_uop[1].fu_code[FC_DGEN] = dis_use_dgen_1;
+        dis_uop[1].uses_ldq = dis_use_agen_1 && !dis_use_dgen_1;
+        dis_uop[1].uses_stq = dis_use_dgen_1;
+        dis_uop[1].br_mask = dis_br_mask_1;
+
+        dis_valid_vec[0] = dis_valid;
+        dis_valid_vec[1] = dis_valid_1;
 
         wakeup_valid[0] = wakeup_valid_0;
         wakeup_pdst[0] = wakeup_pdst_0;
@@ -78,14 +107,14 @@ module mem_issue_test_top (
     issue_unit_collapsing #(
         .NUM_ENTRIES(4),
         .ISSUE_WIDTH(1),
-        .DISPATCH_WIDTH(1),
+        .DISPATCH_WIDTH(2),
         .NUM_WAKEUP_PORTS(2),
         .PREG_SZ(6),
         .IS_MEM(1)
     ) issue_dut (
         .clk,
         .rst_n,
-        .dis_valid(dis_valid),
+        .dis_valid(dis_valid_vec),
         .dis_uop,
         .dis_ready(dis_ready_vec),
         .iss_valid(iss_valid_vec),
@@ -93,6 +122,7 @@ module mem_issue_test_top (
         .wakeup_valid,
         .wakeup_pdst,
         .brupdate,
+        .rob_head_idx,
         .flush_pipeline,
         .squash_grant(1'b0)
     );
@@ -120,6 +150,7 @@ module mem_issue_test_top (
     );
 
     assign dis_ready = dis_ready_vec[0];
+    assign dis_ready_1 = dis_ready_vec[1];
     assign iss_valid = iss_valid_vec[0];
     assign iss_rob_idx = iss_uop[0].rob_idx;
     assign iss_use_agen = iss_uop[0].fu_code[FC_AGEN];

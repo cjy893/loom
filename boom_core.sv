@@ -551,7 +551,8 @@ module boom_core #(
         .dis_valid(iq_alu_dis_valid), .dis_uop(iq_alu_dis_uop), .dis_ready(alu_iq_dis_ready),
         .iss_valid(alu_iss_valid), .iss_uop(alu_iss_uop),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(1'b0));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(1'b0));
 
     // MEM IQ
     issue_unit_collapsing #(.NUM_ENTRIES(MEM_IQ_ENTRIES), .ISSUE_WIDTH(1),
@@ -561,7 +562,8 @@ module boom_core #(
         .dis_valid(iq_mem_dis_valid), .dis_uop(iq_mem_dis_uop), .dis_ready(mem_iq_dis_ready),
         .iss_valid(mem_iss_valid[0]), .iss_uop(mem_iss_uop[0]),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(1'b0));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(1'b0));
     for (genvar i = 1; i < MEM_WIDTH; i++) begin : gen_unused_mem_issue
         assign mem_iss_valid[i] = 1'b0;
         assign mem_iss_uop[i] = '0;
@@ -575,7 +577,8 @@ module boom_core #(
         .dis_valid(iq_unq_dis_valid), .dis_uop(iq_unq_dis_uop), .dis_ready(unq_iq_dis_ready),
         .iss_valid(unq_iss_valid), .iss_uop(unq_iss_uop),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(!unq_exec_ready));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(!unq_exec_ready));
 
     // ================================================================
     // 物理寄存器文件
