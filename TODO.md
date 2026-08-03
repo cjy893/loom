@@ -244,22 +244,49 @@
 - [x] DMMU CHECK 直接响应性能回归完成：`stream_copy` 0.3264（+4.4%）、
   `crc32` 0.4966（+1.6%）、`coremark` 0.4336（+6.3%）、
   `fireye_A0` 0.3852（+2.7%）；四项均正确结束，DMMU `response` 状态占比为 0%。
-- [x] 扩展性能回归到逐分支 PC/CFI/方向统计，并定位低 IPC 用例：
+- [x] 扩展性能回归到逐分支 PC/CFI/方向统计，记录代表性用例：
   `bitcount` 0.7666、`crc32` 0.4966、`fireye_C0` 0.2647、`my_memcmp` 0.4820。
 - [x] IFU 命中路径已支持翻译响应直接交接 ICache，并可当拍消费 epoch 匹配的
   live F3 预测结果；ICache/后端背压时分别回退到请求寄存器和预测结果寄存器。
   Verilator 回归后 `S_MEM_REQ` 占比为 0%，IPC：`bitcount` 0.8860（+15.6%）、
   `crc32` 0.6397（+28.8%）、`fireye_C0` 0.2662（+0.6%）、
-  `my_memcmp` 0.5567（+15.5%）。后续综合需重点检查 BPD F3 到下一取指请求路径。
-- [ ] 在 Composer 中增加使用现有 GHist 的方向预测组件。当前只有 PC 索引 BIM；
+  `my_memcmp` 0.5567（+15.5%）。综合后 WNS 仍为 +0.978 ns，与优化前一致。
+- [x] 为 IMMU direct bypass 和 ICache lookup hit 增加响应/下一请求同拍周转红测试；
+  当前 IMMU 225 项检查仅该契约失败 1 项，ICache 32B/64B 配置也分别仅失败 1 项。
+- [x] IMMU direct response 和 ICache lookup hit 已可在响应握手周期接收下一请求；
+  响应反压、TLB wait、miss/refill 和维护期间继续禁止覆盖在途请求。IMMU 231 项、
+  ICache 32B/64B 配置 2158/2406 项检查、core_top 恢复，以及官方 58 项功能 ELF
+  正常/AXI 背压回归均通过。
+- [x] IFU 在 ICache hit 响应与 Composer F2 对齐时直接组包，并在该 packet 被接收的
+  同一周期启动下一次翻译；F2 已消费请求产生的迟到 F3 用单项 drop 状态丢弃，JIRL
+  缺少早期目标、FTQ/后端反压或时序未对齐时仍回退到原有 F3/寄存路径。完整回归后
+  IPC：`bitcount` 0.9077（+2.4%）、`crc32` 0.6799（+6.3%）、`fireye_C0`
+  0.2672（+0.4%）、`my_memcmp` 0.6169（+10.8%）；综合 WNS 为 +0.987 ns，
+  与修改前 +0.978 ns 基本一致。
+- [x] 将 GShare 接入 Composer 和 IFU 的真实逐 bank GHist；逻辑第一/第二 bank 历史
+  会随物理 bank 轮换，packet 接收同拍的下一 BPD 请求使用更新后历史，branch rewind
+  后的首个请求直接使用 FTQ 恢复快照。`test/ifu/` 和 `test/core_ifu/` 回归通过。
   `bitcount` 的 `0x1c00077c` 分支 taken 恰为 50%，2000 次执行误预测 1990 次，
-  v4 默认配置则在 BIM/BTB 之后继续组合 TAGE 和 loop predictor。
+  v4 默认配置则在 BIM/BTB 之后继续组合 TAGE 和 loop predictor。该局部分支仍值得
+  修复，但 `bitcount` 总体 IPC 已约为参考核的 0.8，不再视为主要整体性能瓶颈。
+- [x] 固定第一版 GShare 的 F0-to-F2、逐 lane provider、prediction-time meta、
+  fetch-row PC XOR history 索引及提交训练契约；`test/gshare/run.sh --reference`
+  覆盖冷启动、历史分流、N/T 交替、连续旧 meta、读写碰撞和非提交更新过滤。
+- [x] 生产 `ifu/bpd/gshare.sv` 已按上述契约实现，和 reference 仅注释不同；
+  `test/gshare/run.sh` 默认生产模式通过并加入分支预测聚合回归，现已接入 Composer/IFU。
+- [x] 增加 `test/composer_gshare/` 接入测试；reference 和生产模式均覆盖 BIM 冷回退、
+  GShare provider 覆盖、条件/无条件分支选择、bank history 流水对齐，以及
+  `BTB | BIM | GShare` metadata 拼接和反向切片，现已加入分支预测聚合回归。
+- [x] 增加 BIM `bank1/lane1` 的 N,T 交替方向与旧 metadata 连续提交测试；确认计数器
+  合法地在 `2'b10`/`2'b01` 间振荡、write-bypass 未丢训练且无 bank/lane 串扰。
+  同一序列下 BIM 16 次全部误预测，1 位历史参考模型仅有 3 次冷启动误预测。
 - [ ] 针对 `fireye_C0` 的数据相关条件分支增加预测回归；当前误预测率 19.31%，
   热点均为条件分支，未发现 B/BL 或 JIRL 目标误预测。
 - [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应红测试；当前 RTL 仍有2个
   时序断言失败，其余功能契约通过。
 - [ ] DCache hit 直接响应作为数据侧第二优先级保留；它对 `my_memcmp` 明确有益，
-  但不能解决 `bitcount`、`crc32` 和 `fireye_C0` 的主要瓶颈。
+  但 `my_memcmp` 总体 IPC 已约为参考核的 0.8。当前优先分析相对参考核仅约三分之一
+  的 `crc32` 和 `fireye_C0`，避免把局部停顿直接等同于主要整体性能缺口。
 
 ### 真实指令用例
 

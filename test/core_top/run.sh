@@ -17,6 +17,7 @@ case "$MODE" in
     rtl+=(
       "$ROOT/ifu/bpd/ubtb.sv"
       "$ROOT/ifu/bpd/bim.sv"
+      "$ROOT/ifu/bpd/gshare.sv"
       "$ROOT/ifu/bpd/btb.sv"
       "$ROOT/ifu/bpd/composer.sv"
       "$ROOT/ifu/bpd/bpd_update_router.sv"

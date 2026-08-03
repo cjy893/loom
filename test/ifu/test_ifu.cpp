@@ -10,8 +10,16 @@ static constexpr uint32_t RESET_PC = 0x1c000000U;
 static constexpr uint32_t FETCH_BYTES = FETCH_WIDTH * sizeof(uint32_t);
 static constexpr uint32_t ECODE_PIF = 0x03U;
 static constexpr uint32_t ECODE_TLBR = 0x3fU;
+static constexpr uint32_t CFI_BR = 1U;
 
 using Bundle = std::array<uint32_t, FETCH_WIDTH>;
+
+static constexpr uint32_t beq(unsigned rj, unsigned rd,
+                              int byte_offset) {
+    return 0x58000000U |
+           ((static_cast<uint32_t>(byte_offset >> 2) & 0xffffU) << 10) |
+           ((rj & 0x1fU) << 5) | (rd & 0x1fU);
+}
 
 static bool send_response(Vifu_test_top* dut, const Bundle& bundle,
                           int max_cycles = 8);
@@ -33,6 +41,11 @@ static void reset(Vifu_test_top* dut) {
     dut->rst_n = 0;
     dut->redirect_valid = 0;
     dut->redirect_pc = 0;
+    dut->branch_redirect = 0;
+    dut->branch_redirect_ftq_idx = 0;
+    dut->branch_redirect_taken = 0;
+    dut->branch_redirect_pc_lob = 0;
+    dut->branch_redirect_cfi_type = 0;
     dut->xlate_req_ready = 0;
     dut->xlate_resp_valid = 0;
     dut->xlate_resp_vaddr = 0;
@@ -318,10 +331,27 @@ static bool send_response(Vifu_test_top* dut, const Bundle& bundle,
 
 static void pulse_redirect(Vifu_test_top* dut, uint32_t target) {
     dut->redirect_pc = target;
+    dut->branch_redirect = 0;
     dut->redirect_valid = 1;
     dut->eval();
     tick(dut);
     dut->redirect_valid = 0;
+    dut->eval();
+}
+
+static void pulse_branch_redirect(Vifu_test_top* dut, uint32_t target,
+                                  uint32_t ftq_idx, uint32_t branch_pc) {
+    dut->redirect_pc = target;
+    dut->branch_redirect = 1;
+    dut->branch_redirect_ftq_idx = ftq_idx;
+    dut->branch_redirect_taken = 1;
+    dut->branch_redirect_pc_lob = branch_pc & 0x3fU;
+    dut->branch_redirect_cfi_type = CFI_BR;
+    dut->redirect_valid = 1;
+    dut->eval();
+    tick(dut);
+    dut->redirect_valid = 0;
+    dut->branch_redirect = 0;
     dut->eval();
 }
 
@@ -436,6 +466,154 @@ static bool accept_fetch_and_next_xlate(Vifu_test_top* dut,
 
     dut->xlate_req_ready = 0;
     dut->eval();
+    return passed;
+}
+
+static bool run_live_imem_response_fast_path(Vifu_test_top* dut) {
+    static constexpr Bundle RESPONSE = {
+        0x02800401U, 0x02800802U, 0x00100823U, 0x03400000U
+    };
+    static constexpr uint32_t NEXT_PC = RESET_PC + FETCH_BYTES;
+
+    reset(dut);
+    for (int cycle = 0; cycle < 4096 && !dut->bpd_ready_dbg; ++cycle)
+        tick(dut);
+
+    bool passed = check("live response test waits for predictor initialization",
+                        dut->bpd_ready_dbg);
+    passed &= accept_xlate_request(dut, RESET_PC);
+
+    // Accept the translated ICache request without inserting an artificial
+    // request-state cycle. Its hit response then aligns with predictor F2.
+    dut->xlate_resp_vaddr = RESET_PC;
+    dut->xlate_resp_paddr = RESET_PC;
+    dut->xlate_resp_mat = 1;
+    dut->xlate_resp_cacheable = 1;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->xlate_resp_xcpt_code = 0;
+    dut->xlate_resp_valid = 1;
+    dut->imem_req_ready = 1;
+    dut->eval();
+    passed &= check("live response setup accepts translation",
+                    dut->xlate_resp_ready);
+    passed &= check("live response setup accepts ICache request",
+                    dut->imem_req_valid);
+    tick(dut);
+
+    dut->xlate_resp_valid = 0;
+    dut->imem_req_ready = 0;
+    for (int lane = 0; lane < FETCH_WIDTH; ++lane)
+        dut->imem_resp_insts[lane] = RESPONSE[lane];
+    dut->imem_resp_valid = 1;
+    dut->fetch_ready = 1;
+    dut->xlate_req_ready = 1;
+    dut->eval();
+
+    passed &= check("ICache hit response is accepted",
+                    dut->imem_resp_ready);
+    passed &= check("ICache hit aligns before full F3 result",
+                    !dut->bpd_f3_valid_dbg);
+    passed &= expect_fetch(dut, 0xfU, RESET_PC, RESPONSE, 0);
+    passed &= check("live ICache packet launches next translation",
+                    dut->xlate_req_valid);
+    passed &= check("live ICache packet uses sequential next PC",
+                    dut->xlate_req_vaddr == NEXT_PC);
+
+    tick(dut);
+    dut->imem_resp_valid = 0;
+    dut->fetch_ready = 0;
+    dut->xlate_req_ready = 0;
+    dut->eval();
+
+    passed &= check("live packet does not enter registered fetch state",
+                    dut->ifu_state_dbg == 1U);
+    passed &= check("accepted live packet is not repeated",
+                    dut->fetch_valid == 0);
+    passed &= check("F2-consumed packet still produces a late raw F3",
+                    dut->bpd_f3_valid_dbg);
+    passed &= check("late F3 is not captured as the next packet result",
+                    !dut->bpd_result_valid_dbg);
+    tick(dut);
+    passed &= check("discarded F3 remains absent after its valid cycle",
+                    !dut->bpd_result_valid_dbg);
+
+    if (passed)
+        std::printf("PASS: IFU live ICache response fast path\n");
+    return passed;
+}
+
+static bool run_gshare_history_request_path(Vifu_test_top* dut) {
+    static constexpr uint32_t TARGET_PC = RESET_PC + 0x28U;
+    static constexpr uint32_t TARGET_BASE = RESET_PC + 0x20U;
+    static constexpr uint32_t NEXT_PC = RESET_PC + 0x30U;
+    static constexpr Bundle BRANCH_PACKET = {
+        beq(0, 0, static_cast<int>(TARGET_PC - RESET_PC)),
+        0x03400000U, 0x03400000U, 0x03400000U
+    };
+    static constexpr Bundle TARGET_PACKET = {
+        0x03400000U, 0x03400000U, 0x03400000U, 0x03400000U
+    };
+
+    reset(dut);
+    for (int cycle = 0; cycle < 4096 && !dut->bpd_ready_dbg; ++cycle)
+        tick(dut);
+
+    bool passed = check("history test waits for predictor initialization",
+                        dut->bpd_ready_dbg);
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
+    passed &= expect_request(dut, RESET_PC);
+    passed &= accept_request(dut, RESET_PC);
+    passed &= send_response(dut, BRANCH_PACKET);
+    passed &= expect_fetch(dut, 0xfU, RESET_PC, BRANCH_PACKET, 0);
+    passed &= check("cold conditional branch falls through",
+                    (dut->fetch_predicted_taken & 0x1U) == 0);
+
+    const uint32_t branch_ftq_idx = dut->fetch_ftq_idx_dbg;
+    accept_fetch(dut);
+    pulse_branch_redirect(dut, TARGET_PC, branch_ftq_idx, RESET_PC);
+
+    passed &= check("branch recovery presents corrected history",
+                    dut->ftq_ghist_restore_valid_dbg);
+    passed &= check("branch recovery launches target predictor request",
+                    dut->bpd_f0_valid_dbg);
+    passed &= check("target begins in physical bank one",
+                    dut->bpd_first_bank_dbg == 1);
+    passed &= check("target request enables both predictor banks",
+                    dut->bank_f0_valid_dbg == 0x3U);
+    passed &= check("logical first bank receives pre-branch history",
+                    dut->bank1_f0_ghist_dbg == 0);
+    passed &= check("logical second bank receives taken-branch history",
+                    dut->bank0_f0_ghist_dbg == 1);
+
+    passed &= accept_xlate_request(dut, TARGET_PC);
+    passed &= send_xlate_response(dut, TARGET_PC, TARGET_PC);
+    passed &= expect_request(dut, TARGET_BASE);
+    passed &= accept_request(dut, TARGET_BASE);
+    passed &= send_response(dut, TARGET_PACKET);
+    passed &= expect_fetch(dut, 0x3U, TARGET_PC, TARGET_PACKET, 2);
+
+    dut->fetch_ready = 1;
+    dut->xlate_req_ready = 1;
+    dut->eval();
+    passed &= check("target packet launches its next translation",
+                    dut->xlate_req_valid &&
+                    dut->xlate_req_vaddr == NEXT_PC);
+    passed &= check("same-cycle packet acceptance launches predictor",
+                    dut->bpd_f0_valid_dbg);
+    passed &= check("next request rotates logical first bank to bank zero",
+                    dut->bpd_first_bank_dbg == 0);
+    passed &= check("same-cycle request uses advanced history in bank zero",
+                    dut->bank0_f0_ghist_dbg == 1);
+    passed &= check("same-cycle request uses advanced history in bank one",
+                    dut->bank1_f0_ghist_dbg == 1);
+
+    tick(dut);
+    dut->fetch_ready = 0;
+    dut->xlate_req_ready = 0;
+    dut->eval();
+
+    if (passed)
+        std::printf("PASS: IFU GShare history request path\n");
     return passed;
 }
 
@@ -799,6 +977,8 @@ int main(int argc, char** argv) {
     passed &= run_xlate_to_imem_fast_path(dut);
     passed &= run_xlate_fast_path_backpressure(dut);
     passed &= run_redirect_cancels_xlate_fast_path(dut);
+    passed &= run_live_imem_response_fast_path(dut);
+    passed &= run_gshare_history_request_path(dut);
     passed &= run_live_f3_result_fast_path(dut);
     passed &= run_reset_and_sequential(dut);
     passed &= run_direct_self_branch_predicted_npc(dut);

@@ -398,6 +398,55 @@ void test_refill_hit_and_offsets(Testbench& tb) {
     std::printf("PASS: cacheable refill, hit, and line offsets\n");
 }
 
+void test_hit_response_turnover(Testbench& tb,
+                                Vicache_test_top* dut) {
+    tb.reset();
+
+    constexpr uint32_t first = 0x0000'7000u;
+    const uint32_t second = first + LINE_BYTES;
+
+    tb.transact(first, true, MissExpectation::Miss);
+    tb.transact(second, true, MissExpectation::Miss);
+
+    tb.accept_request(first, true);
+    tb.check("first resident line hits", dut->resp_valid == 1);
+    tb.check_response(first);
+
+    dut->req_paddr = second;
+    dut->req_cacheable = 1;
+    dut->req_valid = 1;
+
+    // A stalled hit response owns the lookup result and cannot be replaced.
+    dut->resp_ready = 0;
+    dut->eval();
+    tb.check("backpressured hit rejects next lookup",
+             dut->req_ready == 0);
+    tb.check_response(first);
+
+    // With the old response retiring, the synchronous RAM can read the next
+    // address on this edge and keep the hit pipeline occupied.
+    dut->resp_ready = 1;
+    dut->eval();
+    const bool turnover_ready = dut->req_ready == 1;
+    tb.check("hit response accepts next lookup in handshake cycle",
+             turnover_ready);
+    tb.check_response(first);
+    tb.tick();
+
+    dut->req_valid = 0;
+    dut->resp_ready = 0;
+    dut->eval();
+
+    if (turnover_ready) {
+        tb.check("turnover lookup produces the next hit",
+                 dut->resp_valid == 1);
+        tb.check_response(second);
+        tb.consume_response(second, 0);
+    }
+
+    std::printf("PASS: hit response same-cycle turnover contract\n");
+}
+
 void test_uncached_bypass(Testbench& tb) {
     tb.reset();
 
@@ -521,6 +570,7 @@ int main(int argc, char** argv) {
     Testbench tb(dut);
 
     test_refill_hit_and_offsets(tb);
+    test_hit_response_turnover(tb, dut);
     test_uncached_bypass(tb);
     test_maintenance_modes(tb);
     test_two_way_replacement(tb);

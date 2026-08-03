@@ -6,10 +6,12 @@ TEST_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 tests=(
   "ubtb:$TEST_ROOT/ubtb/run.sh"
   "bim:$TEST_ROOT/bim/run.sh"
+  "gshare:$TEST_ROOT/gshare/run.sh"
   "btb:$TEST_ROOT/btb/run.sh"
   "ras:$TEST_ROOT/ras/run.sh"
   "ghist:$TEST_ROOT/ghist/run.sh"
   "composer:$TEST_ROOT/bpd_top/run.sh"
+  "composer_gshare:$TEST_ROOT/composer_gshare/run.sh"
   "update_router:$TEST_ROOT/bpd_update_router/run.sh"
   "banked_contract:$TEST_ROOT/bpd_banked/run.sh"
   "f3_predecode:$TEST_ROOT/f3_predecode/run.sh"

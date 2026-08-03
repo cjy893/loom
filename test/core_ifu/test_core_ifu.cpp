@@ -1772,10 +1772,13 @@ static bool test_conditional_direction_training(
         "conditional training commit trace",
         check_commit_trace("conditional training", result, program,
                            expected_indices));
-    passed &= check("cold taken branch redirects exactly once",
-                    target_redirects == 1);
-    passed &= check("trained branch predicts taken before direction change",
-                    predicted_taken == 3);
+    // The F2 fast path can fetch two dynamic instances before the first one
+    // commits. Both are therefore cold; later predictions still exercise the
+    // committed T,T,N,N counter sequence through BIM's write bypass.
+    passed &= check("two in-flight cold branches redirect before training",
+                    target_redirects == 2);
+    passed &= check("commit-trained branch predicts taken before direction change",
+                    predicted_taken == 2);
     passed &= check("two taken predictions are corrected after N transition",
                     fallthrough_redirects == 2);
     passed &= check("conditional direction sequence reaches its exit",

@@ -2,6 +2,7 @@ import loom_params::*;
 import loom_consts::*;
 import loom_types::*;
 
+// Test-only executable specification for Composer with GShare.
 module composer #(
     parameter int BANK_WIDTH = 2,
     parameter int UBTB_ENTRIES = 16,
@@ -27,7 +28,6 @@ module composer #(
 
     output logic [BPD_MAX_META_LENGTH-1:0] f2_meta,
     output logic [BPD_MAX_META_LENGTH-1:0] f3_meta,
-
     output logic ready,
 
     input logic update_valid,

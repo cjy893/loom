@@ -399,6 +399,48 @@ void test_cache_line_boundary(Vbpd_banked_test_top* dut) {
                 prediction.f3[3]);
 }
 
+void test_bank1_lane1_nt_alternation(Vbpd_banked_test_top* dut) {
+    reset_predictor(dut);
+
+    // Logical lane 3 at ...077c maps to physical bank 1, local lane 1.
+    // After the first taken instance allocates the target entry, the BIM
+    // counter alternates 10/01 and predicts the N,T phase incorrectly.
+    constexpr uint32_t packet_pc = 0x1c10'0770U;
+    constexpr uint32_t target = 0x1c10'0700U;
+    constexpr int iterations = 12;
+    int classified_mispredicts = 0;
+
+    for (int iteration = 0; iteration < iterations; ++iteration) {
+        const Snapshot prediction = lookup(dut, packet_pc);
+        const uint8_t expected_ctr = (iteration & 1) ? 1 : 2;
+        const bool actual_taken = (iteration & 1) != 0;
+
+        expect_eq("bank1/lane1 alternating counter",
+                  read_bim_ctr(prediction, 1, 1), expected_ctr);
+        expect_eq("bank1/lane1 alternating leaves bank0/lane1 unchanged",
+                  read_bim_ctr(prediction, 0, 1), 2);
+
+        if (iteration < 2) {
+            expect_miss("bank1/lane1 remains unclassified before first taken",
+                        prediction.f3[3]);
+        } else {
+            expect_branch("bank1/lane1 classified branch",
+                          prediction.f3[3], !actual_taken, target);
+            classified_mispredicts +=
+                prediction.f3[3].taken != actual_taken;
+        }
+
+        drive_update(dut, packet_pc, 0b1000, 3, actual_taken,
+                     true, false, false, target, prediction.meta);
+    }
+
+    const Snapshot final_prediction = lookup(dut, packet_pc);
+    expect_eq("bank1/lane1 alternating returns to weak taken",
+              read_bim_ctr(final_prediction, 1, 1), 2);
+    expect_eq("bank1/lane1 classified N/T instances all mispredict",
+              classified_mispredicts, iterations - 2);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -412,6 +454,7 @@ int main(int argc, char** argv) {
     test_physical_meta_and_bim_training(dut);
     test_first_bank_cfi_suppresses_second_update(dut);
     test_cache_line_boundary(dut);
+    test_bank1_lane1_nt_alternation(dut);
 
     pass("banked BPD contract");
     delete dut;

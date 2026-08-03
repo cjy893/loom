@@ -19,7 +19,7 @@
 | Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换及 FTQ/taken 元数据到 uop/提交的传输已测试 |
 | 地址转换 | `mmu/`、TLB 相关模块 | IMMU/DMMU、地址转换和 TLB 基础路径已实现并测试；DMMU 直映射/DMW bypass 支持 CHECK 当拍响应和反压锁存 |
 | Cache | ICache/DCache 相关模块 | ICache lookup hit 直接响应、8 KiB 4-way DCache、AXI 路径和 CACOP 基础功能已实现并测试 |
-| 分支预测组件 | `ifu/bpd/` | UBTB、BIM、BTB、Composer、RAS、GHist、F3 predecode、update router 已通过独立/集成测试 |
+| 分支预测组件 | `ifu/bpd/` | UBTB、BIM、GShare、BTB、Composer、RAS、GHist、F3 predecode、update router 已通过独立/集成测试 |
 | FTQ | `ifu/fetch_target_queue.sv` | 已接入生产 IFU、核心 commit/brupdate、注册执行查询和架构全 flush；参数化与闭环测试通过 |
 | 乱序内核 | `exu/loom_core.sv` | Fetch Buffer 直连 Decode 边界已验证，由 `core_top.sv` 负责 SoC 接口 |
 | SRT-4 除法器 | `exu/exe/div/`（`srt4_core` + `divider` 符号包装层） | 完成，接入 `unq.sv`，`test/div` 契约测试通过 |
@@ -31,7 +31,7 @@
 | 项目 | 当前状态 | 剩余工作 |
 |------|---------|---------|
 | 取指并发 | IFU+IMMU+ICache 当前只允许一个未完成请求；直映射/命中可直接响应，接受 fetch packet 时可同拍发起下一翻译/BPD | 后续增加 tag/FTQ index/frontend epoch、多 outstanding 和 replay |
-| 分支预测 | 双 Composer、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 基线显示先优化多 outstanding、数据侧并发和预测准确度，F1/F2 早重定向暂缓 |
+| 分支预测 | 双 Composer 内的 BIM+GShare 方向预测、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 重新测量 GShare 后的分支热点；F1/F2 早重定向暂缓 |
 | 预测元数据 | 真实 FTQ index、predicted-taken 和 predicted-npc 已经 IFU→Fetch Buffer→`loom_core`→uop 传递 | 多 outstanding 时扩展请求身份，不改变逐 lane 元数据契约 |
 | GHist/RAS | fetch-wide 双 bank 更新、branch rewind repair 及异常/中断/ERTN 全清空已接入并测试 | F1/F2 早重定向时重新验证投机更新时间点 |
 | FTQ 闭环 | 与 Fetch Buffer 原子分配，已接 commit、brupdate、branch rewind、BPD 训练和架构全 flush | 多 outstanding 时把请求 tag/epoch 与 FTQ 身份绑定 |
@@ -43,8 +43,11 @@
 ### 已实现的分支预测生产接入边界
 
 - BPD/FTQ 归 `ifu.sv` 管理；`core_top.sv` 只连接 IFU、Fetch Buffer、`loom_core` 和 SoC 接口。
-- 两个 Composer 分别服务两个取指 bank；Composer 只包含 UBTB/BIM/BTB，RAS、GHist、F3 predecode 和 FTQ 直接归 IFU 控制。
-- 当前生产版本采用 F3 已对齐预测，不启用 F1/F2 早重定向；指令、lane、FTQ index、taken、predicted-npc 和 meta 保持一一对应。
+- 两个 Composer 分别服务两个取指 bank；Composer 包含 UBTB/BIM/GShare/BTB，RAS、GHist、F3 predecode 和 FTQ 直接归 IFU 控制。
+- IFU 按逻辑第一/第二 bank 计算两份 GHist 后映射到物理 bank；packet 接收同拍和
+  branch rewind 后首个预测请求均使用对应的更新/恢复快照。
+- 当前生产版本以 F3 已对齐预测为完整回退路径；仅当 ICache live 响应与同 epoch F2
+  对齐时使用 F2 早组包，指令、lane、FTQ index、taken、predicted-npc 和 meta 仍保持一一对应。
 - 非 bank 对齐重定向需保留正确的逐 lane valid/元数据关系。Fetch Buffer 可以压缩稀疏 lane，但入队前不得错误平移 meta。
 - Fetch Buffer 接受 fetch packet 与 FTQ 分配必须是同一事务；任何一侧未 ready 时两侧状态都不能推进。
 - core redirect 必须高于预测 next PC。branch mispredict 从对应 FTQ 项恢复，异常、中断和 ERTN 使用全前端清空语义。
@@ -52,9 +55,12 @@
 - `test/core_ifu/` 已覆盖预测训练、RAS/GHist repair、随机反压和全前端 flush；
   `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
-- 性能统计已覆盖 CoreMark、`fireye_A0`、`stream_copy` 和 `crc32`。本轮 IMMU/ICache
-  直接响应与 IFU 同拍下一请求组合使 `stream_copy`、`crc32` IPC 分别提升约 40.0%、69.4%；
-  后续分别跟踪 tagged 多 outstanding 前端、LSU/数据侧并发和预测准确度，F1/F2 暂不优先。
+- 性能统计已覆盖 CoreMark、`fireye_A0`、`stream_copy`、`bitcount`、`crc32`、
+  `fireye_C0` 和 `my_memcmp`。IFU 已在 live ICache 响应与 F2 对齐时同拍组包并启动
+  下一次翻译；最新四项 IPC 为 0.9077、0.6799、0.2672、0.6169。其中 `bitcount`
+  和 `my_memcmp` 已约为参考核 IPC 的 0.8，当前主要相对缺口是仅约三分之一的
+  `crc32` 和 `fireye_C0`。GShare 已接入真实 GHist，下一步重新测量上述 IPC 和逐分支
+  误预测，再按实测阻塞跟踪 tagged 多 outstanding 前端及 LSU/数据侧并发。
 
 ---
 

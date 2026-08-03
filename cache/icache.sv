@@ -152,7 +152,9 @@ module icache #(
     end
 
     always_comb begin
-        req_ready = rst_n && state_q == S_IDLE && !maint_valid;
+        req_ready = rst_n && !maint_valid &&
+                    ((state_q == S_IDLE) ||
+                     (lookup_resp_valid && resp_ready));
 
         resp_valid = lookup_resp_valid || state_q == S_RESPONSE;
         resp_insts = resp_insts_q;
@@ -256,7 +258,15 @@ module icache #(
 
                 S_LOOKUP: begin
                     if (req_cacheable_q && lookup_hit) begin
-                        if (resp_ready) state_q <= S_IDLE;
+                        if (resp_ready) begin
+                            if (req_valid && req_ready) begin
+                                req_paddr_q <= req_paddr;
+                                req_cacheable_q <= req_cacheable;
+                                state_q <= S_LOOKUP;
+                            end else begin
+                                state_q <= S_IDLE;
+                            end
+                        end
                     end else begin
                         refill_set_q <= lookup_set;
                         refill_tag_q <= lookup_tag;

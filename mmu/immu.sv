@@ -111,7 +111,9 @@ module immu #(
     );
 
     always_comb begin
-        req_ready = (state == S_IDLE) && !flush;
+        req_ready = !flush &&
+                    ((state == S_IDLE) ||
+                     (direct_resp_valid && resp_ready));
 
         tlb_req_valid = (state == S_CHECK) && trans_use_tlb && !flush;
         tlb_req_vaddr = req_vaddr_q;
@@ -171,7 +173,18 @@ module immu #(
 
                 S_CHECK: begin
                     if (trans_resp_valid) begin
-                        if (resp_ready) state <= S_IDLE;
+                        if (resp_ready) begin
+                            if (req_valid && req_ready) begin
+                                req_vaddr_q <= req_vaddr;
+                                csr_crmd_q <= csr_crmd;
+                                csr_asid_q <= csr_asid;
+                                csr_dmw0_q <= csr_dmw0;
+                                csr_dmw1_q <= csr_dmw1;
+                                state <= S_CHECK;
+                            end else begin
+                                state <= S_IDLE;
+                            end
+                        end
                     end else if (trans_use_tlb && tlb_req_fire) begin
                         state <= S_TLB_WAIT;
                     end

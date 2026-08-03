@@ -239,6 +239,60 @@ void test_direct_and_backpressure(Testbench& tb, Vimmu_test_top* dut) {
     std::printf("PASS: direct mode and response backpressure\n");
 }
 
+void test_direct_response_turnover(Testbench& tb,
+                                   Vimmu_test_top* dut) {
+    tb.reset();
+
+    constexpr uint32_t first_vaddr = 0x1c00'0200;
+    constexpr uint32_t second_vaddr = 0x1c00'0240;
+    constexpr uint32_t crmd = make_crmd(0, true, false, 1);
+
+    tb.accept_request(first_vaddr, crmd, 0);
+    tb.wait_for_bypass_response();
+
+    dut->req_vaddr = second_vaddr;
+    dut->csr_crmd = crmd;
+    dut->csr_asid = 0;
+    dut->csr_dmw0 = 0;
+    dut->csr_dmw1 = 0;
+    dut->req_valid = 1;
+
+    // Backpressure must preserve the first response and reject turnover.
+    dut->resp_ready = 0;
+    dut->eval();
+    tb.check("backpressured direct response rejects next request",
+             dut->req_ready == 0);
+    tb.check_eq("backpressured direct response keeps first vaddr",
+                dut->resp_vaddr, first_vaddr);
+
+    // Once the response can retire, the next direct request should enter
+    // during the same cycle instead of waiting for an idle bubble.
+    dut->resp_ready = 1;
+    dut->eval();
+    const bool turnover_ready = dut->req_ready == 1;
+    tb.check("direct response accepts next request in handshake cycle",
+             turnover_ready);
+    tb.check_eq("turnover handshake still returns first vaddr",
+                dut->resp_vaddr, first_vaddr);
+    tb.tick();
+
+    dut->req_valid = 0;
+    dut->resp_ready = 0;
+    dut->eval();
+
+    if (turnover_ready) {
+        tb.check("turnover request produces next direct response",
+                 dut->resp_valid == 1);
+        tb.check_eq("turnover response carries second vaddr",
+                    dut->resp_vaddr, second_vaddr);
+        tb.check_eq("turnover response carries second paddr",
+                    dut->resp_paddr, second_vaddr);
+        tb.consume_response();
+    }
+
+    std::printf("PASS: direct response same-cycle turnover contract\n");
+}
+
 void test_dmw_paths(Testbench& tb, Vimmu_test_top* dut) {
     tb.reset();
 
@@ -504,6 +558,7 @@ int main(int argc, char** argv) {
     Testbench tb(dut);
 
     test_direct_and_backpressure(tb, dut);
+    test_direct_response_turnover(tb, dut);
     test_dmw_paths(tb, dut);
     test_tlb_success_and_snapshot(tb, dut);
     test_tlb_request_backpressure(tb, dut);

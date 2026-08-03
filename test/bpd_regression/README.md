@@ -3,7 +3,7 @@
 This aggregate suite runs every standalone and integration contract needed
 before connecting branch prediction to the production frontend:
 
-- UBTB, BIM, BTB, RAS, GHist, and Composer;
+- UBTB, BIM, GShare, BTB, RAS, GHist, Composer, and Composer+GShare;
 - fetch-wide update routing and the banked Composer contract;
 - F3 LA32 control-flow predecode;
 - Fetch Buffer FTQ-index and predicted-taken transport;
