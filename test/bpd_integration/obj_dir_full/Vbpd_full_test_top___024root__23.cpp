@@ -4,11 +4,26 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___nba_sequent__TOP__15(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__15\n"); );
+void Vbpd_full_test_top___024root___nba_sequent__TOP__16(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__16\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_37 = (IData)(
+                                                        (0x40000000U 
+                                                         == 
+                                                         (0x60000000U 
+                                                          & vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[7U])));
+    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_hits 
+        = ((0xfffffffeU & ((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_valid) 
+                           & (((0x000007ffU & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
+                                               >> 5U)) 
+                               == vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[1U]) 
+                              << 1U))) | ((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_valid) 
+                                          & ((0x000007ffU 
+                                              & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
+                                                 >> 5U)) 
+                                             == vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[0U])));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_38 = ((vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[7U] 
                                                   >> 0x0000001fU) 
                                                  | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_37));

@@ -289,6 +289,14 @@ class Testbench {
                   unsigned response_gap_seed = 0,
                   int response_stall = 0) {
         accept_request(address, cacheable);
+
+        if (expectation == MissExpectation::Hit) {
+            check("cache hit responds directly from lookup",
+                  dut_->resp_valid == 1);
+            check("cache hit does not request lower memory",
+                  dut_->mem_req_valid == 0);
+        }
+
         const bool missed = wait_for_response_or_memory();
 
         if (expectation == MissExpectation::Miss)

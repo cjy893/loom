@@ -290,8 +290,8 @@ module core_top #(
     dcache #(
         .ADDR_WIDTH    (32),
         .TAG_WIDTH     (LSU_ADDR_SZ + 2),
-        .NUM_SETS      (64),
-        .NUM_WAYS      (2),
+        .NUM_SETS      (DCACHE_NSETS),
+        .NUM_WAYS      (DCACHE_NWAYS),
         .LINE_BYTES    (32),
         .MEM_DATA_WIDTH(32),
         .MEM_LEN_WIDTH (DCACHE_MEM_LEN_WIDTH)

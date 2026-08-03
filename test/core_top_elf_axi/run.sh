@@ -12,10 +12,16 @@ SINGLE_DEBUG_COMMIT=${SINGLE_DEBUG_COMMIT:-1}
 VERILATOR=${VERILATOR:-verilator}
 VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
 MDIR=${CORE_TOP_ELF_AXI_OBJ_DIR:-"$TEST_DIR/obj_dir"}
+SKIP_BUILD=${CORE_TOP_ELF_AXI_SKIP_BUILD:-0}
 
 if [[ "$SINGLE_DEBUG_COMMIT" != 0 &&
       "$SINGLE_DEBUG_COMMIT" != 1 ]]; then
   printf 'SINGLE_DEBUG_COMMIT must be 0 or 1\n' >&2
+  exit 2
+fi
+
+if [[ "$SKIP_BUILD" != 0 && "$SKIP_BUILD" != 1 ]]; then
+  printf 'CORE_TOP_ELF_AXI_SKIP_BUILD must be 0 or 1\n' >&2
   exit 2
 fi
 
@@ -76,18 +82,24 @@ rtl=(
   "$TEST_DIR/core_top_elf_axi_test_top.sv"
 )
 
-"$VERILATOR" --cc -Wno-fatal \
-  -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
-  --Mdir "$MDIR" \
-  --top-module core_top_elf_axi_test_top \
-  -GENABLE_SINGLE_DEBUG_COMMIT="$SINGLE_DEBUG_COMMIT" \
-  --exe "$TEST_DIR/test_core_top_elf_axi.cpp" \
-  "$ELF_DIR/elf_image.cpp" \
-  -CFLAGS "-std=c++17 -O0 -I$ELF_DIR" \
-  "${rtl[@]}"
+if [[ "$SKIP_BUILD" == 0 ]]; then
+  "$VERILATOR" --cc -Wno-fatal \
+    -Wno-DECLFILENAME -Wno-UNDRIVEN -Wno-WIDTH -Wno-UNUSEDSIGNAL \
+    --Mdir "$MDIR" \
+    --top-module core_top_elf_axi_test_top \
+    -GENABLE_SINGLE_DEBUG_COMMIT="$SINGLE_DEBUG_COMMIT" \
+    --exe "$TEST_DIR/test_core_top_elf_axi.cpp" \
+    "$ELF_DIR/elf_image.cpp" \
+    -CFLAGS "-std=c++17 -O0 -I$ELF_DIR" \
+    "${rtl[@]}"
 
-make -C "$MDIR" -f Vcore_top_elf_axi_test_top.mk -j 1 \
-  VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+  make -C "$MDIR" -f Vcore_top_elf_axi_test_top.mk -j 1 \
+    VERILATOR_ROOT="$VERILATOR_KIT_ROOT"
+elif [[ ! -x "$MDIR/Vcore_top_elf_axi_test_top" ]]; then
+  printf 'Built simulator not found: %s\n' \
+    "$MDIR/Vcore_top_elf_axi_test_top" >&2
+  exit 2
+fi
 
 args=(--elf "$ELF_PATH")
 if [[ -f "$DISASM_PATH" ]]; then

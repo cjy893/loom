@@ -13,6 +13,12 @@ static constexpr uint32_t ECODE_TLBR = 0x3fU;
 
 using Bundle = std::array<uint32_t, FETCH_WIDTH>;
 
+static bool send_response(Vifu_test_top* dut, const Bundle& bundle,
+                          int max_cycles = 8);
+static bool expect_fetch(Vifu_test_top* dut, uint32_t expected_valid,
+                         uint32_t first_pc, const Bundle& source,
+                         int source_offset);
+
 static void tick(Vifu_test_top* dut) {
     dut->clk = 0;
     dut->eval();
@@ -97,10 +103,145 @@ static bool send_xlate_response(Vifu_test_top* dut, uint32_t vaddr,
 
     bool passed = check("IFU accepts outstanding translation response",
                         dut->xlate_resp_ready);
+    if (xcpt_valid) {
+        passed &= check("translation fault suppresses same-cycle memory request",
+                        !dut->imem_req_valid);
+    } else {
+        passed &= check("translation response launches same-cycle memory request",
+                        dut->imem_req_valid);
+        passed &= check("same-cycle memory request uses translated address",
+                        dut->imem_req_addr ==
+                            (paddr & ~(FETCH_WIDTH * sizeof(uint32_t) - 1U)));
+        passed &= check("same-cycle memory request preserves MAT",
+                        dut->imem_req_mat == mat);
+        passed &= check("same-cycle memory request preserves cacheability",
+                        dut->imem_req_cacheable == cacheable);
+    }
     tick(dut);
     dut->xlate_resp_valid = 0;
     dut->xlate_resp_xcpt_valid = 0;
     dut->eval();
+    return passed;
+}
+
+static bool run_xlate_to_imem_fast_path(Vifu_test_top* dut) {
+    static constexpr uint32_t PHYSICAL_BASE = 0x12345000U;
+    static constexpr Bundle RESPONSE = {
+        0x02800401U, 0x02800802U, 0x00100823U, 0x03400000U
+    };
+
+    reset(dut);
+    bool passed = accept_xlate_request(dut, RESET_PC);
+
+    dut->xlate_resp_vaddr = RESET_PC;
+    dut->xlate_resp_paddr = PHYSICAL_BASE;
+    dut->xlate_resp_mat = 2;
+    dut->xlate_resp_cacheable = 0;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->xlate_resp_xcpt_code = 0;
+    dut->xlate_resp_valid = 1;
+    dut->imem_req_ready = 1;
+    dut->eval();
+
+    passed &= check("fast path accepts translation response",
+                    dut->xlate_resp_ready);
+    passed &= check("fast path accepts memory request in the same cycle",
+                    dut->imem_req_valid);
+    passed &= check("fast path memory address",
+                    dut->imem_req_addr == PHYSICAL_BASE);
+    passed &= check("fast path MAT", dut->imem_req_mat == 2);
+    passed &= check("fast path cacheability", !dut->imem_req_cacheable);
+
+    tick(dut);
+    dut->xlate_resp_valid = 0;
+    dut->imem_req_ready = 0;
+    dut->eval();
+    passed &= check("accepted fast-path request waits for memory response",
+                    dut->imem_resp_ready && !dut->imem_req_valid);
+
+    passed &= send_response(dut, RESPONSE);
+    passed &= expect_fetch(dut, 0xfU, RESET_PC, RESPONSE, 0);
+
+    if (passed)
+        std::printf("PASS: IFU translation-to-memory fast path\n");
+    return passed;
+}
+
+static bool run_xlate_fast_path_backpressure(Vifu_test_top* dut) {
+    static constexpr uint32_t PHYSICAL_PC = 0x12345048U;
+    static constexpr uint32_t PHYSICAL_BASE = 0x12345040U;
+
+    reset(dut);
+    bool passed = accept_xlate_request(dut, RESET_PC);
+
+    dut->xlate_resp_vaddr = RESET_PC;
+    dut->xlate_resp_paddr = PHYSICAL_PC;
+    dut->xlate_resp_mat = 3;
+    dut->xlate_resp_cacheable = 0;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->xlate_resp_valid = 1;
+    dut->imem_req_ready = 0;
+    dut->eval();
+    passed &= check("backpressured fast-path request is visible",
+                    dut->xlate_resp_ready && dut->imem_req_valid);
+    passed &= check("backpressured fast-path address is aligned",
+                    dut->imem_req_addr == PHYSICAL_BASE);
+    passed &= check("backpressured fast-path attributes are visible",
+                    dut->imem_req_mat == 3 && !dut->imem_req_cacheable);
+
+    tick(dut);
+    dut->xlate_resp_valid = 0;
+    dut->xlate_resp_paddr = 0xdeadbeefU;
+    dut->xlate_resp_mat = 0;
+    dut->xlate_resp_cacheable = 1;
+    dut->eval();
+
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        passed &= check("fallback request remains valid under backpressure",
+                        dut->imem_req_valid);
+        passed &= check("fallback request holds translated address",
+                        dut->imem_req_addr == PHYSICAL_BASE);
+        passed &= check("fallback request holds translated attributes",
+                        dut->imem_req_mat == 3 && !dut->imem_req_cacheable);
+        tick(dut);
+    }
+
+    if (passed)
+        std::printf("PASS: IFU fast-path request backpressure fallback\n");
+    return passed;
+}
+
+static bool run_redirect_cancels_xlate_fast_path(Vifu_test_top* dut) {
+    static constexpr uint32_t TARGET_PC = RESET_PC + 0x80U;
+
+    reset(dut);
+    bool passed = accept_xlate_request(dut, RESET_PC);
+
+    dut->xlate_resp_vaddr = RESET_PC;
+    dut->xlate_resp_paddr = RESET_PC;
+    dut->xlate_resp_mat = 1;
+    dut->xlate_resp_cacheable = 1;
+    dut->xlate_resp_xcpt_valid = 0;
+    dut->xlate_resp_valid = 1;
+    dut->imem_req_ready = 1;
+    dut->redirect_pc = TARGET_PC;
+    dut->redirect_valid = 1;
+    dut->eval();
+
+    passed &= check("redirect rejects simultaneous translation response",
+                    !dut->xlate_resp_ready);
+    passed &= check("redirect suppresses simultaneous fast-path memory request",
+                    !dut->imem_req_valid);
+
+    tick(dut);
+    dut->redirect_valid = 0;
+    dut->xlate_resp_valid = 0;
+    dut->imem_req_ready = 0;
+    dut->eval();
+    passed &= expect_xlate_request(dut, TARGET_PC);
+
+    if (passed)
+        std::printf("PASS: IFU redirect cancels translation fast path\n");
     return passed;
 }
 
@@ -154,7 +295,7 @@ static bool accept_request(Vifu_test_top* dut, uint32_t expected_addr) {
 }
 
 static bool send_response(Vifu_test_top* dut, const Bundle& bundle,
-                          int max_cycles = 8) {
+                          int max_cycles) {
     for (int lane = 0; lane < FETCH_WIDTH; ++lane)
         dut->imem_resp_insts[lane] = bundle[lane];
     dut->imem_resp_valid = 1;
@@ -272,6 +413,82 @@ static void accept_fetch(Vifu_test_top* dut) {
     dut->eval();
 }
 
+static bool accept_fetch_and_next_xlate(Vifu_test_top* dut,
+                                        uint32_t next_pc) {
+    dut->fetch_ready = 1;
+    dut->xlate_req_ready = 1;
+    dut->eval();
+
+    bool passed = check(
+        "next translation launches with accepted fetch packet",
+        dut->fetch_valid != 0 && dut->xlate_req_valid);
+    passed &= check("same-cycle translation uses predicted next PC",
+                    dut->xlate_req_vaddr == next_pc);
+
+    tick(dut);
+    dut->fetch_ready = 0;
+    dut->eval();
+
+    // Keep the rest of the test synchronized with the legacy one-cycle path
+    // so a timing failure does not turn into unrelated protocol failures.
+    if (dut->xlate_req_valid)
+        tick(dut);
+
+    dut->xlate_req_ready = 0;
+    dut->eval();
+    return passed;
+}
+
+static bool run_live_f3_result_fast_path(Vifu_test_top* dut) {
+    static constexpr Bundle FIRST = {
+        0x03400000U, 0x03400000U, 0x03400000U, 0x03400000U
+    };
+    static constexpr Bundle SECOND = {
+        0x02800401U, 0x02800802U, 0x00100823U, 0x03400000U
+    };
+    static constexpr uint32_t SECOND_PC = RESET_PC + FETCH_BYTES;
+
+    reset(dut);
+    for (int cycle = 0; cycle < 4096 && !dut->bpd_ready_dbg; ++cycle)
+        tick(dut);
+
+    bool passed = check("latency test waits for predictor initialization",
+                        dut->bpd_ready_dbg);
+    passed &= complete_translation(dut, RESET_PC, RESET_PC);
+    passed &= accept_request(dut, RESET_PC);
+    passed &= send_response(dut, FIRST);
+    passed &= expect_fetch(dut, 0xfU, RESET_PC, FIRST, 0);
+
+    passed &= accept_fetch_and_next_xlate(dut, SECOND_PC);
+    dut->imem_req_ready = 1;
+    passed &= send_xlate_response(dut, SECOND_PC, SECOND_PC);
+    passed &= send_response(dut, SECOND);
+
+    // The F3 result and ICache response become visible together. The packet
+    // must not spend an extra cycle waiting for a redundant result register.
+    passed &= check("latency test reaches fetch state",
+                    dut->ifu_state_dbg == 4U);
+    passed &= check("latency test observes matching live F3 result",
+                    dut->bpd_f3_valid_dbg);
+    passed &= check("latency test does not use registered F3 result",
+                    !dut->bpd_result_valid_dbg);
+    passed &= check("fetch consumes matching live F3 result",
+                    dut->fetch_valid == 0xfU);
+    passed &= expect_fetch(dut, 0xfU, SECOND_PC, SECOND, 0);
+
+    const FetchSnapshot live_packet = snapshot_fetch(dut);
+    tick(dut);
+    passed &= check("stalled live F3 result is captured",
+                    !dut->bpd_f3_valid_dbg &&
+                    dut->bpd_result_valid_dbg);
+    passed &= check("captured F3 packet remains stable",
+                    same_fetch(live_packet, snapshot_fetch(dut)));
+
+    if (passed)
+        std::printf("PASS: IFU live F3 result fast path\n");
+    return passed;
+}
+
 static bool run_reset_and_sequential(Vifu_test_top* dut) {
     static constexpr Bundle FIRST = {
         0x02800401U, 0x02800802U, 0x00100823U, 0x03400000U
@@ -320,8 +537,8 @@ static bool run_reset_and_sequential(Vifu_test_top* dut) {
                         same_fetch(stalled, snapshot_fetch(dut)));
     }
 
-    accept_fetch(dut);
-    passed &= complete_translation(
+    passed &= accept_fetch_and_next_xlate(dut, RESET_PC + FETCH_BYTES);
+    passed &= send_xlate_response(
         dut, RESET_PC + FETCH_BYTES, RESET_PC + FETCH_BYTES);
     passed &= expect_request(dut, RESET_PC + FETCH_BYTES);
 
@@ -579,6 +796,10 @@ int main(int argc, char** argv) {
     auto* dut = new Vifu_test_top;
 
     bool passed = true;
+    passed &= run_xlate_to_imem_fast_path(dut);
+    passed &= run_xlate_fast_path_backpressure(dut);
+    passed &= run_redirect_cancels_xlate_fast_path(dut);
+    passed &= run_live_f3_result_fast_path(dut);
     passed &= run_reset_and_sequential(dut);
     passed &= run_direct_self_branch_predicted_npc(dut);
     passed &= run_redirect_while_request_stalled(dut);

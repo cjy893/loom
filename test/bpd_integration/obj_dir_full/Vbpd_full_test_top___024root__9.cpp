@@ -58,6 +58,10 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__0(Vbpd_full_test_top___024
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx 
+        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
+    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset 
+        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v1 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0 = 0U;
@@ -68,12 +72,6 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__0(Vbpd_full_test_top___024
         = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U];
     vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U] 
         = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U];
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set 
-        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
-    vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset 
-        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v1 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v2 = 0U;
@@ -82,21 +80,23 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__0(Vbpd_full_test_top___024
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v1 = 0U;
     if (vlSelfRef.rst_n) {
+        if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset) {
+            if ((0x07ffU == (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx))) {
+                vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset = 0U;
+            } else {
+                vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx 
+                    = (0x000007ffU & ((IData)(1U) + (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx)));
+            }
+        }
         if (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate) {
             if ((1U & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__found_empty)))) {
                 vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr 
                     = (0x0000000fU & ((IData)(1U) + (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr)));
             }
         }
-        if (((IData)(vlSelfRef.f1_update_valid) & (IData)(vlSelfRef.f1_is_call))) {
-            vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 
-                = ((IData)(4U) + vlSelfRef.f0_pc);
-            vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 
-                = (0x0000001fU & vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U]);
-            vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 = 1U;
-        }
     } else {
+        vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset = 1U;
+        vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx = 0U;
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr = 0U;
-        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v1 = 1U;
     }
 }

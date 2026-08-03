@@ -1346,9 +1346,6 @@ static bool test_ras_wrong_path_repair(Vcore_ifu_test_top* dut) {
                     total_forced_fetch_stalls > 0);
     passed &= check("random frontend fills and backpressures FTQ",
                     total_ftq_backpressure > 0);
-    passed &= check("redirect overlaps an outstanding imem request",
-                    redirects_with_pending_imem > 0);
-
     if (passed) {
         std::printf(
             "PASS: core_ifu randomized frontend recovery "

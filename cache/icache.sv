@@ -85,6 +85,7 @@ module icache #(
     logic [WAY_BITS-1:0] lookup_victim_way;
     logic [SET_BITS-1:0] lookup_set;
     logic [TAG_BITS-1:0] lookup_tag;
+    logic lookup_resp_valid;
 
     function automatic logic [ADDR_WIDTH-1:0] align_line(
         input logic [ADDR_WIDTH-1:0] addr
@@ -153,8 +154,13 @@ module icache #(
     always_comb begin
         req_ready = rst_n && state_q == S_IDLE && !maint_valid;
 
-        resp_valid = state_q == S_RESPONSE;
+        resp_valid = lookup_resp_valid || state_q == S_RESPONSE;
         resp_insts = resp_insts_q;
+        if (lookup_resp_valid) begin
+            for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
+                resp_insts[lane] = data_read_q[lookup_hit_way][lane];
+            end
+        end
 
         maint_ready = rst_n && state_q == S_IDLE;
         maint_done = maint_done_q;
@@ -170,6 +176,9 @@ module icache #(
 
         mem_resp_ready = state_q == S_MEM_RESP;
     end
+
+    assign lookup_resp_valid = state_q == S_LOOKUP &&
+                               req_cacheable_q && lookup_hit;
 
     for (genvar way = 0; way < NUM_WAYS; way++) begin : gen_data_way
         for (genvar lane = 0; lane < FETCH_WIDTH; lane++) begin : gen_data_lane
@@ -247,10 +256,7 @@ module icache #(
 
                 S_LOOKUP: begin
                     if (req_cacheable_q && lookup_hit) begin
-                        for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
-                            resp_insts_q[lane] <= data_read_q[lookup_hit_way][lane];
-                        end
-                        state_q <= S_RESPONSE;
+                        if (resp_ready) state_q <= S_IDLE;
                     end else begin
                         refill_set_q <= lookup_set;
                         refill_tag_q <= lookup_tag;

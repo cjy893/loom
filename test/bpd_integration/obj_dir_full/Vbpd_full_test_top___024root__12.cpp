@@ -9,21 +9,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__3(Vbpd_full_test_top___024
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid 
-        = ((IData)(vlSelfRef.rst_n) && (IData)(vlSelfRef.f0_valid));
-    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update_valid 
-        = ((IData)(vlSelfRef.rst_n) && ((IData)(vlSelfRef.update_valid) 
-                                        & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset))));
-    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s2_valid 
-        = ((IData)(vlSelfRef.rst_n) && (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_valid));
-    vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__f3_valid 
-        = ((IData)(vlSelfRef.rst_n) && (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s2_valid));
     if (vlSelfRef.rst_n) {
-        if (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate) {
-            vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid 
-                = ((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
-                   | (0x0000ffffU & ((IData)(1U) << (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__alloc_idx))));
-        }
         if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_write) {
             if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_hit) {
                 vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0 
@@ -50,7 +36,6 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__3(Vbpd_full_test_top___024
             }
         }
     } else {
-        vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid = 0U;
         vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_enq_idx = 0U;
         vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_valid = 0U;
         vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v1 = 1U;

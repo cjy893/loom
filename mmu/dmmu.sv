@@ -80,10 +80,13 @@ module dmmu #(
     logic        trans_xcpt_valid;
     logic [5:0]  trans_xcpt_code;
     logic [31:0] trans_badvaddr;
+    logic        check_resp_valid;
 
     assign trans_req_valid =
         (state == S_CHECK) ||
         ((state == S_TLB_WAIT) && tlb_resp_valid);
+
+    assign check_resp_valid = (state == S_CHECK) && trans_resp_valid;
 
     addr_trans trans (
         .req_valid       (trans_req_valid),
@@ -122,7 +125,7 @@ module dmmu #(
         tlb_req_vaddr = req_vaddr_q;
         tlb_req_asid = csr_asid_q[ASID_WIDTH-1:0];
 
-        resp_valid = (state == S_RESPONSE) && !flush;
+        resp_valid = ((state == S_RESPONSE) || check_resp_valid) && !flush;
         resp_vaddr = resp_vaddr_q;
         resp_access = resp_access_q;
         resp_tag    = resp_tag_q;
@@ -132,6 +135,18 @@ module dmmu #(
         resp_xcpt_valid = resp_xcpt_valid_q;
         resp_xcpt_code = resp_xcpt_code_q;
         resp_badvaddr = resp_badvaddr_q;
+
+        if (check_resp_valid) begin
+            resp_vaddr = req_vaddr_q;
+            resp_access = req_access_q;
+            resp_tag = req_tag_q;
+            resp_paddr = trans_paddr;
+            resp_mat = trans_mat;
+            resp_cacheable = trans_cacheable;
+            resp_xcpt_valid = trans_xcpt_valid;
+            resp_xcpt_code = trans_xcpt_code;
+            resp_badvaddr = trans_badvaddr;
+        end
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -172,16 +187,20 @@ module dmmu #(
 
                 S_CHECK: begin
                     if (trans_resp_valid) begin
-                        resp_vaddr_q <= req_vaddr_q;
-                        resp_access_q <= req_access_q;
-                        resp_tag_q <= req_tag_q;
-                        resp_paddr_q <= trans_paddr;
-                        resp_mat_q <= trans_mat;
-                        resp_cacheable_q <= trans_cacheable;
-                        resp_xcpt_valid_q <= trans_xcpt_valid;
-                        resp_xcpt_code_q <= trans_xcpt_code;
-                        resp_badvaddr_q <= trans_badvaddr;
-                        state <= S_RESPONSE;
+                        if (resp_ready) begin
+                            state <= S_IDLE;
+                        end else begin
+                            resp_vaddr_q <= req_vaddr_q;
+                            resp_access_q <= req_access_q;
+                            resp_tag_q <= req_tag_q;
+                            resp_paddr_q <= trans_paddr;
+                            resp_mat_q <= trans_mat;
+                            resp_cacheable_q <= trans_cacheable;
+                            resp_xcpt_valid_q <= trans_xcpt_valid;
+                            resp_xcpt_code_q <= trans_xcpt_code;
+                            resp_badvaddr_q <= trans_badvaddr;
+                            state <= S_RESPONSE;
+                        end
                     end else if (trans_use_tlb) begin
                         state <= S_TLB_WAIT;
                     end

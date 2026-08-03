@@ -71,7 +71,49 @@ module core_top_elf_axi_test_top #(
     output logic        core_dmem_req_is_store,
     output logic [1:0]  axi_read_state,
     output logic [1:0]  axi_write_state,
-    output logic        dmem_outstanding
+    output logic        dmem_outstanding,
+
+    output logic [2:0] ifu_state,
+    output logic [1:0] immu_state,
+    output logic [2:0] icache_state,
+    output logic [1:0] dmmu_state,
+    output logic [3:0] dcache_state,
+    output logic       ifu_packet_fire,
+    output logic       ifu_xlate_req_valid,
+    output logic       ifu_xlate_req_ready,
+    output logic       icache_req_valid,
+    output logic       icache_req_ready,
+    output logic       icache_lookup_cacheable,
+    output logic       icache_lookup_hit,
+    output logic       lsu_xlate_req_valid,
+    output logic       lsu_xlate_req_ready,
+    output logic       dmmu_req_valid,
+    output logic       dmmu_req_ready,
+    output logic       dcache_lookup_cacheable,
+    output logic       dcache_lookup_hit,
+    output logic       mem_issue_valid,
+    output logic       load_wb_valid,
+    output logic       ld_query_valid,
+    output logic       ld_query_block,
+    output logic       ld_query_forward_valid,
+    output logic       ldq_empty,
+    output logic       stq_empty,
+    output logic [1:0] rename_stalls,
+    output logic [1:0] dispatch_valid,
+    output logic [1:0] dispatch_fire,
+    output logic [MAX_BR_COUNT-1:0] branch_resolve_mask,
+    output logic [ALU_WIDTH-1:0]    branch_resolve_valid_detail,
+    output logic [ALU_WIDTH*32-1:0] branch_resolve_pc_detail,
+    output logic [ALU_WIDTH*3-1:0]  branch_resolve_cfi_type_detail,
+    output logic [ALU_WIDTH-1:0]    branch_resolve_predicted_taken_detail,
+    output logic [ALU_WIDTH-1:0]    branch_resolve_actual_taken_detail,
+    output logic [ALU_WIDTH-1:0]    branch_resolve_mispredict_detail,
+    output logic                    branch_mispredict,
+    output logic [31:0]             branch_mispredict_pc,
+    output logic [2:0]              branch_mispredict_cfi_type,
+    output logic                    branch_mispredict_predicted_taken,
+    output logic                    branch_mispredict_actual_taken,
+    output logic                    frontend_flush
 );
     core_top #(
         .ENABLE_SINGLE_DEBUG_COMMIT(ENABLE_SINGLE_DEBUG_COMMIT)
@@ -167,4 +209,78 @@ module core_top_elf_axi_test_top #(
     assign axi_write_state = dut.write_state_q;
     assign dmem_outstanding =
         rst_n && !dut.dmem_req_ready && !dut.dmem_resp_valid;
+
+    assign ifu_state = dut.ifu_inst.state_q;
+    assign immu_state = dut.core_inst.immu_inst.state;
+    assign icache_state = dut.icache_inst.state_q;
+    assign dmmu_state = dut.core_inst.dmmu_inst.state;
+    assign dcache_state = dut.dcache_inst.state_q;
+
+    assign ifu_packet_fire = dut.ifu_inst.packet_fire;
+    assign ifu_xlate_req_valid = dut.ifu_xlate_req_valid;
+    assign ifu_xlate_req_ready = dut.ifu_xlate_req_ready;
+    assign icache_req_valid = dut.imem_req_valid;
+    assign icache_req_ready = dut.imem_req_ready;
+    assign icache_lookup_cacheable =
+        dut.icache_inst.state_q == 3'd1 &&
+        dut.icache_inst.req_cacheable_q;
+    assign icache_lookup_hit =
+        icache_lookup_cacheable && dut.icache_inst.lookup_hit;
+
+    assign lsu_xlate_req_valid = dut.core_inst.lsu_dmmu_req_valid;
+    assign lsu_xlate_req_ready = dut.core_inst.lsu_dmmu_req_ready;
+    assign dmmu_req_valid = dut.core_inst.dmmu_req_valid;
+    assign dmmu_req_ready = dut.core_inst.dmmu_req_ready;
+    assign dcache_lookup_cacheable =
+        dut.dcache_inst.state_q == 4'd1 &&
+        dut.dcache_inst.req_cacheable_q;
+    assign dcache_lookup_hit =
+        dcache_lookup_cacheable && dut.dcache_inst.lookup_hit;
+
+    assign mem_issue_valid = dut.core_inst.mem_iss_valid[0];
+    assign load_wb_valid = dut.core_inst.lsu_load_wb_valid;
+    assign ld_query_valid = dut.core_inst.lsu_inst.ld_query_valid;
+    assign ld_query_block = dut.core_inst.lsu_inst.ld_query_block;
+    assign ld_query_forward_valid =
+        dut.core_inst.lsu_inst.ld_query_forward_valid;
+    assign ldq_empty = dut.core_inst.lsu_ldq_empty;
+    assign stq_empty = dut.core_inst.lsu_stq_empty;
+
+    assign rename_stalls = dut.core_inst.rn_stalls;
+    assign dispatch_valid = dut.core_inst.rn2_mask;
+    assign dispatch_fire = dut.core_inst.dis_fire;
+    assign branch_resolve_mask =
+        dut.core_inst.brupdate_w.b1.resolve_mask;
+    always_comb begin
+        branch_resolve_valid_detail = dut.core_inst.alu_brinfo_valid_q;
+        branch_resolve_pc_detail = '0;
+        branch_resolve_cfi_type_detail = '0;
+        branch_resolve_predicted_taken_detail = '0;
+        branch_resolve_actual_taken_detail = '0;
+        branch_resolve_mispredict_detail = '0;
+
+        for (int port = 0; port < ALU_WIDTH; port++) begin
+            branch_resolve_pc_detail[port * 32 +: 32] =
+                dut.core_inst.alu_brinfo_q[port].uop.pc;
+            branch_resolve_cfi_type_detail[port * 3 +: 3] =
+                dut.core_inst.alu_brinfo_q[port].cfi_type;
+            branch_resolve_predicted_taken_detail[port] =
+                dut.core_inst.alu_brinfo_q[port].uop.taken;
+            branch_resolve_actual_taken_detail[port] =
+                dut.core_inst.alu_brinfo_q[port].taken;
+            branch_resolve_mispredict_detail[port] =
+                dut.core_inst.alu_brinfo_q[port].mispredict;
+        end
+    end
+    assign branch_mispredict =
+        dut.core_inst.brupdate_w.b2.mispredict;
+    assign branch_mispredict_pc =
+        dut.core_inst.brupdate_w.b2.uop.pc;
+    assign branch_mispredict_cfi_type =
+        dut.core_inst.brupdate_w.b2.cfi_type;
+    assign branch_mispredict_predicted_taken =
+        dut.core_inst.brupdate_w.b2.uop.taken;
+    assign branch_mispredict_actual_taken =
+        dut.core_inst.brupdate_w.b2.taken;
+    assign frontend_flush = dut.core_frontend_flush_valid;
 endmodule

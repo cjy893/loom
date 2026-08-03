@@ -12,6 +12,13 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__1(Vbpd_full_test_top___024
     VlWide<3>/*95:0*/ __Vtemp_1;
     // Body
     if (vlSelfRef.rst_n) {
+        if (((IData)(vlSelfRef.f1_update_valid) & (IData)(vlSelfRef.f1_is_call))) {
+            vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 
+                = ((IData)(4U) + vlSelfRef.f0_pc);
+            vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 
+                = (0x0000001fU & vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U]);
+            vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0 = 1U;
+        }
         if (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__do_allocate) {
             vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0 
                 = (1U & ((~ (IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr
@@ -117,6 +124,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__1(Vbpd_full_test_top___024
                                      << 5U)));
         }
     } else {
+        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v1 = 1U;
         vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v1 = 1U;
         vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] = 0U;
         vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U] = 0U;

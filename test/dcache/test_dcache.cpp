@@ -196,6 +196,14 @@ class Testbench {
         return Event::Timeout;
     }
 
+    void check_direct_hit_response(const char* name) {
+        check(name, dut_->resp_valid == 1);
+        check("cache hit does not request a lower-memory read",
+              dut_->mem_read_req_valid == 0);
+        check("cache hit does not request a lower-memory write",
+              dut_->mem_write_req_valid == 0);
+    }
+
     void serve_read(uint32_t expected_address, uint8_t expected_len,
                     unsigned stall_seed = 0) {
         check("read request is valid", dut_->mem_read_req_valid == 1);
@@ -529,6 +537,7 @@ void test_load_refill_and_hit(Testbench& tb) {
     const Request hit{0x0000'1004U, true, false, 0, 0, 0xa2};
     const unsigned reads_before = tb.read_requests();
     tb.accept_cpu_request(hit);
+    tb.check_direct_hit_response("load hit responds directly from lookup");
     tb.check_equal("second load hits",
                    static_cast<int>(tb.wait_event()),
                    static_cast<int>(Event::Response));
@@ -566,6 +575,7 @@ void test_store_merge_and_write_allocate(Testbench& tb) {
 
     Request byte_store{address + 2U, true, true, 0x00aa'0000U, 0x4, 0x33};
     tb.accept_cpu_request(byte_store);
+    tb.check_direct_hit_response("store hit responds directly from lookup");
     tb.check_equal("partial store hit responds without memory",
                    static_cast<int>(tb.wait_event()),
                    static_cast<int>(Event::Response));

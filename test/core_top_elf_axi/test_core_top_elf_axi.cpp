@@ -2,6 +2,8 @@
 #include "elf_image.h"
 #include "verilated.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -9,16 +11,27 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace {
 
 constexpr uint32_t RESET_PC = 0x1c000000U;
+constexpr uint32_t DEFAULT_PERF_WINDOW_PC = 0x1c000438U;
+constexpr uint32_t LED_ADDRESS = 0xbfaff020U;
 constexpr uint32_t NUM_ADDRESS = 0xbfaff050U;
 constexpr uint32_t SWITCH_ADDRESS = 0xbfaff060U;
 constexpr uint32_t SW_INTER_ADDRESS = 0xbfaff090U;
 constexpr uint32_t SIMU_FLAG_ADDRESS = 0xbfafff20U;
 constexpr uint32_t TIMER_ADDRESS = 0xbfafe000U;
+constexpr uint32_t UART_STATUS_WORD_ADDRESS = 0xbfe001e4U;
 constexpr unsigned COMMIT_WIDTH = 2;
+constexpr unsigned ALU_WIDTH = 3;
+
+bool is_mmio_alias(uint32_t address, uint32_t virtual_address) {
+    return address == virtual_address ||
+           address == (virtual_address & 0x1fffffffU);
+}
 
 struct Options {
     std::string elf_path;
@@ -27,8 +40,12 @@ struct Options {
     uint64_t watchdog_cycles = 50000;
     unsigned target_tests = 58;
     unsigned axi_latency = 2;
+    uint32_t perf_window_pc = DEFAULT_PERF_WINDOW_PC;
+    uint32_t simu_flag = 0xffffffffU;
     bool stress = false;
     bool trace = false;
+    bool perf_mode = false;
+    bool simu_flag_set = false;
     bool allow_exceptions = false;
     bool check_startup_prefix = true;
     std::set<uint32_t> allowed_exception_pcs;
@@ -40,6 +57,12 @@ struct CommitRecord {
     uint32_t inst = 0;
     unsigned ldst = 0;
     unsigned rob_idx = 0;
+};
+
+struct BranchPcStats {
+    uint64_t resolves = 0;
+    uint64_t taken = 0;
+    uint64_t mispredicts = 0;
 };
 
 uint64_t parse_unsigned(const std::string& option,
@@ -60,6 +83,9 @@ void print_usage(const char* executable) {
         "  --max-cycles N      simulation limit\n"
         "  --watchdog N        no-commit timeout\n"
         "  --axi-latency N     AXI response latency\n"
+        "  --perf              profile rdtimel-delimited benchmark windows\n"
+        "  --window-pc N       committed rdtimel PC (default 0x1c000438)\n"
+        "  --simu-flag N       value read at SIMU_FLAG (perf default 0)\n"
         "  --stress            add deterministic AXI backpressure\n"
         "  --allow-exceptions  continue through architectural exceptions\n"
         "  --allow-exception-pc N\n"
@@ -96,6 +122,16 @@ Options parse_options(int argc, char** argv) {
         } else if (argument == "--axi-latency") {
             options.axi_latency = static_cast<unsigned>(
                 parse_unsigned(argument, require_value()));
+        } else if (argument == "--perf") {
+            options.perf_mode = true;
+            options.check_startup_prefix = false;
+        } else if (argument == "--window-pc") {
+            options.perf_window_pc = static_cast<uint32_t>(
+                parse_unsigned(argument, require_value()));
+        } else if (argument == "--simu-flag") {
+            options.simu_flag = static_cast<uint32_t>(
+                parse_unsigned(argument, require_value()));
+            options.simu_flag_set = true;
         } else if (argument == "--stress") {
             options.stress = true;
         } else if (argument == "--allow-exceptions") {
@@ -124,6 +160,8 @@ Options parse_options(int argc, char** argv) {
         throw std::runtime_error("cycle limits must be nonzero");
     if (options.target_tests == 0)
         throw std::runtime_error("--target-tests must be nonzero");
+    if (options.perf_mode && !options.simu_flag_set)
+        options.simu_flag = 0;
     return options;
 }
 
@@ -169,11 +207,12 @@ void reset(Vcore_top_elf_axi_test_top* dut) {
 class AxiMemory {
 public:
     AxiMemory(ElfImage* image, unsigned latency, bool stress,
-              bool trace)
+              bool trace, uint32_t simu_flag)
         : image_(image),
           latency_(latency),
           stress_(stress),
-          trace_(trace) {}
+          trace_(trace),
+          simu_flag_(simu_flag) {}
 
     void drive(Vcore_top_elf_axi_test_top* dut, uint64_t cycle) {
         dut->arready =
@@ -183,7 +222,7 @@ public:
             !aw_seen_ && !write_response_pending_ &&
             (!stress_ || cycle % 7 != 2);
         dut->wready =
-            !w_seen_ && !write_response_pending_ &&
+            aw_seen_ && !write_response_pending_ &&
             (!stress_ || cycle % 9 != 5);
 
         if (read_pending_ && !read_active_ &&
@@ -227,8 +266,14 @@ public:
         }
         if (hold_aw_) {
             require(dut->awvalid, "AWVALID dropped under backpressure");
+            require(dut->awid == held_awid_,
+                    "AWID changed under backpressure");
             require(dut->awaddr == held_awaddr_,
                     "AWADDR changed under backpressure");
+            require(dut->awlen == held_awlen_,
+                    "AWLEN changed under backpressure");
+            require(dut->awsize == held_awsize_,
+                    "AWSIZE changed under backpressure");
         }
         if (hold_w_) {
             require(dut->wvalid, "WVALID dropped under backpressure");
@@ -236,6 +281,8 @@ public:
                     "WDATA changed under backpressure");
             require(dut->wstrb == held_wstrb_,
                     "WSTRB changed under backpressure");
+            require(dut->wlast == held_wlast_,
+                    "WLAST changed under backpressure");
         }
 
         hold_ar_ = dut->arvalid && !dut->arready;
@@ -249,11 +296,16 @@ public:
             held_arlen_ = dut->arlen;
             held_arsize_ = dut->arsize;
         }
-        if (hold_aw_)
+        if (hold_aw_) {
+            held_awid_ = dut->awid;
             held_awaddr_ = dut->awaddr;
+            held_awlen_ = dut->awlen;
+            held_awsize_ = dut->awsize;
+        }
         if (hold_w_) {
             held_wdata_ = dut->wdata;
             held_wstrb_ = dut->wstrb;
+            held_wlast_ = dut->wlast;
         }
     }
 
@@ -297,54 +349,66 @@ public:
         if (aw_fire) {
             require(!aw_seen_, "duplicate AW handshake");
             require(dut->awid == 1, "store AWID is not LSU ID 1");
-            require(dut->awlen == 0, "store AWLEN is not zero");
+            require(dut->awlen == 0 || dut->awlen == 7,
+                    "store AWLEN is neither one beat nor a cache line");
             require(dut->awsize == 2, "store AWSIZE is not word");
             require(dut->awburst == 1,
                     "store AWBURST is not incrementing");
             require((dut->awaddr & 3U) == 0,
                     "store AWADDR is not word aligned");
+            require(dut->awlen == 0 || (dut->awaddr & 31U) == 0,
+                    "cache-line write address is not line aligned");
             aw_seen_ = true;
             write_addr_q_ = dut->awaddr;
+            write_len_q_ = dut->awlen;
+            write_beat_q_ = 0;
         }
 
         if (w_fire) {
-            require(!w_seen_, "duplicate W handshake");
+            require(aw_seen_, "W handshake without a pending AW");
             require(dut->wid == 1, "store WID is not LSU ID 1");
-            require(dut->wlast, "single-beat store lacks WLAST");
             require(dut->wstrb != 0, "store has an empty WSTRB");
-            w_seen_ = true;
-            write_data_q_ = dut->wdata;
-            write_mask_q_ = dut->wstrb;
-        }
+            const bool expected_last = write_beat_q_ == write_len_q_;
+            require(static_cast<bool>(dut->wlast) == expected_last,
+                    "WLAST does not match AWLEN");
 
-        if (aw_seen_ && w_seen_) {
-            require(!write_response_pending_,
-                    "new store completed before prior B response");
+            uint32_t beat_addr =
+                write_addr_q_ + static_cast<uint32_t>(write_beat_q_) * 4U;
             image_->write_word_masked(
-                write_addr_q_, write_data_q_, write_mask_q_);
-            ++stores_;
-            ++writes_;
+                beat_addr, dut->wdata, dut->wstrb);
 
-            uint32_t base = write_addr_q_ & ~uint32_t{3};
-            write_response_is_num_ = base == NUM_ADDRESS;
-            write_response_num_value_ =
-                write_response_is_num_
-                    ? image_->read_word(NUM_ADDRESS)
-                    : 0;
+            uint32_t base = beat_addr & ~uint32_t{3};
+            if (is_mmio_alias(base, LED_ADDRESS)) {
+                ++led_writes_;
+                led_value_ = image_->read_word(base);
+            }
 
             if (trace_) {
                 std::printf(
-                    "[%8llu] AXI-W addr=%08x data=%08x strb=%x%s\n",
+                    "[%8llu] AXI-W addr=%08x data=%08x strb=%x "
+                    "beat=%u/%u%s\n",
                     static_cast<unsigned long long>(cycle),
-                    write_addr_q_, write_data_q_, write_mask_q_,
-                    write_response_is_num_ ? " NUM" : "");
+                    beat_addr, dut->wdata, dut->wstrb,
+                    write_beat_q_, write_len_q_,
+                    is_mmio_alias(base, NUM_ADDRESS) ? " NUM" : "");
             }
 
-            aw_seen_ = false;
-            w_seen_ = false;
-            write_response_pending_ = true;
-            write_response_active_ = false;
-            write_response_due_cycle_ = cycle + latency_;
+            if (expected_last) {
+                ++stores_;
+                ++writes_;
+                write_response_is_num_ =
+                    is_mmio_alias(base, NUM_ADDRESS);
+                write_response_num_value_ =
+                    write_response_is_num_
+                        ? image_->read_word(base)
+                        : 0;
+                aw_seen_ = false;
+                write_response_pending_ = true;
+                write_response_active_ = false;
+                write_response_due_cycle_ = cycle + latency_;
+            } else {
+                ++write_beat_q_;
+            }
         }
     }
 
@@ -369,6 +433,8 @@ public:
         return num_completions_;
     }
     uint32_t num_value() const { return num_value_; }
+    uint64_t led_writes() const { return led_writes_; }
+    uint32_t led_value() const { return led_value_; }
 
 private:
     void require(bool condition, const char* message) {
@@ -432,14 +498,16 @@ private:
         uint32_t base = address & ~uint32_t{3};
         if (read_id_ == 0)
             return image_->read_word(base);
-        if (base == SWITCH_ADDRESS)
+        if (is_mmio_alias(base, SWITCH_ADDRESS))
             return 0x000000ffU;
-        if (base == SW_INTER_ADDRESS)
+        if (is_mmio_alias(base, SW_INTER_ADDRESS))
             return 0x0000aaaaU;
-        if (base == SIMU_FLAG_ADDRESS)
-            return 0xffffffffU;
-        if (base == TIMER_ADDRESS)
+        if (is_mmio_alias(base, SIMU_FLAG_ADDRESS))
+            return simu_flag_;
+        if (is_mmio_alias(base, TIMER_ADDRESS))
             return static_cast<uint32_t>(cycle);
+        if (is_mmio_alias(base, UART_STATUS_WORD_ADDRESS))
+            return 0x00002000U;
         return image_->read_word(base);
     }
 
@@ -447,6 +515,7 @@ private:
     unsigned latency_ = 0;
     bool stress_ = false;
     bool trace_ = false;
+    uint32_t simu_flag_ = 0xffffffffU;
     std::string protocol_error_;
 
     bool read_pending_ = false;
@@ -459,10 +528,9 @@ private:
     uint32_t read_data_q_ = 0;
 
     bool aw_seen_ = false;
-    bool w_seen_ = false;
     uint32_t write_addr_q_ = 0;
-    uint32_t write_data_q_ = 0;
-    unsigned write_mask_q_ = 0;
+    unsigned write_len_q_ = 0;
+    unsigned write_beat_q_ = 0;
     bool write_response_pending_ = false;
     bool write_response_active_ = false;
     uint64_t write_response_due_cycle_ = 0;
@@ -476,9 +544,13 @@ private:
     uint32_t held_araddr_ = 0;
     unsigned held_arlen_ = 0;
     unsigned held_arsize_ = 0;
+    unsigned held_awid_ = 0;
     uint32_t held_awaddr_ = 0;
+    unsigned held_awlen_ = 0;
+    unsigned held_awsize_ = 0;
     uint32_t held_wdata_ = 0;
     unsigned held_wstrb_ = 0;
+    bool held_wlast_ = false;
 
     bool invalid_fetch_ = false;
     uint32_t invalid_fetch_address_ = 0;
@@ -490,6 +562,8 @@ private:
     uint64_t completed_writes_ = 0;
     uint64_t num_completions_ = 0;
     uint32_t num_value_ = 0;
+    uint64_t led_writes_ = 0;
+    uint32_t led_value_ = 0;
 };
 
 void print_recent(const std::deque<CommitRecord>& recent,
@@ -507,6 +581,323 @@ void print_recent(const std::deque<CommitRecord>& recent,
         std::fprintf(stderr, "\n");
     }
 }
+
+unsigned count_bits(unsigned value) {
+    unsigned count = 0;
+    while (value != 0) {
+        count += value & 1U;
+        value >>= 1;
+    }
+    return count;
+}
+
+double ratio(uint64_t numerator, uint64_t denominator) {
+    return denominator == 0
+               ? 0.0
+               : static_cast<double>(numerator) /
+                     static_cast<double>(denominator);
+}
+
+struct PerformanceStats {
+    uint64_t cycles = 0;
+    uint64_t commits = 0;
+    uint64_t commit_cycles = 0;
+    uint64_t dual_commit_cycles = 0;
+
+    std::array<uint64_t, 8> ifu_states{};
+    std::array<uint64_t, 4> immu_states{};
+    std::array<uint64_t, 8> icache_states{};
+    std::array<uint64_t, 4> dmmu_states{};
+    std::array<uint64_t, 16> dcache_states{};
+
+    uint64_t ifu_packets = 0;
+    uint64_t ifu_xlate_fires = 0;
+    uint64_t ifu_xlate_stalls = 0;
+    uint64_t icache_req_fires = 0;
+    uint64_t icache_req_stalls = 0;
+    uint64_t icache_hits = 0;
+    uint64_t icache_misses = 0;
+    uint64_t fetch_buffer_empty_cycles = 0;
+    uint64_t frontend_not_ready_cycles = 0;
+
+    uint64_t mem_issues = 0;
+    uint64_t dmmu_req_fires = 0;
+    uint64_t dmmu_req_stalls = 0;
+    uint64_t dcache_req_fires = 0;
+    uint64_t dcache_req_stalls = 0;
+    uint64_t dcache_load_reqs = 0;
+    uint64_t dcache_store_reqs = 0;
+    uint64_t dcache_hits = 0;
+    uint64_t dcache_misses = 0;
+    uint64_t load_writebacks = 0;
+    uint64_t load_queries = 0;
+    uint64_t load_query_blocks = 0;
+    uint64_t load_forwards = 0;
+    uint64_t ldq_nonempty_cycles = 0;
+    uint64_t stq_nonempty_cycles = 0;
+
+    uint64_t rename_stall_cycles = 0;
+    uint64_t dispatch_active_cycles = 0;
+    uint64_t dispatch_blocked_cycles = 0;
+    uint64_t branch_resolves = 0;
+    uint64_t branch_mispredicts = 0;
+    uint64_t branch_direction_mispredicts = 0;
+    std::array<uint64_t, 8> branch_mispredicts_by_cfi{};
+    std::unordered_map<uint32_t, uint64_t> branch_mispredicts_by_pc;
+    std::unordered_map<uint32_t, BranchPcStats> branches_by_pc;
+    uint64_t frontend_flushes = 0;
+
+    uint64_t axi_ifetch_reads = 0;
+    uint64_t axi_data_reads = 0;
+    uint64_t axi_writes = 0;
+
+    void sample(const Vcore_top_elf_axi_test_top* dut) {
+        ++cycles;
+
+        unsigned committed = count_bits(dut->commit_valid & 0x3U);
+        commits += committed;
+        commit_cycles += committed != 0;
+        dual_commit_cycles += committed == 2;
+
+        ++ifu_states[dut->ifu_state & 0x7U];
+        ++immu_states[dut->immu_state & 0x3U];
+        ++icache_states[dut->icache_state & 0x7U];
+        ++dmmu_states[dut->dmmu_state & 0x3U];
+        ++dcache_states[dut->dcache_state & 0xfU];
+
+        ifu_packets += dut->ifu_packet_fire;
+        ifu_xlate_fires +=
+            dut->ifu_xlate_req_valid && dut->ifu_xlate_req_ready;
+        ifu_xlate_stalls +=
+            dut->ifu_xlate_req_valid && !dut->ifu_xlate_req_ready;
+        icache_req_fires +=
+            dut->icache_req_valid && dut->icache_req_ready;
+        icache_req_stalls +=
+            dut->icache_req_valid && !dut->icache_req_ready;
+        if (dut->icache_lookup_cacheable) {
+            icache_hits += dut->icache_lookup_hit;
+            icache_misses += !dut->icache_lookup_hit;
+        }
+        fetch_buffer_empty_cycles += dut->fetch_buffer_count == 0;
+        frontend_not_ready_cycles += !dut->core_fe_ready;
+
+        mem_issues += dut->mem_issue_valid;
+        dmmu_req_fires +=
+            dut->dmmu_req_valid && dut->dmmu_req_ready;
+        dmmu_req_stalls +=
+            dut->dmmu_req_valid && !dut->dmmu_req_ready;
+        bool dcache_fire =
+            dut->core_dmem_req_valid && dut->core_dmem_req_ready;
+        dcache_req_fires += dcache_fire;
+        dcache_req_stalls +=
+            dut->core_dmem_req_valid && !dut->core_dmem_req_ready;
+        dcache_load_reqs += dcache_fire && !dut->core_dmem_req_is_store;
+        dcache_store_reqs += dcache_fire && dut->core_dmem_req_is_store;
+        if (dut->dcache_lookup_cacheable) {
+            dcache_hits += dut->dcache_lookup_hit;
+            dcache_misses += !dut->dcache_lookup_hit;
+        }
+        load_writebacks += dut->load_wb_valid;
+        load_queries += dut->ld_query_valid;
+        load_query_blocks += dut->ld_query_valid && dut->ld_query_block;
+        load_forwards +=
+            dut->ld_query_valid && dut->ld_query_forward_valid &&
+            !dut->ld_query_block;
+        ldq_nonempty_cycles += !dut->ldq_empty;
+        stq_nonempty_cycles += !dut->stq_empty;
+
+        rename_stall_cycles += dut->rename_stalls != 0;
+        dispatch_active_cycles += dut->dispatch_valid != 0;
+        dispatch_blocked_cycles +=
+            dut->dispatch_valid != 0 &&
+            dut->dispatch_fire != dut->dispatch_valid;
+        branch_resolves += count_bits(dut->branch_resolve_mask);
+        for (unsigned port = 0; port < ALU_WIDTH; ++port) {
+            if ((dut->branch_resolve_valid_detail & (1U << port)) == 0)
+                continue;
+
+            const uint32_t pc = dut->branch_resolve_pc_detail[port];
+            BranchPcStats& stats = branches_by_pc[pc];
+            ++stats.resolves;
+            stats.taken +=
+                (dut->branch_resolve_actual_taken_detail >> port) & 1U;
+            stats.mispredicts +=
+                (dut->branch_resolve_mispredict_detail >> port) & 1U;
+        }
+        branch_mispredicts += dut->branch_mispredict;
+        if (dut->branch_mispredict) {
+            ++branch_mispredicts_by_cfi[
+                dut->branch_mispredict_cfi_type & 0x7U];
+            ++branch_mispredicts_by_pc[dut->branch_mispredict_pc];
+            branch_direction_mispredicts +=
+                dut->branch_mispredict_predicted_taken !=
+                dut->branch_mispredict_actual_taken;
+        }
+        frontend_flushes += dut->frontend_flush;
+
+        bool ar_fire = dut->arvalid && dut->arready;
+        axi_ifetch_reads += ar_fire && dut->arid == 0;
+        axi_data_reads += ar_fire && dut->arid == 1;
+        axi_writes += dut->awvalid && dut->awready;
+    }
+
+    void print(unsigned windows, uint32_t reported_cycles) const {
+        const uint64_t icache_lookups = icache_hits + icache_misses;
+        const uint64_t dcache_lookups = dcache_hits + dcache_misses;
+
+        std::printf(
+            "PERF: windows=%u cycles=%llu reported_cycles=%u "
+            "commits=%llu IPC=%.4f commit_util=%.2f%% dual_commit=%.2f%%\n",
+            windows, static_cast<unsigned long long>(cycles),
+            reported_cycles, static_cast<unsigned long long>(commits),
+            ratio(commits, cycles), 100.0 * ratio(commit_cycles, cycles),
+            100.0 * ratio(dual_commit_cycles, cycles));
+
+        std::printf(
+            "  frontend: packets=%llu (%.4f/cyc) fb_empty=%.2f%% "
+            "core_not_ready=%.2f%% xlate=%llu stall=%llu "
+            "ic_req=%llu stall=%llu\n",
+            static_cast<unsigned long long>(ifu_packets),
+            ratio(ifu_packets, cycles),
+            100.0 * ratio(fetch_buffer_empty_cycles, cycles),
+            100.0 * ratio(frontend_not_ready_cycles, cycles),
+            static_cast<unsigned long long>(ifu_xlate_fires),
+            static_cast<unsigned long long>(ifu_xlate_stalls),
+            static_cast<unsigned long long>(icache_req_fires),
+            static_cast<unsigned long long>(icache_req_stalls));
+        std::printf(
+            "  ifu_state%%: xreq=%.2f xresp=%.2f mreq=%.2f "
+            "mresp=%.2f fetch=%.2f fault=%.2f\n",
+            100.0 * ratio(ifu_states[0], cycles),
+            100.0 * ratio(ifu_states[1], cycles),
+            100.0 * ratio(ifu_states[2], cycles),
+            100.0 * ratio(ifu_states[3], cycles),
+            100.0 * ratio(ifu_states[4], cycles),
+            100.0 * ratio(ifu_states[5], cycles));
+        std::printf(
+            "  icache: lookup=%llu hit=%llu miss=%llu hit_rate=%.2f%% "
+            "state_idle=%.2f%% lookup=%.2f%% refill=%.2f%%\n",
+            static_cast<unsigned long long>(icache_lookups),
+            static_cast<unsigned long long>(icache_hits),
+            static_cast<unsigned long long>(icache_misses),
+            100.0 * ratio(icache_hits, icache_lookups),
+            100.0 * ratio(icache_states[0], cycles),
+            100.0 * ratio(icache_states[1], cycles),
+            100.0 * ratio(icache_states[3], cycles));
+
+        std::printf(
+            "  backend: mem_issue=%llu rename_stall=%.2f%% "
+            "dispatch_active=%.2f%% dispatch_blocked=%.2f%%\n",
+            static_cast<unsigned long long>(mem_issues),
+            100.0 * ratio(rename_stall_cycles, cycles),
+            100.0 * ratio(dispatch_active_cycles, cycles),
+            100.0 * ratio(dispatch_blocked_cycles, cycles));
+        std::printf(
+            "  dmmu: req=%llu stall=%llu state_idle=%.2f%% "
+            "check=%.2f%% wait=%.2f%% response=%.2f%%\n",
+            static_cast<unsigned long long>(dmmu_req_fires),
+            static_cast<unsigned long long>(dmmu_req_stalls),
+            100.0 * ratio(dmmu_states[0], cycles),
+            100.0 * ratio(dmmu_states[1], cycles),
+            100.0 * ratio(dmmu_states[2], cycles),
+            100.0 * ratio(dmmu_states[3], cycles));
+        std::printf(
+            "  dcache: req=%llu load=%llu store=%llu stall=%llu "
+            "lookup=%llu hit=%llu miss=%llu hit_rate=%.2f%%\n",
+            static_cast<unsigned long long>(dcache_req_fires),
+            static_cast<unsigned long long>(dcache_load_reqs),
+            static_cast<unsigned long long>(dcache_store_reqs),
+            static_cast<unsigned long long>(dcache_req_stalls),
+            static_cast<unsigned long long>(dcache_lookups),
+            static_cast<unsigned long long>(dcache_hits),
+            static_cast<unsigned long long>(dcache_misses),
+            100.0 * ratio(dcache_hits, dcache_lookups));
+        std::printf(
+            "  dcache_state%%: idle=%.2f lookup=%.2f wb=%.2f "
+            "refill=%.2f response=%.2f\n",
+            100.0 * ratio(dcache_states[0], cycles),
+            100.0 * ratio(dcache_states[1], cycles),
+            100.0 * ratio(
+                dcache_states[2] + dcache_states[3] + dcache_states[4],
+                cycles),
+            100.0 * ratio(dcache_states[5] + dcache_states[6], cycles),
+            100.0 * ratio(dcache_states[12], cycles));
+        std::printf(
+            "  lsu: load_wb=%llu query=%llu blocked=%llu forwarded=%llu "
+            "ldq_nonempty=%.2f%% stq_nonempty=%.2f%%\n",
+            static_cast<unsigned long long>(load_writebacks),
+            static_cast<unsigned long long>(load_queries),
+            static_cast<unsigned long long>(load_query_blocks),
+            static_cast<unsigned long long>(load_forwards),
+            100.0 * ratio(ldq_nonempty_cycles, cycles),
+            100.0 * ratio(stq_nonempty_cycles, cycles));
+        std::printf(
+            "  control: branches=%llu mispredict=%llu rate=%.2f%% "
+            "frontend_flush=%llu AXI(ifetch/read/write)=%llu/%llu/%llu\n",
+            static_cast<unsigned long long>(branch_resolves),
+            static_cast<unsigned long long>(branch_mispredicts),
+            100.0 * ratio(branch_mispredicts, branch_resolves),
+            static_cast<unsigned long long>(frontend_flushes),
+            static_cast<unsigned long long>(axi_ifetch_reads),
+            static_cast<unsigned long long>(axi_data_reads),
+            static_cast<unsigned long long>(axi_writes));
+
+        std::printf(
+            "  control_detail: cfi(br/b_bl/jirl)=%llu/%llu/%llu "
+            "direction=%llu target_or_metadata=%llu\n",
+            static_cast<unsigned long long>(branch_mispredicts_by_cfi[1]),
+            static_cast<unsigned long long>(branch_mispredicts_by_cfi[2]),
+            static_cast<unsigned long long>(branch_mispredicts_by_cfi[3]),
+            static_cast<unsigned long long>(branch_direction_mispredicts),
+            static_cast<unsigned long long>(
+                branch_mispredicts - branch_direction_mispredicts));
+
+        std::vector<std::pair<uint32_t, uint64_t>> hot_mispredicts(
+            branch_mispredicts_by_pc.begin(),
+            branch_mispredicts_by_pc.end());
+        std::sort(
+            hot_mispredicts.begin(), hot_mispredicts.end(),
+            [](const auto& lhs, const auto& rhs) {
+                if (lhs.second != rhs.second)
+                    return lhs.second > rhs.second;
+                return lhs.first < rhs.first;
+            });
+
+        std::printf("  top_mispredict_pc:");
+        const size_t shown = std::min<size_t>(8, hot_mispredicts.size());
+        for (size_t index = 0; index < shown; ++index) {
+            std::printf(
+                " %08x=%llu", hot_mispredicts[index].first,
+                static_cast<unsigned long long>(
+                    hot_mispredicts[index].second));
+        }
+        std::printf("\n");
+
+        std::vector<std::pair<uint32_t, BranchPcStats>> hot_branches(
+            branches_by_pc.begin(), branches_by_pc.end());
+        std::sort(
+            hot_branches.begin(), hot_branches.end(),
+            [](const auto& lhs, const auto& rhs) {
+                if (lhs.second.mispredicts != rhs.second.mispredicts)
+                    return lhs.second.mispredicts > rhs.second.mispredicts;
+                return lhs.first < rhs.first;
+            });
+
+        std::printf("  branch_pc_detail:");
+        const size_t branch_shown =
+            std::min<size_t>(8, hot_branches.size());
+        for (size_t index = 0; index < branch_shown; ++index) {
+            const auto& [pc, stats] = hot_branches[index];
+            std::printf(
+                " %08x=%llu/%llu(%.1f%%,taken=%.1f%%)", pc,
+                static_cast<unsigned long long>(stats.mispredicts),
+                static_cast<unsigned long long>(stats.resolves),
+                100.0 * ratio(stats.mispredicts, stats.resolves),
+                100.0 * ratio(stats.taken, stats.resolves));
+        }
+        std::printf("\n");
+    }
+};
 
 }  // namespace
 
@@ -546,22 +937,27 @@ int main(int argc, char** argv) {
     }
 
     std::printf(
-        "ELF: %s\nentry=0x%08x, PT_LOAD segments=%zu%s\n",
+        "ELF: %s\nentry=0x%08x, PT_LOAD segments=%zu%s%s\n",
         options.elf_path.c_str(), image.entry(),
         image.segments().size(),
-        options.stress ? ", AXI stress" : "");
+        options.stress ? ", AXI stress" : "",
+        options.perf_mode ? ", performance profile" : "");
 
     auto* dut = new Vcore_top_elf_axi_test_top;
     reset(dut);
 
     AxiMemory memory(
-        &image, options.axi_latency, options.stress, options.trace);
+        &image, options.axi_latency, options.stress, options.trace,
+        options.simu_flag);
     std::deque<CommitRecord> recent;
+    PerformanceStats perf_stats;
     uint64_t commit_count = 0;
     uint64_t redirect_count = 0;
     uint64_t exception_count = 0;
     uint64_t last_commit_cycle = 0;
     uint64_t observed_num_completions = 0;
+    unsigned perf_windows = 0;
+    bool perf_window_active = false;
     bool saw_first_commit = false;
     bool passed = false;
     std::string failure;
@@ -577,6 +973,9 @@ int main(int argc, char** argv) {
         memory.drive(dut, cycle);
         dut->eval();
         memory.observe_master_stability(dut);
+
+        if (options.perf_mode && perf_window_active)
+            perf_stats.sample(dut);
 
         if (dut->redirect_valid) {
             ++redirect_count;
@@ -599,6 +998,29 @@ int main(int argc, char** argv) {
                 packed_field(dut->commit_ldst, lane, 5),
                 packed_field(dut->commit_rob_idx, lane, 6),
             };
+
+            if (options.perf_mode &&
+                record.pc == options.perf_window_pc) {
+                if (perf_window_active) {
+                    perf_window_active = false;
+                    if (options.trace) {
+                        std::printf(
+                            "[%8llu] PERF window %u close\n",
+                            static_cast<unsigned long long>(cycle),
+                            perf_windows);
+                    }
+                } else {
+                    perf_window_active = true;
+                    ++perf_windows;
+                    if (options.trace) {
+                        std::printf(
+                            "[%8llu] PERF window %u open\n",
+                            static_cast<unsigned long long>(cycle),
+                            perf_windows);
+                    }
+                }
+            }
+
             ++commit_count;
             saw_first_commit = true;
             last_commit_cycle = cycle;
@@ -672,7 +1094,12 @@ int main(int argc, char** argv) {
 
         if (failure.empty() && !memory.protocol_error().empty())
             failure = memory.protocol_error();
-        if (failure.empty() && memory.invalid_fetch()) {
+        // An out-of-order frontend may issue a wrong-path fetch outside the
+        // ELF before a branch redirect arrives. Committed instructions are
+        // still checked against the ELF above, so this is not a correctness
+        // failure for performance profiling.
+        if (failure.empty() && !options.perf_mode &&
+            memory.invalid_fetch()) {
             char message[96];
             std::snprintf(
                 message, sizeof(message),
@@ -686,21 +1113,40 @@ int main(int argc, char** argv) {
                 observed_num_completions) {
             observed_num_completions = memory.num_completions();
             uint32_t status = memory.num_value();
-            unsigned test_number = status >> 24;
-            unsigned passed_tests = status & 0x00ffffffU;
+            if (options.perf_mode) {
+                if (perf_windows == 0) {
+                    failure = "performance window PC was never committed";
+                } else if (perf_window_active) {
+                    failure = "SOC_NUM written while a performance window was open";
+                } else if (memory.led_writes() == 0) {
+                    failure = "benchmark did not report an LED result";
+                } else if (memory.led_value() != 0x0000ffffU) {
+                    char message[96];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "benchmark reported failure (LED=0x%08x)",
+                        memory.led_value());
+                    failure = message;
+                } else {
+                    passed = true;
+                }
+            } else {
+                unsigned test_number = status >> 24;
+                unsigned passed_tests = status & 0x00ffffffU;
 
-            if (test_number != 0 &&
-                passed_tests < test_number) {
-                char message[128];
-                std::snprintf(
-                    message, sizeof(message),
-                    "NSCSCC functional test %u failed "
-                    "(NUM=0x%08x, passed=%u)",
-                    test_number, status, passed_tests);
-                failure = message;
-            } else if (test_number >= options.target_tests &&
-                       passed_tests == test_number) {
-                passed = true;
+                if (test_number != 0 &&
+                    passed_tests < test_number) {
+                    char message[128];
+                    std::snprintf(
+                        message, sizeof(message),
+                        "NSCSCC functional test %u failed "
+                        "(NUM=0x%08x, passed=%u)",
+                        test_number, status, passed_tests);
+                    failure = message;
+                } else if (test_number >= options.target_tests &&
+                           passed_tests == test_number) {
+                    passed = true;
+                }
             }
         }
 
@@ -743,30 +1189,42 @@ int main(int argc, char** argv) {
         passed = false;
         failure = "stress mode did not exercise AXI backpressure";
     }
-    if (passed &&
+    if (passed && !options.perf_mode &&
         memory.completed_writes() != memory.writes()) {
         passed = false;
         failure = "final AXI write response was not completed";
     }
-    if (passed && dut->dmem_outstanding) {
+    if (passed && !options.perf_mode && dut->dmem_outstanding) {
         passed = false;
         failure = "core retained an outstanding LSU transaction";
     }
 
     if (passed) {
-        std::printf(
-            "PASS: core_top_elf_axi%s commits=%llu redirects=%llu "
-            "exceptions=%llu ifetch=%llu loads=%llu stores=%llu "
-            "NUM=0x%08x\n",
-            options.stress ? " stress" : "",
-            static_cast<unsigned long long>(commit_count),
-            static_cast<unsigned long long>(redirect_count),
-            static_cast<unsigned long long>(exception_count),
-            static_cast<unsigned long long>(
-                memory.instruction_reads()),
-            static_cast<unsigned long long>(memory.loads()),
-            static_cast<unsigned long long>(memory.stores()),
-            memory.num_value());
+        if (options.perf_mode) {
+            perf_stats.print(perf_windows, memory.num_value());
+            std::printf(
+                "PASS: core_top_perf%s commits=%llu redirects=%llu "
+                "exceptions=%llu LED=0x%08x NUM=0x%08x\n",
+                options.stress ? " stress" : "",
+                static_cast<unsigned long long>(commit_count),
+                static_cast<unsigned long long>(redirect_count),
+                static_cast<unsigned long long>(exception_count),
+                memory.led_value(), memory.num_value());
+        } else {
+            std::printf(
+                "PASS: core_top_elf_axi%s commits=%llu redirects=%llu "
+                "exceptions=%llu ifetch=%llu loads=%llu stores=%llu "
+                "NUM=0x%08x\n",
+                options.stress ? " stress" : "",
+                static_cast<unsigned long long>(commit_count),
+                static_cast<unsigned long long>(redirect_count),
+                static_cast<unsigned long long>(exception_count),
+                static_cast<unsigned long long>(
+                    memory.instruction_reads()),
+                static_cast<unsigned long long>(memory.loads()),
+                static_cast<unsigned long long>(memory.stores()),
+                memory.num_value());
+        }
     } else {
         std::fprintf(
             stderr,
@@ -777,7 +1235,7 @@ int main(int argc, char** argv) {
             stderr,
             "State: redirects=%llu exceptions=%llu ifetch=%llu "
             "loads=%llu stores=%llu writes=%llu/%llu "
-            "NUM=0x%08x backpressure=%u\n",
+            "LED=0x%08x NUM=0x%08x backpressure=%u\n",
             static_cast<unsigned long long>(redirect_count),
             static_cast<unsigned long long>(exception_count),
             static_cast<unsigned long long>(
@@ -786,7 +1244,8 @@ int main(int argc, char** argv) {
             static_cast<unsigned long long>(memory.stores()),
             static_cast<unsigned long long>(memory.completed_writes()),
             static_cast<unsigned long long>(memory.writes()),
-            memory.num_value(), memory.saw_backpressure());
+            memory.led_value(), memory.num_value(),
+            memory.saw_backpressure());
         print_recent(recent, disassembly);
     }
 

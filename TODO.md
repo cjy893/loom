@@ -162,6 +162,8 @@
 - [x] 验证正常双发包连续进入 Decode，`is_unique` 包不会提前离开 Fetch Buffer。
 - [x] 用正式重定向端口替代测试顶层对 `loom_core` 内部信号的层次化引用。
 - [x] 建立单 outstanding IMMU 控制契约，覆盖 ITLB、取指异常、反压和 flush。
+- [x] 直映射 IMMU 与 ICache lookup hit 支持直接响应；接受当前 fetch packet 时同拍发起
+  下一 PC 的翻译和 BPD 请求，消除单 outstanding 前端的固定包间气泡。
 - [x] 单 outstanding IFU 使用 frontend epoch 丢弃迟到预测，并用请求 stale 状态
   拒绝重定向前的翻译/取指响应。
 - [ ] 实现多 outstanding ICache/IMMU 时，为请求增加 tag/FTQ index
@@ -220,9 +222,44 @@
 - [x] 增加生产 `core_top` 在 ICache/DCache refill 在途时的分支、异常和中断恢复回归，
   正常与确定性 AXI 背压模式均通过 `test/core_top_recovery/`。
 - [x] 生产 `core_top` 官方功能 ELF 在正常与 AXI 背压模式下均通过 58/58 测试点。
-- [ ] 在 `core_top_elf_axi` 增加周期、IPC、误预测、Cache miss 和主要阻塞原因统计，
+- [x] 在 `core_top_elf_axi` 增加周期、IPC、误预测、Cache miss 和主要阻塞原因统计，
   再运行 CoreMark 与 `fireye_A0` 建立性能基线。
-- [ ] 根据性能数据决定是否实现 F1/F2 早重定向和带 tag/epoch 的多 outstanding IFU/IMMU。
+- [x] 根据性能数据决定是否实现 F1/F2 早重定向和带 tag/epoch 的多 outstanding IFU/IMMU：
+  当前先保留已对齐 F3；多 outstanding 前端、LSU/数据侧并发和预测准确度优化拆分为后续阶段。
+
+#### 2026-08-02 性能基线与本轮结果
+
+| 用例 | 优化前 IPC | 优化后 IPC | 变化 | 当前主要限制 |
+|------|-----------:|-----------:|-----:|--------------|
+| `stream_copy` | 0.2233 | 0.3125 | +40.0% | LDQ/数据侧反压，DCache hit 仍有串行延迟 |
+| `crc32` | 0.2886 | 0.4890 | +69.4% | Fetch Buffer 空 66.25%，单 outstanding 前端 |
+| `coremark` | 0.3575 | 0.4079 | +14.1% | 分支误预测率 11.14% |
+| `fireye_A0` | 0.3824 | 0.3752 | -1.9% | LDQ 几乎常满、DCache refill 占用高 |
+
+- [x] CoreMark、`fireye_A0`、`stream_copy`、`crc32` 正常模式均完成并返回正确 LED/NUM。
+- [x] 四个性能用例在确定性 AXI 背压模式下均完成，无死锁、协议或数据错误。
+- [x] 综合检查 IMMU/ICache 直接响应及 IFU 同拍下一请求，WNS 与优化前保持不变。
+- [x] DMMU bypass 已支持 CHECK 当拍直接响应；单元、LSU-DMMU、CACOP、精确异常、
+  core_top 恢复以及官方功能 ELF 正常/AXI 背压回归通过。
+- [x] DMMU CHECK 直接响应性能回归完成：`stream_copy` 0.3264（+4.4%）、
+  `crc32` 0.4966（+1.6%）、`coremark` 0.4336（+6.3%）、
+  `fireye_A0` 0.3852（+2.7%）；四项均正确结束，DMMU `response` 状态占比为 0%。
+- [x] 扩展性能回归到逐分支 PC/CFI/方向统计，并定位低 IPC 用例：
+  `bitcount` 0.7666、`crc32` 0.4966、`fireye_C0` 0.2647、`my_memcmp` 0.4820。
+- [x] IFU 命中路径已支持翻译响应直接交接 ICache，并可当拍消费 epoch 匹配的
+  live F3 预测结果；ICache/后端背压时分别回退到请求寄存器和预测结果寄存器。
+  Verilator 回归后 `S_MEM_REQ` 占比为 0%，IPC：`bitcount` 0.8860（+15.6%）、
+  `crc32` 0.6397（+28.8%）、`fireye_C0` 0.2662（+0.6%）、
+  `my_memcmp` 0.5567（+15.5%）。后续综合需重点检查 BPD F3 到下一取指请求路径。
+- [ ] 在 Composer 中增加使用现有 GHist 的方向预测组件。当前只有 PC 索引 BIM；
+  `bitcount` 的 `0x1c00077c` 分支 taken 恰为 50%，2000 次执行误预测 1990 次，
+  v4 默认配置则在 BIM/BTB 之后继续组合 TAGE 和 loop predictor。
+- [ ] 针对 `fireye_C0` 的数据相关条件分支增加预测回归；当前误预测率 19.31%，
+  热点均为条件分支，未发现 B/BL 或 JIRL 目标误预测。
+- [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应红测试；当前 RTL 仍有2个
+  时序断言失败，其余功能契约通过。
+- [ ] DCache hit 直接响应作为数据侧第二优先级保留；它对 `my_memcmp` 明确有益，
+  但不能解决 `bitcount`、`crc32` 和 `fireye_C0` 的主要瓶颈。
 
 ### 真实指令用例
 
@@ -295,7 +332,8 @@
 - [x] 覆盖生产 Cache/AXI 事务在途时的分支、异常和中断恢复。
 - [x] 已发现的前端、分支预测、异常和访存恢复问题均有对应模块级或核心级回归。
 - [ ] 后续失败继续缩减为最小用例并永久加入 `test/`。
-- [ ] 增加 IPC、误预测、Cache miss 和主要阻塞原因统计后，运行 CoreMark 与 `fireye_A0`。
+- [x] 增加 IPC、误预测、Cache miss 和主要阻塞原因统计，并运行 CoreMark、`fireye_A0`、
+  `stream_copy` 与 `crc32`；结果记录在分支预测性能阶段。
 
 ## 每次提交前检查
 

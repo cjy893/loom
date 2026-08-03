@@ -671,12 +671,14 @@ bool run_case(Vcore_top_recovery_test_top* dut,
     bool scenario_ok = primary_redirect_seen &&
                        primary_redirects == 1 &&
                        return_redirect_seen &&
-                       (config.return_pc == 0 || return_redirects == 1) &&
-                       redirect_overlapped_special;
-    if (config.scenario != Scenario::Branch)
+                       (config.return_pc == 0 || return_redirects == 1);
+    if (config.scenario == Scenario::Branch) {
+        scenario_ok &= redirect_overlapped_special;
+    } else {
         scenario_ok &= full_flush_overlapped_special &&
                        full_flush_cleared_ftq &&
                        full_flush_cleared_ghist;
+    }
     if (config.scenario == Scenario::Exception) {
         scenario_ok &= exception_seen && exception_ok;
     } else if (config.scenario == Scenario::Interrupt) {

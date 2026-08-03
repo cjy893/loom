@@ -10,7 +10,9 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__9(Vbpd_full_test_top___024
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
     vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s2_ctrs 
-        = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_rdata;
+        = ((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_valid)
+            ? (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_data)
+            : (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata));
     vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s2_hit 
         = ((((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
              | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_9)) 
@@ -212,16 +214,8 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__9(Vbpd_full_test_top___024
                                    >> 0x00000020U)) 
                           >> 4U));
     if (((IData)(vlSelfRef.f0_valid) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset)))) {
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_rdata 
-            = (((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_write) 
-                & ((0x000007ffU & (vlSelfRef.f0_pc 
-                                   >> 4U)) == (0x000007ffU 
-                                               & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
-                                                  >> 5U))))
-                ? (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_new_ctr)
-                : vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__ram
-               [(7U & (vlSelfRef.f0_pc >> 4U))][(0x000000ffU 
-                                                 & (vlSelfRef.f0_pc 
-                                                    >> 7U))]);
+        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata 
+            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__ram
+            [(0x000007ffU & (vlSelfRef.f0_pc >> 4U))];
     }
 }

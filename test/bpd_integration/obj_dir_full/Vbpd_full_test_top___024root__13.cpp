@@ -15,8 +15,6 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__4(Vbpd_full_test_top___024
         = vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U];
     vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U] 
         = vlSelfRef.__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U];
-    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_set 
-        = vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
     if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0) {
         vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0] 
             = (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid

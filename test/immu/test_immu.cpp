@@ -136,9 +136,7 @@ class Testbench {
     void wait_for_bypass_response() {
         check("bypass path does not query TLB",
               dut_->tlb_req_valid == 0);
-        check("bypass response is registered", dut_->resp_valid == 0);
-        tick();
-        check("bypass response becomes valid", dut_->resp_valid == 1);
+        check("bypass response is valid in CHECK", dut_->resp_valid == 1);
     }
 
     ResponseSnapshot snapshot() const {

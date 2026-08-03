@@ -15,10 +15,10 @@
 | Rename Stage | `exu/rename/rename_stage.sv` | 完成 |
 | Dispatch | `exu/dispatch.sv` | 完成（双路独立打包和逐入口反压） |
 | Issue Slot | `exu/issue/issue_slot.sv` | 基本完成，优化项见下 |
-| IFU | `ifu/ifu.sv` | 单 outstanding IMMU+ICache、双 Composer F3 预测、RAS/GHist、FTQ 和恢复闭环已生产接入 |
+| IFU | `ifu/ifu.sv` | 单 outstanding IMMU+ICache、同拍下一请求、双 Composer F3 预测、RAS/GHist、FTQ 和恢复闭环已生产接入 |
 | Fetch Buffer | `ifu/fetcher_buffer.sv` | 4 取指到 2 译码宽度转换及 FTQ/taken 元数据到 uop/提交的传输已测试 |
-| 地址转换 | `mmu/`、TLB 相关模块 | IMMU/DMMU、地址转换和 TLB 基础路径已实现并测试 |
-| Cache | ICache/DCache 相关模块 | ICache、DCache、AXI 路径和 CACOP 基础功能已实现并测试 |
+| 地址转换 | `mmu/`、TLB 相关模块 | IMMU/DMMU、地址转换和 TLB 基础路径已实现并测试；DMMU 直映射/DMW bypass 支持 CHECK 当拍响应和反压锁存 |
+| Cache | ICache/DCache 相关模块 | ICache lookup hit 直接响应、8 KiB 4-way DCache、AXI 路径和 CACOP 基础功能已实现并测试 |
 | 分支预测组件 | `ifu/bpd/` | UBTB、BIM、BTB、Composer、RAS、GHist、F3 predecode、update router 已通过独立/集成测试 |
 | FTQ | `ifu/fetch_target_queue.sv` | 已接入生产 IFU、核心 commit/brupdate、注册执行查询和架构全 flush；参数化与闭环测试通过 |
 | 乱序内核 | `exu/loom_core.sv` | Fetch Buffer 直连 Decode 边界已验证，由 `core_top.sv` 负责 SoC 接口 |
@@ -30,8 +30,8 @@
 
 | 项目 | 当前状态 | 剩余工作 |
 |------|---------|---------|
-| 取指并发 | IFU+IMMU+ICache 当前只允许一个未完成请求 | 后续增加 tag/FTQ index/frontend epoch、多 outstanding 和 replay |
-| 分支预测 | 双 Composer、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 性能分析后决定是否启用 F1/F2 早重定向 |
+| 取指并发 | IFU+IMMU+ICache 当前只允许一个未完成请求；直映射/命中可直接响应，接受 fetch packet 时可同拍发起下一翻译/BPD | 后续增加 tag/FTQ index/frontend epoch、多 outstanding 和 replay |
+| 分支预测 | 双 Composer、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 基线显示先优化多 outstanding、数据侧并发和预测准确度，F1/F2 早重定向暂缓 |
 | 预测元数据 | 真实 FTQ index、predicted-taken 和 predicted-npc 已经 IFU→Fetch Buffer→`loom_core`→uop 传递 | 多 outstanding 时扩展请求身份，不改变逐 lane 元数据契约 |
 | GHist/RAS | fetch-wide 双 bank 更新、branch rewind repair 及异常/中断/ERTN 全清空已接入并测试 | F1/F2 早重定向时重新验证投机更新时间点 |
 | FTQ 闭环 | 与 Fetch Buffer 原子分配，已接 commit、brupdate、branch rewind、BPD 训练和架构全 flush | 多 outstanding 时把请求 tag/epoch 与 FTQ 身份绑定 |
@@ -52,7 +52,9 @@
 - `test/core_ifu/` 已覆盖预测训练、RAS/GHist repair、随机反压和全前端 flush；
   `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
-- F1/F2 早重定向、多 outstanding 取指以及更激进的 replay 属于性能阶段，实施前先增加性能统计。
+- 性能统计已覆盖 CoreMark、`fireye_A0`、`stream_copy` 和 `crc32`。本轮 IMMU/ICache
+  直接响应与 IFU 同拍下一请求组合使 `stream_copy`、`crc32` IPC 分别提升约 40.0%、69.4%；
+  后续分别跟踪 tagged 多 outstanding 前端、LSU/数据侧并发和预测准确度，F1/F2 暂不优先。
 
 ---
 

@@ -28,3 +28,29 @@ SINGLE_DEBUG_COMMIT=0 ./test/core_top_elf_axi/run.sh \
 ```
 
 Set `ELF_PATH` and `DISASM_PATH` to use different inputs.
+
+## Performance profiling
+
+Run the four comparison benchmarks with the production `core_top`, real
+Cache/MMU path, and an AXI memory model:
+
+```bash
+./test/core_top_elf_axi/run_perf.sh
+```
+
+Run only the two memory-sensitive benchmarks:
+
+```bash
+./test/core_top_elf_axi/run_perf.sh stream_copy crc32
+```
+
+The default `PERF_SIMU_FLAG=0` uses the FPGA loop counts. Set it to `1` for a
+short smoke run. `PERF_AXI_STRESS=1` enables deterministic AXI backpressure.
+
+The profiler toggles its measurement window whenever the committed PC is
+`0x1c000438`, the `rdtimel.w` in `get_cpu_clock_count()` in the current
+`nscscc_perf` images. Override it with `--window-pc` when using another build.
+The report includes window IPC, IFU/Cache/MMU state occupancy, I/D Cache hit
+rates, LSU query blocking, dispatch stalls, branch misprediction rate, and AXI
+traffic. Correct completion still requires the benchmark PASS LED value and a
+completed `SOC_NUM` write.

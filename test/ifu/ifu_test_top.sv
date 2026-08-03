@@ -34,7 +34,13 @@ module ifu_test_top (
     output logic [3:0][31:0]     fetch_insts,
     output logic [3:0]           fetch_predicted_taken,
     output logic [3:0][31:0]     fetch_predicted_npc,
-    input  logic                 fetch_ready
+    input  logic                 fetch_ready,
+
+    output logic [2:0]           ifu_state_dbg,
+    output logic                 bpd_f3_valid_dbg,
+    output logic                 bpd_result_valid_dbg,
+    output logic                 bpd_requested_dbg,
+    output logic                 bpd_ready_dbg
 );
     localparam logic [31:0] RESET_PC = 32'h1c00_0000;
 
@@ -88,4 +94,11 @@ module ifu_test_top (
         .fetch_predicted_npc,
         .fetch_ready
     );
+
+    assign ifu_state_dbg = dut.state_q;
+    assign bpd_f3_valid_dbg = dut.bpd_f3_valid_q &&
+                              dut.bpd_f3_epoch_q == dut.frontend_epoch_q;
+    assign bpd_result_valid_dbg = dut.bpd_result_valid_q;
+    assign bpd_requested_dbg = dut.bpd_requested_q;
+    assign bpd_ready_dbg = dut.bpd_ready;
 endmodule
