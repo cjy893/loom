@@ -45,11 +45,10 @@ VL_ATTR_COLD bool Vmem_issue_test_top___024root___eval_phase__stl(Vmem_issue_tes
                 {
                     // Inlined CFunc: _stl_sequent__TOP__5
                     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
-                        = ((IData)(vlSelfRef.br_mispredict) 
-                           & (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                                     & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                         << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                                   >> 0x0000001eU)))));
+                        = (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                                  & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                                >> 0x0000001eU))));
                     vlSelfRef.agen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3) 
                                             & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid));
                     vlSelfRef.dgen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4) 

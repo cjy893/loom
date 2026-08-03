@@ -61,7 +61,7 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__2(Vmem_issue_test_top___0
 void Vmem_issue_test_top___024root___nba_sequent__TOP__3(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___nba_sequent__TOP__4(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___nba_sequent__TOP__5(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024root* vlSelf);
+void Vmem_issue_test_top___024root___ico_comb__TOP__5(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___nba_sequent__TOP__7(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___024root* vlSelf);
 
@@ -83,7 +83,7 @@ bool Vmem_issue_test_top___024root___eval_phase__nba(Vmem_issue_test_top___024ro
                 Vmem_issue_test_top___024root___nba_sequent__TOP__3(vlSelf);
                 Vmem_issue_test_top___024root___nba_sequent__TOP__4(vlSelf);
                 Vmem_issue_test_top___024root___nba_sequent__TOP__5(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__6(vlSelf);
+                Vmem_issue_test_top___024root___ico_comb__TOP__5(vlSelf);
                 Vmem_issue_test_top___024root___nba_sequent__TOP__7(vlSelf);
                 Vmem_issue_test_top___024root___nba_sequent__TOP__8(vlSelf);
             }

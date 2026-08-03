@@ -436,17 +436,17 @@ module decode(
                     end
                     7'b0111000: begin  // mul.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op = MULDIV_MUL_W;
                     end
                     7'b0111001: begin  // mulh.w
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op = MULDIV_MULH_W;
                     end
                     7'b0111010: begin  // mulh.wu
                         uop.iq_type = IQ_UNQ; uop.fu_code[FC_MUL] = 1'b1;
-                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk; uop.is_unique = 1'b1;
+                        uop.op2_sel = OP2_SRC2; uop.lsrc2 = rk;
                         uop.fcn_op = MULDIV_MULH_WU;
                     end
                     // pattern 000000000010: inst[21]=1, inst[20]=0

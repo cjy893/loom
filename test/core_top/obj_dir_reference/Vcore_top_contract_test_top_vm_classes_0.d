@@ -7,4 +7,6 @@ Vcore_top_contract_test_top_vm_classes_0.o: \
  Vcore_top_contract_test_top___024root__3.cpp \
  Vcore_top_contract_test_top___024root__4.cpp \
  Vcore_top_contract_test_top___024root__5.cpp \
- Vcore_top_contract_test_top___024root__6.cpp
+ Vcore_top_contract_test_top___024root__6.cpp \
+ Vcore_top_contract_test_top___024root__7.cpp \
+ Vcore_top_contract_test_top___024root__8.cpp

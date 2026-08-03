@@ -10,12 +10,10 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___0
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_br_killed 
-        = ((IData)(vlSelfRef.br_mispredict) & (0U != 
-                                               ((IData)(vlSelfRef.mispredict_mask) 
-                                                & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
-                                                    << 2U) 
-                                                   | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                                      >> 0x0000001eU)))));
+        = (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                  & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
+                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
+                                >> 0x0000001eU))));
     vlSelfRef.iss_valid = vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec;
     vlSelfRef.dis_ready = vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec;
     vlSelfRef.iss_rob_idx = (0x0000003fU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U]);
@@ -24,12 +22,10 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___0
     vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
                                     >> 0x00000012U));
     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
-        = ((IData)(vlSelfRef.br_mispredict) & (0U != 
-                                               ((IData)(vlSelfRef.mispredict_mask) 
-                                                & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                                    << 2U) 
-                                                   | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                                      >> 0x0000001eU)))));
+        = (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                  & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                >> 0x0000001eU))));
     vlSelfRef.agen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3) 
                             & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid));
     vlSelfRef.dgen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4) 

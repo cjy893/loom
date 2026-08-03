@@ -11,7 +11,6 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__1(Vmem_issue
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant = 0U;
     vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec = 0U;
     VL_ASSIGN_W(416, vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop, Vmem_issue_test_top__ConstPool__CONST_h75d095d1_0);
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used = 0U;

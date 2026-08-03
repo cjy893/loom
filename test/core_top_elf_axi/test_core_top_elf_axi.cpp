@@ -632,6 +632,8 @@ struct PerformanceStats {
     uint64_t load_writebacks = 0;
     uint64_t load_queries = 0;
     uint64_t load_query_blocks = 0;
+    uint64_t load_query_unresolved_blocks = 0;
+    uint64_t load_query_overlap_blocks = 0;
     uint64_t load_forwards = 0;
     uint64_t ldq_nonempty_cycles = 0;
     uint64_t stq_nonempty_cycles = 0;
@@ -639,6 +641,11 @@ struct PerformanceStats {
     uint64_t rename_stall_cycles = 0;
     uint64_t dispatch_active_cycles = 0;
     uint64_t dispatch_blocked_cycles = 0;
+    uint64_t branch_alloc_stall_cycles = 0;
+    uint64_t rob_stall_cycles = 0;
+    uint64_t alu_iq_full_cycles = 0;
+    uint64_t mem_iq_full_cycles = 0;
+    uint64_t unq_iq_full_cycles = 0;
     uint64_t branch_resolves = 0;
     uint64_t branch_mispredicts = 0;
     uint64_t branch_direction_mispredicts = 0;
@@ -700,6 +707,12 @@ struct PerformanceStats {
         load_writebacks += dut->load_wb_valid;
         load_queries += dut->ld_query_valid;
         load_query_blocks += dut->ld_query_valid && dut->ld_query_block;
+        load_query_unresolved_blocks +=
+            dut->ld_query_valid && dut->ld_query_block &&
+            dut->ld_query_unresolved_older;
+        load_query_overlap_blocks +=
+            dut->ld_query_valid && dut->ld_query_block &&
+            dut->ld_query_overlap_count != 0;
         load_forwards +=
             dut->ld_query_valid && dut->ld_query_forward_valid &&
             !dut->ld_query_block;
@@ -711,6 +724,12 @@ struct PerformanceStats {
         dispatch_blocked_cycles +=
             dut->dispatch_valid != 0 &&
             dut->dispatch_fire != dut->dispatch_valid;
+        branch_alloc_stall_cycles +=
+            dut->dispatch_valid != 0 && !dut->branch_alloc_ready;
+        rob_stall_cycles += dut->dispatch_valid != 0 && !dut->rob_ready;
+        alu_iq_full_cycles += dut->alu_iq_full;
+        mem_iq_full_cycles += dut->mem_iq_full;
+        unq_iq_full_cycles += dut->unq_iq_full;
         branch_resolves += count_bits(dut->branch_resolve_mask);
         for (unsigned port = 0; port < ALU_WIDTH; ++port) {
             if ((dut->branch_resolve_valid_detail & (1U << port)) == 0)
@@ -787,11 +806,19 @@ struct PerformanceStats {
 
         std::printf(
             "  backend: mem_issue=%llu rename_stall=%.2f%% "
-            "dispatch_active=%.2f%% dispatch_blocked=%.2f%%\n",
+            "dispatch_active=%.2f%% dispatch_blocked=%.2f%% "
+            "brtag_stall=%.2f%% rob_stall=%.2f%%\n",
             static_cast<unsigned long long>(mem_issues),
             100.0 * ratio(rename_stall_cycles, cycles),
             100.0 * ratio(dispatch_active_cycles, cycles),
-            100.0 * ratio(dispatch_blocked_cycles, cycles));
+            100.0 * ratio(dispatch_blocked_cycles, cycles),
+            100.0 * ratio(branch_alloc_stall_cycles, cycles),
+            100.0 * ratio(rob_stall_cycles, cycles));
+        std::printf(
+            "  iq_full%%: alu=%.2f mem=%.2f unq=%.2f\n",
+            100.0 * ratio(alu_iq_full_cycles, cycles),
+            100.0 * ratio(mem_iq_full_cycles, cycles),
+            100.0 * ratio(unq_iq_full_cycles, cycles));
         std::printf(
             "  dmmu: req=%llu stall=%llu state_idle=%.2f%% "
             "check=%.2f%% wait=%.2f%% response=%.2f%%\n",
@@ -823,11 +850,14 @@ struct PerformanceStats {
             100.0 * ratio(dcache_states[5] + dcache_states[6], cycles),
             100.0 * ratio(dcache_states[12], cycles));
         std::printf(
-            "  lsu: load_wb=%llu query=%llu blocked=%llu forwarded=%llu "
+            "  lsu: load_wb=%llu query=%llu blocked=%llu "
+            "unresolved=%llu overlap=%llu forwarded=%llu "
             "ldq_nonempty=%.2f%% stq_nonempty=%.2f%%\n",
             static_cast<unsigned long long>(load_writebacks),
             static_cast<unsigned long long>(load_queries),
             static_cast<unsigned long long>(load_query_blocks),
+            static_cast<unsigned long long>(load_query_unresolved_blocks),
+            static_cast<unsigned long long>(load_query_overlap_blocks),
             static_cast<unsigned long long>(load_forwards),
             100.0 * ratio(ldq_nonempty_cycles, cycles),
             100.0 * ratio(stq_nonempty_cycles, cycles));

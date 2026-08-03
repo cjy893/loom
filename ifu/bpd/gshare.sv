@@ -31,7 +31,9 @@ module gshare #(
     localparam int WRBYPASS_IDX_BITS = $clog2(NUM_WRBYPASS);
     localparam logic [IDX_BITS-1:0] LAST_IDX = IDX_BITS'(NUM_SETS - 1);
 
-    typedef logic [BANK_WIDTH-1:0][CTR_BITS-1:0] counter_row_t;
+    // Keep each table row as one flat word so Vivado can infer a single
+    // synchronous-read RAM instead of expanding every counter into flops.
+    typedef logic [META_BITS-1:0] counter_row_t;
 
     function automatic logic [IDX_BITS-1:0] make_index(
         input logic [31:0] pc,
@@ -120,9 +122,13 @@ module gshare #(
             s1_update.cfi_is_br &&
             s1_update.cfi_idx == CFI_IDX_BITS'(lane) &&
             s1_update.cfi_taken;
-        assign update_new_counters[lane] = update_write_mask[lane]
-            ? update_counter(update_old_counters[lane], update_lane_taken[lane])
-            : update_old_counters[lane];
+        assign update_new_counters[lane*CTR_BITS +: CTR_BITS] =
+            update_write_mask[lane]
+                ? update_counter(
+                    update_old_counters[lane*CTR_BITS +: CTR_BITS],
+                    update_lane_taken[lane]
+                )
+                : update_old_counters[lane*CTR_BITS +: CTR_BITS];
     end
 
     always_comb begin
@@ -131,9 +137,11 @@ module gshare #(
         f2_meta = '0;
         if(s2_valid) begin
             for(int lane = 0; lane < BANK_WIDTH; lane++) begin
-                f2_taken[lane] = s2_counters[lane][CTR_BITS-1];
+                f2_taken[lane] =
+                    s2_counters[lane*CTR_BITS + CTR_BITS - 1];
                 f2_provider_valid[lane] = s2_providers[lane];
-                f2_meta[lane*CTR_BITS +: CTR_BITS] = s2_counters[lane];
+                f2_meta[lane*CTR_BITS +: CTR_BITS] =
+                    s2_counters[lane*CTR_BITS +: CTR_BITS];
             end
         end
     end

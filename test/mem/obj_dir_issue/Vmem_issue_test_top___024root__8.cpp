@@ -4,18 +4,21 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
+void Vmem_issue_test_top___024root___ico_sequent__TOP__0(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___ico_comb__TOP__2(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___ico_comb__TOP__3(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___ico_comb__TOP__4(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___ico_comb__TOP__5(Vmem_issue_test_top___024root* vlSelf);
 void Vmem_issue_test_top___024root___ico_comb__TOP__6(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__7(Vmem_issue_test_top___024root* vlSelf);
 
 void Vmem_issue_test_top___024root___eval_ico(Vmem_issue_test_top___024root* vlSelf) {
     VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_ico\n"); );
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    if ((0x0000000000040000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vmem_issue_test_top___024root___ico_sequent__TOP__0(vlSelf);
+    }
     if ((0x0000000000001400ULL & vlSelfRef.__VicoTriggered[0U])) {
         {
             // Inlined CFunc: _ico_comb__TOP__0
@@ -32,27 +35,23 @@ void Vmem_issue_test_top___024root___eval_ico(Vmem_issue_test_top___024root* vlS
                     << 6U) | (IData)(vlSelfRef.wakeup_pdst_0));
         }
     }
-    if ((0x00000000000c0000ULL & vlSelfRef.__VicoTriggered[0U])) {
+    if ((0x00000000000003f8ULL & vlSelfRef.__VicoTriggered[0U])) {
         Vmem_issue_test_top___024root___ico_comb__TOP__2(vlSelf);
     }
-    if ((0x00000000000003f8ULL & vlSelfRef.__VicoTriggered[0U])) {
-        Vmem_issue_test_top___024root___ico_comb__TOP__3(vlSelf);
-    }
     if ((0x00000000000e0000ULL & vlSelfRef.__VicoTriggered[0U])) {
+        Vmem_issue_test_top___024root___ico_comb__TOP__3(vlSelf);
         Vmem_issue_test_top___024root___ico_comb__TOP__4(vlSelf);
         Vmem_issue_test_top___024root___ico_comb__TOP__5(vlSelf);
         Vmem_issue_test_top___024root___ico_comb__TOP__6(vlSelf);
-        Vmem_issue_test_top___024root___ico_comb__TOP__7(vlSelf);
         {
-            // Inlined CFunc: _ico_comb__TOP__8
+            // Inlined CFunc: _ico_comb__TOP__7
             vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
                                             >> 0x00000012U));
             vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
-                = ((IData)(vlSelfRef.br_mispredict) 
-                   & (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                             & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                 << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                           >> 0x0000001eU)))));
+                = (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                          & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                              << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                                        >> 0x0000001eU))));
         }
     }
 }

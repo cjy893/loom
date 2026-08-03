@@ -450,6 +450,8 @@ struct RunResult {
     int unique_dispatches = 0;
     int unique_multi_lane_dispatches = 0;
     int unique_nonempty_rob_dispatches = 0;
+    int mul_dispatches = 0;
+    int mul_nonempty_rob_dispatches = 0;
     bool unique_dispatch_violation = false;
     bool packet_stable_while_stalled = true;
     int packet_stall_cycles = 0;
@@ -613,6 +615,11 @@ static RunResult run_program(Vcore_ifu_test_top* dut,
                 ++result.unique_nonempty_rob_dispatches;
             if (__builtin_popcount(fired) != 1 || !dut->rob_empty)
                 result.unique_dispatch_violation = true;
+        }
+        if (dut->core_dis_mul) {
+            ++result.mul_dispatches;
+            if (!dut->rob_empty)
+                ++result.mul_nonempty_rob_dispatches;
         }
 
         bool packet_stalled =
@@ -844,12 +851,12 @@ static bool test_redirect_and_stale_response(
     return passed;
 }
 
-static bool test_unique_in_trailing_lanes(
+static bool test_trailing_mul_and_unique_div(
     Vcore_ifu_test_top* dut) {
     const std::vector<Instruction> program = {
         {addi_w(1, 0, 6), "addi.w r1, r0, 6"},
         {addi_w(2, 0, 7), "addi.w r2, r0, 7"},
-        {mul_w(3, 1, 2), "mul.w r3, r1, r2 (unique lane2)"},
+        {mul_w(3, 1, 2), "mul.w r3, r1, r2 (non-serial lane2)"},
         {addi_w(4, 3, 1), "addi.w r4, r3, 1"},
         {addi_w(5, 0, 2), "addi.w r5, r0, 2"},
         {addi_w(6, 0, 3), "addi.w r6, r0, 3"},
@@ -871,8 +878,8 @@ static bool test_unique_in_trailing_lanes(
         "trailing unique commit trace",
         check_commit_trace("trailing unique", result, program,
                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}));
-    passed &= check("lane2/lane3 unique dispatch exactly twice",
-                    result.unique_dispatches == 2);
+    passed &= check("only lane3 divide dispatches as unique",
+                    result.unique_dispatches == 1);
     if (result.unique_dispatch_violation) {
         std::fprintf(
             stderr,
@@ -893,7 +900,52 @@ static bool test_unique_in_trailing_lanes(
     passed &= check("lane3 younger dependency", result.last_write[9] == 8);
 
     if (passed)
-        std::printf("PASS: core_ifu trailing unique lanes\n");
+        std::printf("PASS: core_ifu trailing mul and unique div\n");
+    return passed;
+}
+
+static bool test_mul_dispatch_without_rob_serialization(
+    Vcore_ifu_test_top* dut) {
+    const std::vector<Instruction> program = {
+        {addi_w(1, 0, 0x100), "addi.w r1, r0, 0x100"},
+        {addi_w(4, 0, 6), "addi.w r4, r0, 6"},
+        {addi_w(5, 0, 7), "addi.w r5, r0, 7"},
+        {ld_w(2, 1, 0), "ld.w r2, r1, 0 (delayed older load)"},
+        {mul_w(3, 4, 5), "mul.w r3, r4, r5"},
+        {addi_w(6, 3, 1), "addi.w r6, r3, 1"},
+        {NOP, "andi r0, r0, 0"},
+        {NOP, "andi r0, r0, 0"},
+        {NOP, "andi r0, r0, 0"},
+        {NOP, "andi r0, r0, 0"},
+        {NOP, "andi r0, r0, 0"},
+        {NOP, "andi r0, r0, 0"},
+    };
+    DmemModel dmem;
+    dmem.clear();
+    dmem.write_word(0x100, 0x12345678U);
+    dmem.set_response_latency(40);
+    RunResult result = run_program(dut, program, &dmem, false);
+
+    bool passed = true;
+    passed &= check("non-serial multiply reaches quiescence",
+                    result.finished);
+    passed &= check(
+        "non-serial multiply commit trace",
+        check_commit_trace("non-serial multiply", result, program,
+                           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}));
+    passed &= check("multiply dispatches exactly once",
+                    result.mul_dispatches == 1);
+    passed &= check("multiply dispatches behind an unfinished older load",
+                    result.mul_nonempty_rob_dispatches == 1);
+    passed &= check("older delayed load remains correct",
+                    result.last_write[2] == 0x12345678U);
+    passed &= check("multiply result remains correct",
+                    result.last_write[3] == 42);
+    passed &= check("younger multiply dependency remains correct",
+                    result.last_write[6] == 43);
+
+    if (passed)
+        std::printf("PASS: core_ifu non-serial multiply dispatch\n");
     return passed;
 }
 
@@ -944,7 +996,7 @@ static bool test_redirect_clears_buffered_suffix(
     Vcore_ifu_test_top* dut) {
     const std::vector<Instruction> program = {
         {beq(0, 0, 16), "beq r0, r0, +16 (lane0)"},
-        {mul_w(20, 0, 0), "mul.w r20, r0, r0 (buffered wrong path)"},
+        {div_w(20, 0, 0), "div.w r20, r0, r0 (buffered wrong path)"},
         {st_w(0, 0, 0), "st.w r0, r0, 0 (buffered wrong path)"},
         {addi_w(21, 0, 99), "addi.w r21, r0, 99 (wrong path)"},
         {addi_w(10, 0, 7), "addi.w r10, r0, 7"},
@@ -1051,7 +1103,7 @@ static bool test_jirl_training_and_target_validation(
         {addi_w(20, 0, 99), "addi.w r20, r0, 99 (wrong path)"},
         {addi_w(3, 3, 1), "addi.w r3, r3, 1"},
         {addi_w(2, 2, -1), "addi.w r2, r2, -1"},
-        {mul_w(6, 2, 2), "mul.w r6, r2, r2 (commit barrier)"},
+        {mul_w(6, 2, 2), "mul.w r6, r2, r2"},
         {bne(6, 0, -20), "bne r6, r0, -20"},
         {addi_w(4, 0, 9), "addi.w r4, r0, 9"},
         {NOP, "andi r0, r0, 0"},
@@ -1950,7 +2002,8 @@ int main(int argc, char** argv) {
     bool passed = true;
     passed &= test_four_wide_sequential(dut);
     passed &= test_redirect_and_stale_response(dut);
-    passed &= test_unique_in_trailing_lanes(dut);
+    passed &= test_trailing_mul_and_unique_div(dut);
+    passed &= test_mul_dispatch_without_rob_serialization(dut);
     passed &= test_lane2_predicted_branch(dut);
     passed &= test_redirect_clears_buffered_suffix(dut);
     passed &= test_backend_backpressure_packet_stability(dut);

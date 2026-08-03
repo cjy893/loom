@@ -11,7 +11,7 @@ Vcore_top_contract_test_top__Syms::Vcore_top_contract_test_top__Syms(VerilatedCo
     , TOP{this, namep}
 {
     // Check resources
-    Verilated::stackCheck(26534);
+    Verilated::stackCheck(28329);
     // Setup sub module instances
     // Configure time unit / time precision
     _vm_contextp__->timeunit(-12);

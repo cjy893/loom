@@ -19,7 +19,9 @@ The directed programs cover:
 - a twelve-instruction sequential stream;
 - a direct branch to the last lane of a fetch bundle while the wrong-path
   response is delayed;
-- serializing multiply/divide operations in fetch lanes 2 and 3;
+- a non-serializing multiply and a serializing divide in fetch lanes 2 and 3;
+- an independent multiply dispatching while an older delayed load remains in
+  the ROB, including result and younger-dependency checks;
 - a lane-2 branch with a same-packet wrong-path store;
 - a lane-0 branch whose wrong-path suffix must remain buffered until redirect;
 - LSU backpressure while a fetch packet remains pending;

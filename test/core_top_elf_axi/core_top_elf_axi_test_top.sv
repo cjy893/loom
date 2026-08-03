@@ -96,11 +96,18 @@ module core_top_elf_axi_test_top #(
     output logic       ld_query_valid,
     output logic       ld_query_block,
     output logic       ld_query_forward_valid,
+    output logic       ld_query_unresolved_older,
+    output logic [4:0] ld_query_overlap_count,
     output logic       ldq_empty,
     output logic       stq_empty,
     output logic [1:0] rename_stalls,
     output logic [1:0] dispatch_valid,
     output logic [1:0] dispatch_fire,
+    output logic       branch_alloc_ready,
+    output logic       rob_ready,
+    output logic       alu_iq_full,
+    output logic       mem_iq_full,
+    output logic       unq_iq_full,
     output logic [MAX_BR_COUNT-1:0] branch_resolve_mask,
     output logic [ALU_WIDTH-1:0]    branch_resolve_valid_detail,
     output logic [ALU_WIDTH*32-1:0] branch_resolve_pc_detail,
@@ -243,12 +250,21 @@ module core_top_elf_axi_test_top #(
     assign ld_query_block = dut.core_inst.lsu_inst.ld_query_block;
     assign ld_query_forward_valid =
         dut.core_inst.lsu_inst.ld_query_forward_valid;
+    assign ld_query_unresolved_older =
+        dut.core_inst.lsu_inst.store_queue_i.query_unresolved_older;
+    assign ld_query_overlap_count =
+        dut.core_inst.lsu_inst.store_queue_i.query_overlap_count;
     assign ldq_empty = dut.core_inst.lsu_ldq_empty;
     assign stq_empty = dut.core_inst.lsu_stq_empty;
 
     assign rename_stalls = dut.core_inst.rn_stalls;
     assign dispatch_valid = dut.core_inst.rn2_mask;
     assign dispatch_fire = dut.core_inst.dis_fire;
+    assign branch_alloc_ready = dut.core_inst.branch_alloc_ready;
+    assign rob_ready = dut.core_inst.rob_ready_w;
+    assign alu_iq_full = !(|dut.core_inst.alu_iq_dis_ready);
+    assign mem_iq_full = !(|dut.core_inst.mem_iq_dis_ready);
+    assign unq_iq_full = !(|dut.core_inst.unq_iq_dis_ready);
     assign branch_resolve_mask =
         dut.core_inst.brupdate_w.b1.resolve_mask;
     always_comb begin

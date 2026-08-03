@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
             passed = commit_count == PROG_SIZE &&
                      saw_dual_dispatch &&
                      saw_dual_commit &&
-                     unique_dispatch_count == 12 &&
+                     unique_dispatch_count == 9 &&
                      csr_request_count == 2 &&
                      redirect_count == 2 &&
                      !unique_violation &&
