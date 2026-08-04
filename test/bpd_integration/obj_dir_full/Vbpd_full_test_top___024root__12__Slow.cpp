@@ -31,7 +31,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__11(Vbpd_full_
                                                             & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_lane_pc 
                                                                >> 2U))][2U] 
                                                            >> 0x0000001fU)))));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32 = (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_35 = (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__entry_valid
                                                  [(0x0000001fU 
                                                    & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_lane_pc 
                                                       >> 2U))] 

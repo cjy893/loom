@@ -10,15 +10,15 @@ module rename_test_top (
     input  logic [4:0] in_lsrc1_0,
     input  logic [4:0] in_lsrc2_0,
     input  logic [4:0] in_ldst_0,
-    input  logic [3:0] in_br_mask_0,
+    input  logic [MAX_BR_COUNT-1:0] in_br_mask_0,
     input  logic [4:0] in_lsrc1_1,
     input  logic [4:0] in_lsrc2_1,
     input  logic [4:0] in_ldst_1,
-    input  logic [3:0] in_br_mask_1,
+    input  logic [MAX_BR_COUNT-1:0] in_br_mask_1,
     input  logic       in_allocate_brtag_0,
-    input  logic [1:0] in_br_tag_0,
+    input  logic [BR_TAG_SZ-1:0] in_br_tag_0,
     input  logic       in_allocate_brtag_1,
-    input  logic [1:0] in_br_tag_1,
+    input  logic [BR_TAG_SZ-1:0] in_br_tag_1,
 
     input  logic wakeup_valid,
     input  logic [5:0] wakeup_pdst,
@@ -30,7 +30,9 @@ module rename_test_top (
     input  logic rollback,
     input  logic kill,
     input  logic br_mispredict,
-    input  logic [1:0] br_mispredict_tag,
+    input  logic [BR_TAG_SZ-1:0] br_mispredict_tag,
+    input  logic [MAX_BR_COUNT-1:0] br_resolve_mask,
+    input  logic [MAX_BR_COUNT-1:0] br_mispredict_mask,
     input  logic dis_ready,
     input  logic [1:0] dis_fire,
 
@@ -45,6 +47,8 @@ module rename_test_top (
     output logic [5:0] out_pdst_1,
     output logic [5:0] out_stale_1,
     output logic       out_psrc1_busy_1,
+    output logic [MAX_BR_COUNT-1:0] out_br_mask_0,
+    output logic [MAX_BR_COUNT-1:0] out_br_mask_1,
     output logic [1:0] stalls
 );
     uop_t [1:0] dec_uops;
@@ -88,6 +92,8 @@ module rename_test_top (
         commit_uops[0].stale_pdst = commit_stale_pdst;
         commit_uops[0].dst_rtype = RT_FIX;
         brupdate = '0;
+        brupdate.b1.resolve_mask = br_resolve_mask;
+        brupdate.b1.mispredict_mask = br_mispredict_mask;
         brupdate.b2.mispredict = br_mispredict;
         brupdate.b2.uop.br_tag = br_mispredict_tag;
         if(br_mispredict) begin
@@ -100,7 +106,8 @@ module rename_test_top (
         .CORE_WIDTH(2),
         .PHYSICAL_REGS(56),
         .WAKEUP_PORTS(6),
-        .IS_FP(0)
+        .IS_FP(0),
+        .MAX_BR_COUNT(MAX_BR_COUNT)
     ) dut (
         .clk,
         .rst_n,
@@ -131,4 +138,6 @@ module rename_test_top (
     assign out_pdst_1 = rn_uops[1].pdst;
     assign out_stale_1 = rn_uops[1].stale_pdst;
     assign out_psrc1_busy_1 = rn_uops[1].psrc1_busy;
+    assign out_br_mask_0 = rn_uops[0].br_mask;
+    assign out_br_mask_1 = rn_uops[1].br_mask;
 endmodule

@@ -83,7 +83,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
     };
     struct {
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__survivor;
-        VlWide<52>/*1663:0*/ mem_issue_test_top__DOT__issue_dut__DOT__uop_mux_terms;
+        VlWide<53>/*1675:0*/ mem_issue_test_top__DOT__issue_dut__DOT__uop_mux_terms;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_3;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_4;
@@ -135,20 +135,20 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_src1;
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_src2;
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_imm;
-        VlWide<13>/*415:0*/ mem_issue_test_top__DOT__issue_dut__DOT__selected_uop_bits;
+        VlWide<14>/*418:0*/ mem_issue_test_top__DOT__issue_dut__DOT__selected_uop_bits;
         IData/*31:0*/ __Vtrigprevexpr___TOP__src1_data__0;
         IData/*31:0*/ __Vtrigprevexpr___TOP__src2_data__0;
         IData/*31:0*/ __Vtrigprevexpr___TOP__imm_data__0;
         IData/*31:0*/ __VactIterCount;
-        VlWide<16>/*496:0*/ mem_issue_test_top__DOT__brupdate;
-        VlWide<13>/*415:0*/ mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop;
-        VlWide<13>/*415:0*/ mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop;
-        VlWide<13>/*415:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_uop;
-        VlWide<52>/*1663:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
-        VlWide<26>/*831:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated;
+        VlWide<16>/*503:0*/ mem_issue_test_top__DOT__brupdate;
+        VlWide<14>/*418:0*/ mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop;
+        VlWide<14>/*418:0*/ mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop;
+        VlWide<14>/*418:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_uop;
+        VlWide<53>/*1675:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
+        VlWide<27>/*837:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated;
     };
     struct {
-        VlWide<52>/*1663:0*/ __Vdly__mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
+        VlWide<53>/*1675:0*/ __Vdly__mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
         VlUnpacked<QData/*63:0*/, 1> __VstlTriggered;
         VlUnpacked<QData/*63:0*/, 2> __VicoTriggered;
         VlUnpacked<QData/*63:0*/, 1> __VactTriggered;

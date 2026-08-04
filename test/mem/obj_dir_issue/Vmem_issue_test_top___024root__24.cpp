@@ -9,6 +9,10 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__12(Vmem_issue_test_top___
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor 
+        = (((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+            & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_complete))) 
+           & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire 
         = ((2U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire)) 
            | (1U & (((IData)(vlSelfRef.mem_issue_test_top__DOT__dis_valid_vec) 
@@ -35,9 +39,5 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__12(Vmem_issue_test_top___
     if ((IData)((9U != (9U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
         vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
             = (0xfff7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
-    }
-    if ((IData)((3U != (3U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
-            = (0xffefU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
 }

@@ -11,6 +11,7 @@ DUT_SOURCES=(
   "$ROOT/ifu/bpd/ghist.sv"
   "$ROOT/ifu/bpd/ras.sv"
   "$ROOT/ifu/bpd/ubtb.sv"
+  "$ROOT/ifu/bpd/bpd_sdp_bram.sv"
   "$ROOT/ifu/bpd/bim.sv"
   "$ROOT/ifu/bpd/btb.sv"
 )

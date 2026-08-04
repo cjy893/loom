@@ -12,12 +12,12 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__11(Vmem_issue_test_top___
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_complete 
         = ((7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_complete)) 
            | ((IData)((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_grant) 
-                        >> 3U) & (((0x00020000U != 
-                                    (0x00024000U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U])) 
+                        >> 3U) & (((0x20000000U != 
+                                    (0x24000000U & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U])) 
                                    | ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__issue_agen) 
-                                      >> 3U)) & ((0x00040000U 
+                                      >> 3U)) & ((0x40000000U 
                                                   != 
-                                                  (0x00042000U 
+                                                  (0x42000000U 
                                                    & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U])) 
                                                  | ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__issue_dgen) 
                                                     >> 3U))))) 
@@ -41,26 +41,20 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__11(Vmem_issue_test_top___
                                                                      & vlSelfRef.agen_addr))))) 
                                                     & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid))));
     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_br_killed 
-        = (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                  & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
-                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
-                                >> 0x0000001eU))));
+        = (0U != (((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[8U] 
+                    << 1U) | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop[7U] 
+                              >> 0x0000001fU)) & (IData)(vlSelfRef.mispredict_mask)));
     vlSelfRef.iss_valid = vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec;
     vlSelfRef.iss_rob_idx = (0x0000003fU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U]);
     vlSelfRef.iss_use_agen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x00000011U));
+                                    >> 0x00000014U));
     vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x00000012U));
+                                    >> 0x00000015U));
     vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__iss_br_killed 
-        = (0U != ((IData)(vlSelfRef.mispredict_mask) 
-                  & ((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                      << 2U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
-                                >> 0x0000001eU))));
+        = (0U != (((vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
+                    << 1U) | (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[7U] 
+                              >> 0x0000001fU)) & (IData)(vlSelfRef.mispredict_mask)));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire = 0U;
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
         = vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_q;
-    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor 
-        = (((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
-            & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_complete))) 
-           & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)));
 }

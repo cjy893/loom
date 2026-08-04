@@ -8,8 +8,11 @@ The rollback revision used for the isolated DCache A/B is:
 4103d09fcaf7ede786a28aa76faaa3111cb2c124
 ```
 
-The accepted DCache direct-hit change is currently in the worktree.  Record
-its revision here after it is committed; `4103d09` does not contain that change.
+The accepted DCache direct-hit revision is:
+
+```text
+1f01183c219930db77a9b2808b9c5157f73dc1f0
+```
 
 ### Validation result
 
@@ -30,10 +33,29 @@ performance suite produced this final distribution:
 |------|------------------------:|
 | `quick_sort` | 0.73 |
 | `crc32` | 0.75 |
-| `dhrystone` | 0.81 |
+| `dhrystone` | 0.82 |
 
 Every other measured test is above 0.9, and 10 tests are above 1.0.  Exact
 per-test values for that remaining group were not recorded in this snapshot.
+
+### Predictor counter BRAM isolation
+
+An isolated Verilator A/B compared the original inferred BIM/GShare counter
+arrays with the explicit synchronous BRAM wrapper.  Both sides used the same
+current six-branch-tag configuration, production Cache/MMU/AXI path, and full
+FPGA-loop performance images:
+
+| Test | Old IPC | BRAM IPC | Old cycles | BRAM cycles | Window commits |
+|------|--------:|---------:|-----------:|------------:|---------------:|
+| `crc32` | 0.9304 | 0.9304 | 1,836,456 | 1,836,456 | 1,708,620 |
+| `quick_sort` | 0.5950 | 0.5950 | 2,235,993 | 2,235,993 | 1,330,356 |
+| `dhrystone` | 0.5713 | 0.5713 | 54,541 | 54,541 | 31,160 |
+
+All three completed successfully.  Commit checkpoints, branch mispredicts,
+Cache/AXI traffic, and stall counters were also identical, so the storage
+change has no simulated IPC or cycle regression.  Vivado synthesis and routed
+utilization remain necessary to confirm that the XPM branch maps the four
+counter tables to block RAM and improves physical Slice pressure.
 
 ### Pre-direct-hit timing (rollback)
 
@@ -99,6 +121,81 @@ paths.  Board testing subsequently confirmed the improvement: only
 `quick_sort`, `crc32`, and `dhrystone` remain below 0.9, while 10 tests exceed
 the reference IPC.  The DCache direct-hit experiment is accepted as the new
 implementation baseline.
+
+### Branch-tag same-cycle recycle acceptance
+
+The branch mask allocator now recycles a correctly resolved branch tag in the
+same cycle, while Rename2 preserves a newly allocated instance of that tag when
+clearing resolved branch dependencies.  An isolated Verilator A/B changed only
+the branch mask and Rename2 implementations:
+
+| Test | Old IPC | Recycle IPC | IPC change | Old cycles | Recycle cycles | Cycle change |
+|------|--------:|------------:|-----------:|-----------:|---------------:|-------------:|
+| `crc32` full | 0.7207 | 0.7870 | +9.20% | 2,370,879 | 2,170,938 | -8.43% |
+| `coremark` short | 0.6771 | 0.6800 | +0.43% | 421,652 | 419,904 | -0.41% |
+
+The full CRC32 runs retired the same 1,708,620 instructions.  The old version
+recorded 477,245 branch-mask contract misses; the revised version recorded
+none.  All 38 module suites and the official functional ELF in normal and AXI
+backpressure modes passed 58/58.
+
+The routed board build passed with WNS `+0.361 ns`.  Board measurements showed
+only small aggregate IPC changes: the lowest ratios remain `quick_sort` 0.73,
+`crc32` 0.75, and `dhrystone` 0.82.  The large isolated Verilator CRC32 gain is
+therefore not treated as a corresponding board-level gain; the change is kept
+for eliminating the allocator contract miss without a measured regression.
+
+### Branch-tag capacity and branch-direction isolation
+
+The production four-tag configuration was profiled without changing RTL.  A
+temporary parameter-only six- and eight-tag build initially deadlocked at the
+same point after 5,517 commits.  Static audit found that `loom_core` passes
+`MAX_BR_COUNT` to `br_mask`, but not to `rename_stage`, whose default remains
+four.  A temporary eight-tag build that changed only the `rename_stage` default
+to follow the package parameter completed CRC32 correctly:
+
+| CRC32 configuration | IPC | Cycles | Branch-tag stall/cycles | Full occupancy |
+|---------------------|----:|-------:|------------------------:|---------------:|
+| Production 4 tags | 0.7870 | 2,170,938 | 53.08% | 85.48% at 4 |
+| Temporary 8 tags with matching Rename snapshots | 0.9304 | 1,836,456 | 0.01% | 0.02% at 8 |
+
+Both successful runs retired 1,708,620 instructions in the measured window.
+The temporary eight-tag result is +18.22% IPC and -15.41% cycles.  Occupancy was
+64.93% at five tags and only 1.40% at six or more, so six tags is the preferred
+next A/B point after the production parameter contract and recovery tests are
+fixed.  No production RTL was changed by this isolation.
+
+The `loom_core` to `rename_stage` parameter connection was subsequently fixed.
+Parameterized Rename recovery passed with 4, 6, and 8 tags, and the Core-level
+capacity contract now passes with six.  A complete six-tag CRC32 run produced
+exactly the same measured IPC and cycle count as eight tags (`0.9304` and
+1,836,456 cycles), with 0.24% branch-tag stall cycles.  The official 58-point
+functional ELF also passed in normal and deterministic AXI-backpressure modes.
+The checked-in production capacity is now six.  The production package passed
+the complete module regression plus the official 58-point functional ELF in
+normal and deterministic AXI-backpressure modes.  Non-incremental synthesis
+and implementation remain required to confirm the six-tag area and timing cost.
+
+The same four-tag model recorded actual and predicted direction for each hot
+branch:
+
+- `crc32`: IPC 0.7870, 0.25% mispredicts.  The hot `strlen` branch at
+  `0x1c000ed8` is 99.5% taken and predicts taken after two cold outcomes.  The
+  dominant loss is branch-tag capacity, not direction prediction.
+- `quick_sort`: IPC 0.5783, 19.40% mispredicts and 17.01% branch-tag stalls.
+  The largest hotspots are `0x1c000b04` (8,233/26,185), `0x1c000cd0`
+  (6,985/14,830), and `0x1c000b3c` (3,077/12,599).  Their outcomes are strongly
+  data-dependent; for example `0x1c000cd0` is 50.5% taken with 6,480 direction
+  transitions.  Provider/index/training attribution is required before changing
+  predictor capacity.  STQ accounts for 55.87% of the smaller 6.39% dispatch
+  blocked interval and is a secondary target.
+- `dhrystone`: IPC 0.5683 and 10.57% mispredicts.  `0x1c001704`, `0x1c0009a4`,
+  and `0x1c0016e4` are actually always taken, but predict taken only 33.3%, 0%,
+  and 0%.  `0x1c0016f4` repeats an N,N,T outcome while predicting all N.  The
+  `0x1c001640` JIRL is direction-correct but has 100 target/metadata misses.
+  These signatures prioritize BTB/provider/meta and training-routing audit over
+  adding a more complex predictor.  Freelist pressure remains a separate
+  backend bottleneck (20.34% rename stall).
 
 ## 2026-08-04 pre-40 MHz baseline (historical)
 

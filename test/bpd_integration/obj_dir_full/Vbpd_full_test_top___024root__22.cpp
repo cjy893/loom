@@ -6,8 +6,8 @@
 
 extern const VlWide<10>/*319:0*/ Vbpd_full_test_top__ConstPool__CONST_h9e45139a_0;
 
-void Vbpd_full_test_top___024root___nba_sequent__TOP__15(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__15\n"); );
+void Vbpd_full_test_top___024root___nba_sequent__TOP__14(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__14\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
@@ -64,7 +64,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__15(Vbpd_full_test_top___02
     vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset 
         = vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
     vlSelfRef.bim_ready = (1U & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset)));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_36 = (1U 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27 = (1U 
                                                  & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
                                                     | (3U 
                                                        == 

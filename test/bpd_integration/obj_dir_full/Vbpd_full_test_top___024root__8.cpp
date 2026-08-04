@@ -9,17 +9,17 @@ void Vbpd_full_test_top___024root___ico_comb__TOP__8(Vbpd_full_test_top___024roo
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31 = (((IData)(vlSelfRef.f1_is_br)
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_34 = (((IData)(vlSelfRef.f1_is_br)
                                                    ? (IData)(vlSelfRef.f1_taken)
-                                                   : (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27)) 
+                                                   : (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30)) 
                                                  & (IData)(vlSelfRef.bpd_full_test_top__DOT__ghist_cfi_valid));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28 = ((IData)(vlSelfRef.f1_is_br) 
-                                                 & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31));
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31 = ((IData)(vlSelfRef.f1_is_br) 
+                                                 & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_34));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0 = (1U 
                                                 & (- (IData)(
-                                                             ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28)) 
+                                                             ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31)) 
                                                               & (IData)(vlSelfRef.f1_is_br)))));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 = (1U 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_33 = (1U 
                                                  & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
                                                     | ((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
                                                         >> 7U) 
@@ -56,7 +56,7 @@ void Vbpd_full_test_top___024root___eval_ico(Vbpd_full_test_top___024root* vlSel
     if ((0x0000000000000180ULL & vlSelfRef.__VicoTriggered[0U])) {
         {
             // Inlined CFunc: _ico_comb__TOP__1
-            vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27 
+            vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 
                 = ((IData)(vlSelfRef.f1_is_call) | (IData)(vlSelfRef.f1_is_ret));
         }
     }
@@ -73,7 +73,7 @@ void Vbpd_full_test_top___024root___eval_ico(Vbpd_full_test_top___024root* vlSel
         {
             // Inlined CFunc: _ico_comb__TOP__7
             vlSelfRef.bpd_full_test_top__DOT__ghist_cfi_valid 
-                = ((IData)(vlSelfRef.f1_is_br) | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27));
+                = ((IData)(vlSelfRef.f1_is_br) | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30));
         }
     }
     if ((0x00000000000001e0ULL & vlSelfRef.__VicoTriggered[0U])) {

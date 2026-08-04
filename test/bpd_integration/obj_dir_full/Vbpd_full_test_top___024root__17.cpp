@@ -12,7 +12,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__9(Vbpd_full_test_top___024
     vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s2_ctrs 
         = ((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_valid)
             ? (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_data)
-            : (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata));
+            : (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT____Vcellout__ram__read_data));
     vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s2_hit 
         = ((((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_8) 
              | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_9)) 
@@ -213,9 +213,9 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__9(Vbpd_full_test_top___024
                                            & (- (QData)((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_9)))))) 
                                    >> 0x00000020U)) 
                           >> 4U));
-    if (((IData)(vlSelfRef.f0_valid) & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset)))) {
-        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata 
-            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__ram
+    if (((IData)(vlSelfRef.bim_ready) & (IData)(vlSelfRef.f0_valid))) {
+        vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT____Vcellout__ram__read_data 
+            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem
             [(0x000007ffU & (vlSelfRef.f0_pc >> 4U))];
     }
 }

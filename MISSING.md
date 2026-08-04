@@ -31,7 +31,7 @@
 | 项目 | 当前状态 | 剩余工作 |
 |------|---------|---------|
 | 取指并发 | IFU+IMMU+ICache 当前只允许一个未完成请求；直映射/命中可直接响应，接受 fetch packet 时可同拍发起下一翻译/BPD | 后续增加 tag/FTQ index/frontend epoch、多 outstanding 和 replay |
-| 分支预测 | 双 Composer 内的 BIM+GShare 方向预测、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC | 重新测量 GShare 后的分支热点；F1/F2 早重定向暂缓 |
+| 分支预测 | 双 Composer 内的 BIM+GShare 方向预测、F3 predecode、update router、RAS、GHist 和 FTQ 已在生产 IFU 实例化并驱动 next PC；逐 PC 实际/预测方向热点已测 | 先审计 Dhrystone 恒 taken/NNT 热点的 provider、BTB、meta 和训练路由，再归因 Quick Sort 的高熵分支；F1/F2 早重定向暂缓 |
 | 预测元数据 | 真实 FTQ index、predicted-taken 和 predicted-npc 已经 IFU→Fetch Buffer→`loom_core`→uop 传递 | 多 outstanding 时扩展请求身份，不改变逐 lane 元数据契约 |
 | GHist/RAS | fetch-wide 双 bank 更新、branch rewind repair 及异常/中断/ERTN 全清空已接入并测试 | F1/F2 早重定向时重新验证投机更新时间点 |
 | FTQ 闭环 | 与 Fetch Buffer 原子分配，已接 commit、brupdate、branch rewind、BPD 训练和架构全 flush | 多 outstanding 时把请求 tag/epoch 与 FTQ 身份绑定 |
@@ -56,8 +56,8 @@
   `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
 - 当前 56 PREG、40 MHz 版本的完整基线以
-  [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) 为准。`4103d09` 是 DCache
-  直返前的 A/B 回退提交，不包含当前已验收的 DCache改动；新提交号保存后需要回填。
+  [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) 为准。当前已验收版本对应
+  提交 `1f01183`；`4103d09` 是 DCache直返前的 A/B 回退提交。
 - 40 MHz 实现后的 WNS/TNS 为 `+0.118 ns / 0.000 ns`，WHS/THS 为
   `+0.051 ns / 0.000 ns`，setup/hold 均无失败端点。最差 CPU 路径为 ICache
   `req_paddr_q` 到 GShare `s1_counter_data`，数据路径中约 80.12% 为布线延迟；
@@ -67,8 +67,17 @@
   背压均已通过；隔离 A/B 中 `fireye_A0`、`my_memcmp`、`stream_copy`、`crc32`
   IPC 分别提高 17.6%、24.2%、39.8%、3.7%。40 MHz 实现以 WNS `+0.043 ns`、
   WHS `+0.050 ns` 通过，DCache直返不是最差路径；板上性能验收也已通过，最终仅
-  `quick_sort` 0.73、`crc32` 0.75、`dhrystone` 0.81 低于 0.9，其余均高于
+  `quick_sort` 0.73、`crc32` 0.75、`dhrystone` 0.82 低于 0.9，其余均高于
   0.9，且有 10 项超过 1.0。
+- 正确解析分支 tag 已支持同拍回收，Rename2 同拍复用边界也已修正。隔离
+  Verilator CRC32 IPC 提高 9.20%，38 组回归及官方功能 ELF 正常/背压模式通过；
+  板级实现 WNS 为 `+0.361 ns`，板测总体仅小幅变化，未复现同等幅度的 CRC32
+  增益。
+- 分支 tag 容量隔离确认生产 4-tag CRC32 有 53.08% 周期因 tag 阻塞。
+  `loom_core` 已把 `MAX_BR_COUNT` 显式传给 `rename_stage`，4/6/8-tag Rename 恢复和
+  6-tag Core 契约均通过；临时 6-tag CRC32 IPC 为 0.9304，与 8-tag 完全相同，官方
+  功能 ELF 正常/背压也通过。生产配置现已切换为 6-tag，并通过完整模块回归；尚待
+  非增量综合/实现确认资源占用和 40 MHz 时序。
 
 ---
 

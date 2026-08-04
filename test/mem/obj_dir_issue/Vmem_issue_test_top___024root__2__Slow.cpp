@@ -11,19 +11,19 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__1(Vmem_issue
     // Body
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_br_killed 
         = ((((IData)(vlSelfRef.dis_valid_1) & (0U != 
-                                               ((IData)(vlSelfRef.dis_br_mask_1) 
-                                                & (IData)(vlSelfRef.mispredict_mask)))) 
+                                               ((IData)(vlSelfRef.mispredict_mask) 
+                                                & (IData)(vlSelfRef.dis_br_mask_1)))) 
             << 1U) | ((IData)(vlSelfRef.dis_valid) 
-                      & (0U != ((IData)(vlSelfRef.dis_br_mask) 
-                                & (IData)(vlSelfRef.mispredict_mask)))));
+                      & (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                                & (IData)(vlSelfRef.dis_br_mask)))));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4 = ((~ 
                                                  (0U 
                                                   != 
-                                                  ((IData)(vlSelfRef.mispredict_mask) 
-                                                   & ((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
-                                                       << 2U) 
-                                                      | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
-                                                         >> 0x0000001eU))))) 
+                                                  (((vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
+                                                     << 1U) 
+                                                    | (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[7U] 
+                                                       >> 0x0000001fU)) 
+                                                   & (IData)(vlSelfRef.mispredict_mask)))) 
                                                 & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_valid));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available 
         = (0x0000000fU & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid)));

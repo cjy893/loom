@@ -9,7 +9,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__5(Vbpd_full_t
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_37 = (IData)(
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28 = (IData)(
                                                         (0x40000000U 
                                                          == 
                                                          (0x60000000U 
@@ -84,7 +84,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__5(Vbpd_full_t
                                               & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
                                                  >> 5U)) 
                                              == vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx[0U])));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27 = ((IData)(vlSelfRef.f1_is_call) 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 = ((IData)(vlSelfRef.f1_is_call) 
                                                  | (IData)(vlSelfRef.f1_is_ret));
     vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_lane_pc 
         = (vlSelfRef.update_pc + ((IData)(vlSelfRef.update_cfi_idx) 

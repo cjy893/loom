@@ -13,6 +13,12 @@ VERILATOR=${VERILATOR:-verilator}
 VERILATOR_KIT_ROOT=${VERILATOR_KIT_ROOT:-/usr/local/share/verilator}
 MDIR=${CORE_TOP_ELF_AXI_OBJ_DIR:-"$TEST_DIR/obj_dir"}
 SKIP_BUILD=${CORE_TOP_ELF_AXI_SKIP_BUILD:-0}
+PARAMS_RTL=${PARAMS_RTL:-"$ROOT/common/params_pkg.sv"}
+TEST_MAX_BRANCH_TAGS=${TEST_MAX_BRANCH_TAGS:-6}
+BR_MASK_RTL=${BR_MASK_RTL:-"$ROOT/exu/br_mask.sv"}
+RENAME_STAGE_RTL=${RENAME_STAGE_RTL:-"$ROOT/exu/rename/rename_stage.sv"}
+BIM_RTL=${BIM_RTL:-"$ROOT/ifu/bpd/bim.sv"}
+GSHARE_RTL=${GSHARE_RTL:-"$ROOT/ifu/bpd/gshare.sv"}
 
 if [[ "$SINGLE_DEBUG_COMMIT" != 0 &&
       "$SINGLE_DEBUG_COMMIT" != 1 ]]; then
@@ -25,6 +31,17 @@ if [[ "$SKIP_BUILD" != 0 && "$SKIP_BUILD" != 1 ]]; then
   exit 2
 fi
 
+if [[ ! "$TEST_MAX_BRANCH_TAGS" =~ ^[0-9]+$ ]] ||
+   (( TEST_MAX_BRANCH_TAGS < 1 || TEST_MAX_BRANCH_TAGS > 31 )); then
+  printf 'TEST_MAX_BRANCH_TAGS must be an integer from 1 to 31\n' >&2
+  exit 2
+fi
+
+if [[ ! -f "$PARAMS_RTL" ]]; then
+  printf 'Parameter package not found: %s\n' "$PARAMS_RTL" >&2
+  exit 2
+fi
+
 if [[ ! -f "$ELF_PATH" ]]; then
   printf 'ELF image not found: %s\n' "$ELF_PATH" >&2
   printf 'Set ELF_PATH or pass --elf FILE to this script.\n' >&2
@@ -32,12 +49,13 @@ if [[ ! -f "$ELF_PATH" ]]; then
 fi
 
 rtl=(
-  "$ROOT/common/params_pkg.sv"
+  "$PARAMS_RTL"
   "$ROOT/common/consts_pkg.sv"
   "$ROOT/common/types_pkg.sv"
   "$ROOT/ifu/bpd/ubtb.sv"
-  "$ROOT/ifu/bpd/bim.sv"
-  "$ROOT/ifu/bpd/gshare.sv"
+  "$ROOT/ifu/bpd/bpd_sdp_bram.sv"
+  "$BIM_RTL"
+  "$GSHARE_RTL"
   "$ROOT/ifu/bpd/btb.sv"
   "$ROOT/ifu/bpd/composer.sv"
   "$ROOT/ifu/bpd/bpd_update_router.sv"
@@ -48,11 +66,11 @@ rtl=(
   "$ROOT/ifu/ifu.sv"
   "$ROOT/ifu/fetcher_buffer.sv"
   "$ROOT/exu/decode.sv"
-  "$ROOT/exu/br_mask.sv"
+  "$BR_MASK_RTL"
   "$ROOT/exu/rename/rename_maptable.sv"
   "$ROOT/exu/rename/rename_freelist.sv"
   "$ROOT/exu/rename/rename_busytable.sv"
-  "$ROOT/exu/rename/rename_stage.sv"
+  "$RENAME_STAGE_RTL"
   "$ROOT/exu/dispatch.sv"
   "$ROOT/exu/issue/issue_slot.sv"
   "$ROOT/exu/issue/issue_unit_collapsing.sv"
@@ -91,7 +109,7 @@ if [[ "$SKIP_BUILD" == 0 ]]; then
     -GENABLE_SINGLE_DEBUG_COMMIT="$SINGLE_DEBUG_COMMIT" \
     --exe "$TEST_DIR/test_core_top_elf_axi.cpp" \
     "$ELF_DIR/elf_image.cpp" \
-    -CFLAGS "-std=c++17 -O0 -I$ELF_DIR" \
+    -CFLAGS "-std=c++17 -O0 -I$ELF_DIR -DTEST_MAX_BRANCH_TAGS=$TEST_MAX_BRANCH_TAGS" \
     "${rtl[@]}"
 
   make -C "$MDIR" -f Vcore_top_elf_axi_test_top.mk -j 1 \

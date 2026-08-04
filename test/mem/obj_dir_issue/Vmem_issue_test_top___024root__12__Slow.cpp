@@ -4,37 +4,37 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__2(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico__2\n"); );
+VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__3(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico__3\n"); );
     // Body
-    if ((1U & (IData)((triggers[0U] >> 0x00000013U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 19 is active: @( dis_use_dgen_1)\n");
+    if ((1U & (IData)((triggers[0U] >> 0x0000001dU)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 29 is active: @( mispredict_mask)\n");
     }
-    if ((1U & (IData)((triggers[0U] >> 0x00000014U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 20 is active: @( dis_br_mask_1)\n");
+    if ((1U & (IData)((triggers[0U] >> 0x0000001eU)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 30 is active: @( br_mispredict)\n");
     }
-    if ((1U & (IData)((triggers[0U] >> 0x00000015U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 21 is active: @( wakeup_valid_0)\n");
+    if ((1U & (IData)((triggers[0U] >> 0x0000001fU)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 31 is active: @( flush_pipeline)\n");
     }
-    if ((1U & (IData)((triggers[0U] >> 0x00000016U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 22 is active: @( wakeup_pdst_0)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x00000017U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 23 is active: @( wakeup_valid_1)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x00000018U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 24 is active: @( wakeup_pdst_1)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x00000019U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 25 is active: @( src1_data)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x0000001aU)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 26 is active: @( src2_data)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x0000001bU)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 27 is active: @( imm_data)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 0x0000001cU)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 28 is active: @( resolve_mask)\n");
+    if ((1U & (IData)(triggers[1U]))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 64 is active: Internal 'ico' trigger - first iteration\n");
     }
 }
+
+bool Vmem_issue_test_top___024root___trigger_anySet__act(const VlUnpacked<QData/*63:0*/, 1> &in);
+
+#ifdef VL_DEBUG
+VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__act(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__act\n"); );
+    // Body
+    if ((1U & (~ (IData)(Vmem_issue_test_top___024root___trigger_anySet__act(triggers))))) {
+        VL_DBG_MSGS("         No '" + tag + "' region triggers active\n");
+    }
+    if ((1U & (IData)(triggers[0U]))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 0 is active: @(posedge clk)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 1U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 1 is active: @(negedge rst_n)\n");
+    }
+}
+#endif  // VL_DEBUG

@@ -59,6 +59,35 @@ int main(int argc, char** argv) {
     dut->eval();
     expect_eq("full mask blocks another branch", dut->is_full & 1, 1);
 
+    // A mispredicted branch still needs its snapshot for recovery. Do not let
+    // a wrong-path branch reuse that tag before the b2 recovery flush.
+    dut->resolve_mask = 0x8;
+    dut->mispredict_mask = 0x8;
+    dut->is_branch = 1;
+    dut->will_fire = 1;
+    dut->eval();
+    expect_eq("mispredict resolve does not recycle recovery tag",
+              dut->is_full & 1, 1);
+    clear_inputs(dut);
+    dut->eval();
+
+    // A correctly resolved tag no longer protects any live younger uop. The
+    // allocator should be able to recycle it in the same cycle instead of
+    // inserting a one-cycle bubble while br_mask_q catches up.
+    dut->resolve_mask = 0x8;
+    dut->is_branch = 1;
+    dut->will_fire = 1;
+    dut->eval();
+    expect_eq("correct resolve unblocks same-cycle allocation",
+              dut->is_full & 1, 0);
+    expect_eq("same-cycle allocation reuses resolved tag", dut->br_tag_0, 3);
+    expect_eq("recycled branch excludes the resolved predecessor",
+              dut->br_mask_0, 0x7);
+    eval_cycle(dut);
+    clear_inputs(dut);
+    dut->eval();
+    expect_eq("recycled tag remains allocated", dut->br_mask_0, 0xf);
+
     dut->flush_pipeline = 1;
     eval_cycle(dut);
     clear_inputs(dut);

@@ -78,7 +78,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__3(Vbpd_full_t
                                                            & ((IData)(vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__s1_set) 
                                                               >> 5U))][2U] 
                                                           >> 0x0000001fU)))));
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_36 = (1U 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27 = (1U 
                                                  & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
                                                     | (3U 
                                                        == 

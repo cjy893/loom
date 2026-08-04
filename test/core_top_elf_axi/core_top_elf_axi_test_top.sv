@@ -124,12 +124,17 @@ module core_top_elf_axi_test_top #(
     output logic [3:0] unq_state,
     output logic       unq_issue_valid,
     output logic       unq_exec_ready,
+    output logic       decode_downstream_ready,
     output logic       branch_alloc_ready,
+    output logic [DECODE_WIDTH-1:0]      branch_alloc_demand,
+    output logic [MAX_BR_COUNT-1:0]      branch_mask_state,
+    output logic [7:0]                   rename_branch_capacity,
     output logic       rob_ready,
     output logic       alu_iq_full,
     output logic       mem_iq_full,
     output logic       unq_iq_full,
     output logic [MAX_BR_COUNT-1:0] branch_resolve_mask,
+    output logic [MAX_BR_COUNT-1:0] branch_mispredict_mask,
     output logic [ALU_WIDTH-1:0]    branch_resolve_valid_detail,
     output logic [ALU_WIDTH*32-1:0] branch_resolve_pc_detail,
     output logic [ALU_WIDTH*3-1:0]  branch_resolve_cfi_type_detail,
@@ -301,6 +306,7 @@ module core_top_elf_axi_test_top #(
     assign unq_state = dut.core_inst.unq_inst.state;
     assign unq_issue_valid = dut.core_inst.unq_iss_valid;
     assign unq_exec_ready = dut.core_inst.unq_exec_ready;
+    assign decode_downstream_ready = dut.core_inst.dis_ready_w;
     always_comb begin
         dispatch_iq_type_detail = '0;
         dispatch_fu_code_detail = '0;
@@ -315,12 +321,19 @@ module core_top_elf_axi_test_top #(
         end
     end
     assign branch_alloc_ready = dut.core_inst.branch_alloc_ready;
+    assign branch_alloc_demand =
+        dut.core_inst.bm_is_branch & dut.core_inst.dec_lane_eligible;
+    assign branch_mask_state = dut.core_inst.brmask.br_mask_q;
+    assign rename_branch_capacity =
+        8'(dut.core_inst.rename.MAX_BR_COUNT);
     assign rob_ready = dut.core_inst.rob_ready_w;
     assign alu_iq_full = !(|dut.core_inst.alu_iq_dis_ready);
     assign mem_iq_full = !(|dut.core_inst.mem_iq_dis_ready);
     assign unq_iq_full = !(|dut.core_inst.unq_iq_dis_ready);
     assign branch_resolve_mask =
         dut.core_inst.brupdate_w.b1.resolve_mask;
+    assign branch_mispredict_mask =
+        dut.core_inst.brupdate_w.b1.mispredict_mask;
     always_comb begin
         branch_resolve_valid_detail = dut.core_inst.alu_brinfo_valid_q;
         branch_resolve_pc_detail = '0;

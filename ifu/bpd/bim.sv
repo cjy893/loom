@@ -41,9 +41,6 @@ module bim #(
         else bim_write = (~|old_ctr) ? old_ctr : old_ctr - CTR_SZ'(1);
     endfunction
 
-    (* ram_style = "block" *)
-    logic [BANK_WIDTH*CTR_SZ-1:0] ram [0:NUM_SETS-1];
-
     logic [IDX_SZ-1:0] s0_idx;
 
     assign s0_idx = f0_pc[FETCH_ALIGN_BITS+IDX_SZ -1:FETCH_ALIGN_BITS];
@@ -84,10 +81,30 @@ module bim #(
 
     logic doing_reset;
     logic [IDX_SZ-1:0] rst_idx;
+    logic ram_write_en;
+    logic [IDX_SZ-1:0] ram_write_idx;
+    logic [BANK_WIDTH*CTR_SZ-1:0] ram_write_data;
 
     logic bim_ready;
     assign bim_ready = !doing_reset;
     assign ready = bim_ready;
+
+    assign ram_write_en = doing_reset || upd_write;
+    assign ram_write_idx = doing_reset ? rst_idx : upd_idx;
+    assign ram_write_data = doing_reset ? {BANK_WIDTH{2'b10}} : upd_new_ctr;
+
+    bpd_sdp_bram #(
+        .DEPTH(NUM_SETS),
+        .WIDTH(BANK_WIDTH * CTR_SZ)
+    ) ram (
+        .clk,
+        .read_en(f0_valid && !doing_reset),
+        .read_addr(s0_idx),
+        .read_data(s1_ram_rdata),
+        .write_en(ram_write_en),
+        .write_addr(ram_write_idx),
+        .write_data(ram_write_data)
+    );
 
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
@@ -105,9 +122,6 @@ module bim #(
     end
 
     always_ff @(posedge clk) begin
-        if(f0_valid && !doing_reset)
-            s1_ram_rdata <= ram[s0_idx];
-
         s2_preds_in <= f1_preds_in;
         s2_ctrs <= s1_read_bypass_valid ? s1_read_bypass_data : s1_ram_rdata;
     end
@@ -150,11 +164,6 @@ module bim #(
             if(rst_idx == LAST_IDX) doing_reset <= 1'b0;
             else rst_idx <= rst_idx + 1'b1;
         end
-    end
-
-    always_ff @(posedge clk) begin
-        if(doing_reset) ram[rst_idx] <= {BANK_WIDTH{2'b10}};
-        else if(upd_write) ram[upd_idx] <= upd_new_ctr;
     end
 
     for(genvar entry = 0; entry < NUM_WRBYPASS; entry++) begin

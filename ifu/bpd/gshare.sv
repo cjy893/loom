@@ -31,8 +31,7 @@ module gshare #(
     localparam int WRBYPASS_IDX_BITS = $clog2(NUM_WRBYPASS);
     localparam logic [IDX_BITS-1:0] LAST_IDX = IDX_BITS'(NUM_SETS - 1);
 
-    // Keep each table row as one flat word so Vivado can infer a single
-    // synchronous-read RAM instead of expanding every counter into flops.
+    // Keep one bank's counters in a flat word for the shared BRAM wrapper.
     typedef logic [META_BITS-1:0] counter_row_t;
 
     function automatic logic [IDX_BITS-1:0] make_index(
@@ -59,8 +58,7 @@ module gshare #(
         return (~|old_counter) ? old_counter : old_counter - CTR_BITS'(1);
     endfunction
 
-    (* ram_style = "block" *)
-    counter_row_t counter_ram [0:NUM_SETS-1];
+    (* ram_style = "distributed" *)
     logic [BANK_WIDTH-1:0] provider_ram [0:NUM_SETS-1];
 
     logic doing_reset;
@@ -97,6 +95,9 @@ module gshare #(
     logic write_bypass_hit;
     logic [WRBYPASS_IDX_BITS-1:0] write_bypass_hit_index;
     logic [WRBYPASS_IDX_BITS-1:0] write_bypass_enqueue_index;
+    logic counter_write_en;
+    logic [IDX_BITS-1:0] counter_write_index;
+    counter_row_t counter_write_data;
 
     assign ready = !doing_reset;
     assign s0_index = make_index(f0_pc, f0_ghist);
@@ -116,6 +117,24 @@ module gshare #(
                                   update_write_mask
                                 : provider_ram[update_index] |
                                   update_write_mask;
+    assign counter_write_en = doing_reset || update_write;
+    assign counter_write_index = doing_reset ? reset_index : update_index;
+    assign counter_write_data = doing_reset
+                              ? {BANK_WIDTH{2'b10}}
+                              : update_new_counters;
+
+    bpd_sdp_bram #(
+        .DEPTH(NUM_SETS),
+        .WIDTH(META_BITS)
+    ) counter_ram (
+        .clk,
+        .read_en(f0_valid && !doing_reset),
+        .read_addr(s0_index),
+        .read_data(s1_counter_data),
+        .write_en(counter_write_en),
+        .write_addr(counter_write_index),
+        .write_data(counter_write_data)
+    );
 
     for(genvar lane = 0; lane < BANK_WIDTH; lane++) begin: gen_update
         assign update_lane_taken[lane] = s1_update.cfi_valid &&
@@ -179,10 +198,8 @@ module gshare #(
     end
 
     always_ff @(posedge clk) begin
-        if(f0_valid && !doing_reset) begin
-            s1_counter_data <= counter_ram[s0_index];
+        if(f0_valid && !doing_reset)
             s1_provider_data <= provider_ram[s0_index];
-        end
         s2_counters <= s1_read_bypass_valid
                      ? s1_read_bypass_counters : s1_counter_data;
         s2_providers <= s1_read_bypass_valid
@@ -201,13 +218,10 @@ module gshare #(
     end
 
     always_ff @(posedge clk) begin
-        if(doing_reset) begin
-            counter_ram[reset_index] <= {BANK_WIDTH{2'b10}};
+        if(doing_reset)
             provider_ram[reset_index] <= '0;
-        end else if(update_write) begin
-            counter_ram[update_index] <= update_new_counters;
+        else if(update_write)
             provider_ram[update_index] <= update_new_providers;
-        end
     end
 
     for(genvar entry = 0; entry < NUM_WRBYPASS; entry++) begin: gen_bypass_hit

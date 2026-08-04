@@ -9,7 +9,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__6(Vbpd_full_test_top___024
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 = (1U 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_33 = (1U 
                                                  & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
                                                     | ((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
                                                         >> 7U) 
@@ -29,21 +29,25 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__7(Vbpd_full_test_top___024
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0U;
-    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0U;
+    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entries__v5 = 0U;
-    if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset) {
-        vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 
-            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
-        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 1U;
-    } else if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_write) {
-        vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 
-            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_new_ctr;
-        vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 
-            = (0x000007ffU & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
-                              >> 5U));
-        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 1U;
+    if (((IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset) 
+         | (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_write))) {
+        if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset) {
+            vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 = 0x0aU;
+            vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 
+                = (0x000007ffU & (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx));
+        } else {
+            vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 
+                = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_new_ctr;
+            vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 
+                = (0x000007ffU & ((vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
+                                   << 0x0000001bU) 
+                                  | (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
+                                     >> 5U)));
+        }
+        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__DOT__mem__v0 = 1U;
     }
     if (vlSelfRef.rst_n) {
         if (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__do_allocate) {
@@ -109,7 +113,7 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__7(Vbpd_full_test_top___024
             vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entries__v4 
                 = (0x0000001fU & (vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_lane_pc 
                                   >> 2U));
-        } else if ((((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32) 
+        } else if ((((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_35) 
                      | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_10)) 
                     & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3))) {
             vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__entries__v5 

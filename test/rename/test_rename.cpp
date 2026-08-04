@@ -2,6 +2,17 @@
 #include "verilated.h"
 #include "../common/verilator_test.h"
 
+#ifndef TEST_MAX_BRANCH_TAGS
+#define TEST_MAX_BRANCH_TAGS 4
+#endif
+
+constexpr unsigned MAX_BRANCH_TAGS = TEST_MAX_BRANCH_TAGS;
+static_assert(MAX_BRANCH_TAGS >= 2 && MAX_BRANCH_TAGS < 32);
+constexpr unsigned HIGH_BRANCH_TAG = MAX_BRANCH_TAGS - 1;
+constexpr unsigned OUTER_BRANCH_TAG = MAX_BRANCH_TAGS - 2;
+constexpr unsigned HIGH_BRANCH_MASK = 1U << HIGH_BRANCH_TAG;
+constexpr unsigned OUTER_BRANCH_MASK = 1U << OUTER_BRANCH_TAG;
+
 static void clear_inputs(Vrename_test_top* dut) {
     dut->in_valid = 0;
     dut->in_lsrc1_0 = dut->in_lsrc2_0 = dut->in_ldst_0 = 0;
@@ -22,6 +33,8 @@ static void clear_inputs(Vrename_test_top* dut) {
     dut->kill = 0;
     dut->br_mispredict = 0;
     dut->br_mispredict_tag = 0;
+    dut->br_resolve_mask = 0;
+    dut->br_mispredict_mask = 0;
     dut->dis_ready = 1;
     dut->dis_fire = 3;
 }
@@ -31,6 +44,23 @@ int main(int argc, char** argv) {
     auto* dut = new Vrename_test_top;
     clear_inputs(dut);
     reset_dut(dut);
+
+    // A tag recycled by Decode is a new generation. If lane 0 allocates that
+    // tag, a younger lane entering Rename2 in the same cycle must retain the
+    // dependency even though the old generation resolves on b1.
+    dut->in_valid = 3;
+    dut->in_allocate_brtag_0 = 1;
+    dut->in_br_tag_0 = HIGH_BRANCH_TAG;
+    dut->in_br_mask_1 = HIGH_BRANCH_MASK;
+    dut->br_resolve_mask = HIGH_BRANCH_MASK;
+    eval_cycle(dut);
+    expect_eq("recycled tag dependency survives Rename2 capture",
+              dut->out_br_mask_1, HIGH_BRANCH_MASK);
+
+    clear_inputs(dut);
+    dut->rst_n = 0;
+    eval_cycle(dut);
+    dut->rst_n = 1;
 
     // A read-modify-write must read the old mapping and allocate from p32.
     dut->in_valid = 1;
@@ -248,8 +278,9 @@ int main(int argc, char** argv) {
     expect_eq("branch recovery frees first wrong-path pdst", dut->out_pdst_0, 33);
     expect_eq("branch recovery frees second wrong-path pdst", dut->out_pdst_1, 34);
 
-    // Nested snapshots must restore only allocations younger than the selected
-    // branch: recovering tag 1 keeps p32, then recovering tag 0 frees it.
+    // Use the highest two legal tags so a wider package cannot silently leave
+    // the extra MapTable or Freelist snapshots unimplemented.
+    // Recovering the inner tag keeps p32; recovering the outer tag frees it.
     clear_inputs(dut);
     dut->rst_n = 0;
     eval_cycle(dut);
@@ -257,7 +288,7 @@ int main(int argc, char** argv) {
 
     dut->in_valid = 1;
     dut->in_allocate_brtag_0 = 1;
-    dut->in_br_tag_0 = 0;
+    dut->in_br_tag_0 = OUTER_BRANCH_TAG;
     eval_cycle(dut);
     clear_inputs(dut);
     eval_cycle(dut);
@@ -270,7 +301,7 @@ int main(int argc, char** argv) {
 
     dut->in_valid = 1;
     dut->in_allocate_brtag_0 = 1;
-    dut->in_br_tag_0 = 1;
+    dut->in_br_tag_0 = HIGH_BRANCH_TAG;
     eval_cycle(dut);
     clear_inputs(dut);
     eval_cycle(dut);
@@ -282,14 +313,14 @@ int main(int argc, char** argv) {
     eval_cycle(dut);
 
     dut->br_mispredict = 1;
-    dut->br_mispredict_tag = 1;
+    dut->br_mispredict_tag = HIGH_BRANCH_TAG;
     eval_cycle(dut);
     clear_inputs(dut);
     dut->in_valid = 1;
     dut->in_lsrc1_0 = 5;
     dut->in_lsrc2_0 = 6;
     dut->in_ldst_0 = 7;
-    dut->in_br_mask_0 = 1;
+    dut->in_br_mask_0 = OUTER_BRANCH_MASK;
     eval_cycle(dut);
     expect_eq("inner recovery keeps outer allocation", dut->out_psrc1_0, 32);
     expect_eq("inner recovery restores r6", dut->out_psrc2_0, 6);
@@ -298,7 +329,7 @@ int main(int argc, char** argv) {
     // Do not dispatch the probe; recover the still-unresolved outer branch.
     dut->dis_fire = 0;
     dut->br_mispredict = 1;
-    dut->br_mispredict_tag = 0;
+    dut->br_mispredict_tag = OUTER_BRANCH_TAG;
     eval_cycle(dut);
     clear_inputs(dut);
     dut->in_valid = 3;
@@ -338,6 +369,7 @@ int main(int argc, char** argv) {
     expect_eq("same-bundle recovery frees younger pdst",
               dut->out_pdst_0, 32);
 
+    std::printf("configuration: MAX_BR_COUNT=%u\n", MAX_BRANCH_TAGS);
     pass("rename");
     delete dut;
     return 0;

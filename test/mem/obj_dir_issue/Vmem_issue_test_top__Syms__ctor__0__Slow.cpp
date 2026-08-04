@@ -5,7 +5,7 @@
 
 void Vmem_issue_test_top__Syms::Vmem_issue_test_top__Syms__ctor__0() {
     // Check resources
-    Verilated::stackCheck(1034);
+    Verilated::stackCheck(1074);
     // Setup sub module instances
     // Configure time unit / time precision
     _vm_contextp__->timeunit(-12);

@@ -4,87 +4,39 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__stl(const VlUnpacked<QData/*63:0*/, 1> &triggers, const std::string &tag);
-#endif  // VL_DEBUG
-VL_ATTR_COLD bool Vmem_issue_test_top___024root___trigger_anySet__stl(const VlUnpacked<QData/*63:0*/, 1> &in);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__0(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__1(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__2(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__3(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__4(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__7(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__8(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__9(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__8(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__9(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__10(Vmem_issue_test_top___024root* vlSelf);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__11(Vmem_issue_test_top___024root* vlSelf);
-void Vmem_issue_test_top___024root___ico_comb__TOP__14(Vmem_issue_test_top___024root* vlSelf);
+bool Vmem_issue_test_top___024root___trigger_anySet__ico(const VlUnpacked<QData/*63:0*/, 2> &in);
 
-VL_ATTR_COLD bool Vmem_issue_test_top___024root___eval_phase__stl(Vmem_issue_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___eval_phase__stl\n"); );
-    Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
-    auto& vlSelfRef = std::ref(*vlSelf).get();
-    // Locals
-    CData/*0:0*/ __VstlExecute;
+VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico__0\n"); );
     // Body
-    {
-        // Inlined CFunc: _eval_triggers_vec__stl
-        vlSelfRef.__VstlTriggered[0U] = ((0xfffffffffffffffeULL 
-                                          & vlSelfRef.__VstlTriggered[0U]) 
-                                         | (IData)((IData)(vlSelfRef.__VstlFirstIteration)));
+    if ((1U & (~ (IData)(Vmem_issue_test_top___024root___trigger_anySet__ico(triggers))))) {
+        VL_DBG_MSGS("         No '" + tag + "' region triggers active\n");
     }
-#ifdef VL_DEBUG
-    if (VL_UNLIKELY(vlSymsp->_vm_contextp__->debug())) {
-        Vmem_issue_test_top___024root___dump_triggers__stl(vlSelfRef.__VstlTriggered, "stl"s);
+    if ((1U & (IData)(triggers[0U]))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 0 is active: @( clk)\n");
     }
-#endif
-    __VstlExecute = Vmem_issue_test_top___024root___trigger_anySet__stl(vlSelfRef.__VstlTriggered);
-    if (__VstlExecute) {
-        {
-            // Inlined CFunc: _eval_stl
-            if ((1ULL & vlSelfRef.__VstlTriggered[0U])) {
-                Vmem_issue_test_top___024root___stl_sequent__TOP__0(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__1(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__2(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__3(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__4(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__7(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__8(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__9(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__8(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__9(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__10(vlSelf);
-                Vmem_issue_test_top___024root___stl_sequent__TOP__11(vlSelf);
-                Vmem_issue_test_top___024root___ico_comb__TOP__14(vlSelf);
-                {
-                    // Inlined CFunc: _nba_sequent__TOP__16
-                    vlSelfRef.agen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3) 
-                                            & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid));
-                    vlSelfRef.dgen_valid = ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4) 
-                                            & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3) 
-                                               & (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[8U] 
-                                                  >> 0x00000012U)));
-                }
-            }
-        }
+    if ((1U & (IData)((triggers[0U] >> 1U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 1 is active: @( rst_n)\n");
     }
-    return (__VstlExecute);
+    if ((1U & (IData)((triggers[0U] >> 2U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 2 is active: @( rob_head_idx)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 3U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 3 is active: @( dis_valid)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 4U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 4 is active: @( dis_rob_idx)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 5U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 5 is active: @( dis_psrc1)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 6U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 6 is active: @( dis_psrc2)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 7U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 7 is active: @( dis_psrc1_busy)\n");
+    }
+    if ((1U & (IData)((triggers[0U] >> 8U)))) {
+        VL_DBG_MSGS("         '" + tag + "' region trigger index 8 is active: @( dis_psrc2_busy)\n");
+    }
 }
-
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__1(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__2(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__3(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag);
-
-#ifdef VL_DEBUG
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico\n"); );
-    // Body
-    Vmem_issue_test_top___024root___dump_triggers__ico__0(triggers, tag);
-    Vmem_issue_test_top___024root___dump_triggers__ico__1(triggers, tag);
-    Vmem_issue_test_top___024root___dump_triggers__ico__2(triggers, tag);
-    Vmem_issue_test_top___024root___dump_triggers__ico__3(triggers, tag);
-}
-#endif  // VL_DEBUG

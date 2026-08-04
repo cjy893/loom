@@ -60,16 +60,16 @@ VL_ATTR_COLD bool Vbpd_full_test_top___024root___eval_phase__stl(Vbpd_full_test_
                 Vbpd_full_test_top___024root___stl_sequent__TOP__14(vlSelf);
                 {
                     // Inlined CFunc: _stl_sequent__TOP__15
-                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28 
+                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31 
                         = ((IData)(vlSelfRef.f1_is_br) 
-                           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31));
+                           & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_34));
                     vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate 
                         = ((~ (IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit)) 
                            & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3));
                     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0 
-                        = (1U & (- (IData)(((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28)) 
+                        = (1U & (- (IData)(((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_31)) 
                                             & (IData)(vlSelfRef.f1_is_br)))));
-                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30 
+                    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_33 
                         = (1U & ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 
                                  | ((vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U] 
                                      >> 7U) | ((IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_0) 

@@ -26,9 +26,13 @@ module br_mask #(
     logic [CORE_WIDTH-1:0] [BR_TAG_SZ-1:0] alloc_tag;
     logic [CORE_WIDTH-1:0] [MAX_BR_COUNT-1:0] alloc_mask;
     logic [MAX_BR_COUNT-1:0] allocate_accum;
+    logic [MAX_BR_COUNT-1:0] correct_resolve_mask;
+
+    assign correct_resolve_mask =
+        brupdate.b1.resolve_mask & ~brupdate.b1.mispredict_mask;
 
     always_comb begin
-        allocate_accum = br_mask_q;
+        allocate_accum = br_mask_q & ~correct_resolve_mask;
 
         for(int w = 0; w < CORE_WIDTH; w++) begin
             alloc_tag[w] = '0;

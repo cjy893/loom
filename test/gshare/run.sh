@@ -33,6 +33,7 @@ DUT_SOURCES=(
   "$ROOT/common/params_pkg.sv"
   "$ROOT/common/consts_pkg.sv"
   "$ROOT/common/types_pkg.sv"
+  "$ROOT/ifu/bpd/bpd_sdp_bram.sv"
   "$GSHARE_SOURCE"
 )
 

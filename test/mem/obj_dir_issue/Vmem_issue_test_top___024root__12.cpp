@@ -45,11 +45,11 @@ void Vmem_issue_test_top___024root___eval_ico(Vmem_issue_test_top___024root* vlS
             // Inlined CFunc: _ico_comb__TOP__4
             vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_br_killed 
                 = ((((IData)(vlSelfRef.dis_valid_1) 
-                     & (0U != ((IData)(vlSelfRef.dis_br_mask_1) 
-                               & (IData)(vlSelfRef.mispredict_mask)))) 
+                     & (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                               & (IData)(vlSelfRef.dis_br_mask_1)))) 
                     << 1U) | ((IData)(vlSelfRef.dis_valid) 
-                              & (0U != ((IData)(vlSelfRef.dis_br_mask) 
-                                        & (IData)(vlSelfRef.mispredict_mask)))));
+                              & (0U != ((IData)(vlSelfRef.mispredict_mask) 
+                                        & (IData)(vlSelfRef.dis_br_mask)))));
         }
     }
     if ((0x0000000070000000ULL & vlSelfRef.__VicoTriggered[0U])) {

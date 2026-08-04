@@ -56,7 +56,6 @@ VM_CLASSES_FAST += \
   Vmem_issue_test_top___024root__25 \
   Vmem_issue_test_top___024root__26 \
   Vmem_issue_test_top___024root__27 \
-  Vmem_issue_test_top___024root__28 \
 
 # Generated module classes, non-fast-path, compile with low/medium optimization
 VM_CLASSES_SLOW += \
@@ -78,7 +77,6 @@ VM_CLASSES_SLOW += \
   Vmem_issue_test_top___024root__13__Slow \
   Vmem_issue_test_top___024root__14__Slow \
   Vmem_issue_test_top___024root__15__Slow \
-  Vmem_issue_test_top___024root__16__Slow \
   Vmem_issue_test_top___024unit__Slow \
 
 # Generated support classes, fast-path, compile with highest optimization

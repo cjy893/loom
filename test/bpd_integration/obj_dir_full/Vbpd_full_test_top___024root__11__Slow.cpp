@@ -21,7 +21,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__10(Vbpd_full_
         vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_hit_idx = 1U;
     }
     vlSelfRef.bpd_full_test_top__DOT__ghist_cfi_valid 
-        = ((IData)(vlSelfRef.f1_is_br) | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_27));
+        = ((IData)(vlSelfRef.f1_is_br) | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_30));
     vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit_vec 
         = (((((((0x0003fffeU & (((IData)(vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid) 
                                  >> 0x0000000eU) & 

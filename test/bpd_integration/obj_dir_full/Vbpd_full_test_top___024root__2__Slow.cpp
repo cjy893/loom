@@ -9,6 +9,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__0(Vbpd_full_t
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.bim_ready = (1U & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset)));
     vlSelfRef.current_ghist[0U] = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U];
     vlSelfRef.current_ghist[1U] = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[1U];
     vlSelfRef.current_ghist[2U] = vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[2U];
@@ -17,7 +18,6 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__0(Vbpd_full_t
                            << 3U)) | (0x0000001fU & 
                                       (vlSelfRef.update_pc 
                                        >> 2U)));
-    vlSelfRef.bim_ready = (1U & (~ (IData)(vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset)));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_4 = ((0x00000020U 
                                                  & vlSelfRef.bpd_full_test_top__DOT__ghist_inst__DOT__history_q[0U])
                                                  ? 

@@ -159,11 +159,14 @@ module rob #(
     end
 
     logic branch_recovery_pending;
+    logic branch_interrupt_block;
     assign branch_recovery_pending = brupdate.b2.mispredict;
+    assign branch_interrupt_block = branch_recovery_pending ||
+                                    (|brupdate.b1.mispredict_mask);
 
     assign interrupt_taken = interrupt_pending && (rob_state == S_NORMAL) && !first_head_exception &&
                              !exception_throw_d1 && !exception_throw_d2 &&
-                             !branch_recovery_pending && !lxcpt.valid;
+                             !branch_interrupt_block && !lxcpt.valid;
 
     logic [CORE_WIDTH-1:0] can_commit;
     logic [CORE_WIDTH-1:0] can_throw_exception;

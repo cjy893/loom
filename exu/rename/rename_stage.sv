@@ -231,7 +231,11 @@ module rename_stage #(
         for(int w = 0; w < CORE_WIDTH; w++) begin
             if(|(rn2_uops_next[w].br_mask & brupdate.b1.mispredict_mask)) rn2_mask_next[w] = 1'b0;
 
-            rn2_uops_next[w].br_mask &= ~brupdate.b1.resolve_mask;
+            // Decode has already applied b1 to newly accepted uops. Applying
+            // it again here would clear a same-cycle recycled branch tag from
+            // a younger lane. Only held Rename2 uops need the update.
+            if(!dis_ready)
+                rn2_uops_next[w].br_mask &= ~brupdate.b1.resolve_mask;
         end
     end
 

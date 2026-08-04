@@ -39,9 +39,9 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___stl_sequent__TOP__9(Vbpd_full_t
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit = 1U;
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0fU;
     }
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_38 = ((vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[7U] 
+    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_29 = ((vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[7U] 
                                                   >> 0x0000001fU) 
-                                                 | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_37));
+                                                 | (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_28));
     vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3 = ((IData)(vlSelfRef.update_valid) 
                                                 & ((IData)(vlSelfRef.update_cfi_valid) 
                                                    & ((~ 

@@ -165,11 +165,19 @@ public:
             return;
 
         if (pending_) {
+            std::fprintf(stderr,
+                         "FAIL: imem accepted a second request while one is pending: "
+                         "cycle=%d addr=0x%08x pending_addr=0x%08x "
+                         "accepted_cycle=%d due_cycle=%d response_active=%u\n",
+                         cycle, request_addr, pending_addr_, accepted_cycle_, due_cycle_,
+                         static_cast<unsigned>(response_active_));
             protocol_ok_ = false;
             return;
         }
 
         pending_ = true;
+        pending_addr_ = request_addr;
+        accepted_cycle_ = cycle;
         due_cycle_ = cycle + 2;
         for (int lane = 0; lane < FETCH_WIDTH; ++lane) {
             uint32_t pc = request_addr + 4U * lane;
@@ -187,6 +195,8 @@ private:
     bool pending_ = false;
     bool response_active_ = false;
     bool protocol_ok_ = true;
+    uint32_t pending_addr_ = 0;
+    int accepted_cycle_ = -1;
     int due_cycle_ = 0;
     std::array<uint32_t, FETCH_WIDTH> response_{};
 };
@@ -418,8 +428,20 @@ RunResult run_scenario(Vcore_top_contract_test_top* dut,
     }
     RequestStabilityMonitor stability;
     RunResult result;
+    bool irq_raise_pending = false;
+    bool irq_clear_pending = false;
 
     for (int cycle = 0; cycle < 4000; ++cycle) {
+        if (irq_raise_pending) {
+            dut->hw_irq = 1;
+            result.irq_asserted = true;
+            irq_raise_pending = false;
+        }
+        if (irq_clear_pending) {
+            dut->hw_irq = 0;
+            irq_clear_pending = false;
+        }
+
         imem.drive(dut, cycle);
         dmem.drive(dut, cycle);
         dut->eval();
@@ -438,7 +460,7 @@ RunResult run_scenario(Vcore_top_contract_test_top* dut,
             dut->imem_req_addr == HANDLER_PC) {
             result.handler_fetch_seen = true;
             if (result.irq_asserted)
-                dut->hw_irq = 0;
+                irq_clear_pending = true;
         }
 
         unsigned commit_mask = dut->commit_valid;
@@ -453,11 +475,10 @@ RunResult run_scenario(Vcore_top_contract_test_top* dut,
                     (dut->commit_ldst >> (lane * 5)) & 0x1fU),
             };
             result.commits.push_back(commit);
-            if (!result.irq_asserted &&
+            if (!result.irq_asserted && !irq_raise_pending &&
                 scenario.irq_trigger_pc != 0 &&
                 commit.pc == scenario.irq_trigger_pc) {
-                result.irq_asserted = true;
-                dut->hw_irq = 1;
+                irq_raise_pending = true;
             }
         }
 

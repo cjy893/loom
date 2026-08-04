@@ -15,13 +15,14 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___0
                     | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready))));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
         = ((7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
-           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
-                                       << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[46U] 
-                                                 >> 0x0000001eU)) 
-                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                         << 0x00000017U) 
-                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
-                                           >> 9U))))) 
+           | ((0U != (0x0000003fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
+                                       << 0x00000018U) 
+                                      | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U] 
+                                         >> 8U)) & 
+                                     ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                       << 0x00000014U) 
+                                      | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         >> 0x0000000cU))))) 
               << 3U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready 
         = ((7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready)) 
@@ -29,8 +30,8 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___0
                           >> 3U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
                                        >> 3U))) & (~ 
                                                    (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U] 
-                                                    >> 0x00000015U))) 
-                       & (0x00020000U == (0x00024000U 
+                                                    >> 0x0000001eU))) 
+                       & (0x20000000U == (0x24000000U 
                                           & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U])))) 
               << 3U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready 
@@ -39,8 +40,8 @@ void Vmem_issue_test_top___024root___nba_sequent__TOP__8(Vmem_issue_test_top___0
                           >> 3U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
                                        >> 3U))) & (~ 
                                                    (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[42U] 
-                                                    >> 0x00000014U))) 
-                       & (0x00040000U == (0x00042000U 
+                                                    >> 0x0000001dU))) 
+                       & (0x40000000U == (0x42000000U 
                                           & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[47U])))) 
               << 3U));
     vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 

@@ -35,10 +35,10 @@ void Vbpd_full_test_top___024root___nba_comb__TOP__10(Vbpd_full_test_top___024ro
         vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_idx = 0x0fU;
     }
     vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__upd_hit_way 
-        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32)) 
+        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_35)) 
            & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_10));
     vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__do_allocate 
-        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_32)) 
+        = ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_35)) 
            & ((~ (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_10)) 
               & (IData)(vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3)));
     vlSelfRef.bpd_full_test_top__DOT__ubtb_inst__DOT__do_allocate 

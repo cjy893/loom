@@ -315,10 +315,39 @@
   失败端点。最差路径为 ROB `rob_val` 到 UNQ IQ `psrc1_busy`，DCache直返没有成为
   报告中的最差路径。
 - [x] 完成 DCache hit 直接响应的上板功能和性能验收：仅 `quick_sort` 0.73、
-  `crc32` 0.75、`dhrystone` 0.81 低于 0.9，其余全部高于 0.9，其中 10 项超过
-  OpenLA500 的 IPC；该优化正式并入新的 40 MHz 基线。
+  `crc32` 0.75、`dhrystone` 0.82 低于 0.9，其余全部高于 0.9，其中 10 项超过
+  OpenLA500 的 IPC；该优化已由提交 `1f01183` 正式并入新的 40 MHz 基线。
   “优先分析仅约参考核三分之一的 `crc32` 和 `fireye_C0`”属于旧基线结论，已经由
   下方 2026-08-04 基线取代。
+- [x] 完成正确解析分支 tag 的同拍回收，并修正 Rename2 对同拍复用 tag 的
+  `br_mask` 清除边界。隔离 Verilator A/B 中 `crc32` IPC 0.7207->0.7870
+  （+9.20%，周期 -8.43%），完整 38 组回归和官方功能 ELF 正常/AXI 背压均通过；
+  实现后 WNS 为 `+0.361 ns`。板测总体仅小幅变化，最低项仍为 `quick_sort` 0.73、
+  `crc32` 0.75、`dhrystone` 0.82，因此不把仿真增益直接外推到板上。
+- [x] 完成分支 tag 容量隔离与逐 PC 方向热点采样。生产 4-tag `crc32` 有 53.08%
+  周期因 tag 阻塞且 85.48% 周期占满；直接改为 6/8 都在 5,517 次提交后死锁。
+  根因隔离为 `loom_core` 实例化 `rename_stage` 时漏传 `MAX_BR_COUNT`：仅在 `/tmp`
+  让 Rename 快照跟随 8-tag 后，完整 CRC32 IPC 0.7870->0.9304（+18.22%），周期
+  -15.41%，tag 阻塞降到 0.01%。正式 RTL 未在本次隔离中修改。
+- [x] Rename 参数回归已扩展为 4/6/8-tag，最高两个 tag 的同拍复用、嵌套
+  MapTable/Freelist 快照恢复均通过。Core ELF 新增参数契约快速检查：生产 4-tag
+  通过，临时 6-tag 在修复前按预期报告 `allocator/types=6, rename snapshots=4`。
+- [x] `loom_core -> rename_stage` 已显式传递 `MAX_BR_COUNT`，6-tag Core 契约测试
+  转绿；临时 6-tag 完整 CRC32 IPC/周期与 8-tag 完全相同（0.9304、1,836,456），
+  官方功能 ELF 正常和确定性 AXI 背压均通过 58/58。
+- [x] 生产 `params_pkg.sv` 的 `MAX_BR_COUNT` 已改为 6；正式参数下完整模块回归、
+  Core 参数契约以及官方功能 ELF 正常/确定性 AXI 背压均通过。8-tag 没有额外 IPC
+  收益，因此不采用。
+- [ ] 对已切换的生产 6-tag 配置进行非增量综合/实现，记录 LUT、寄存器和 40 MHz
+  WNS，并与已保存的 4-tag 基线比较；若资源或时序不可接受，再回退到 4-tag。
+- [ ] 为 `dhrystone` 热点增加 provider/index/meta/update 归因：`0x1c001704`、
+  `0x1c0009a4`、`0x1c0016e4` 实际恒 taken 却分别只预测 taken 33.3%/0%/0%，
+  `0x1c0016f4` 为 N,N,T 而持续预测 N；另将 `0x1c001640` 的 JIRL 目标/metadata
+  失配与方向问题分开统计。
+- [ ] 为 `quick_sort` 的 `0x1c000b04`、`0x1c000cd0`、`0x1c000b3c` 增加
+  GShare/BIM/BTB provider 和别名统计。其实际方向转换频繁，先区分固有高熵与
+  索引/训练冲突，再决定扩大 GShare、增加 tagged predictor 或局部历史；STQ 只占
+  总周期约 3.57% 的分发阻塞，列为第二优先级。
 
 #### 2026-08-04 频率优化基线与结果
 

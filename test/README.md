@@ -51,6 +51,12 @@ Run one suite:
 ./test/integration/run.sh
 ```
 
+`test/rename/run.sh` compiles the production Rename modules separately with
+`MAX_BR_COUNT=4`, `6`, and `8`. Each configuration checks same-cycle tag reuse
+and nested recovery through the highest two legal MapTable/Freelist snapshots.
+The Core ELF test also accepts `--check-branch-tag-contract`, which compares the
+global branch-tag capacity with the capacity actually elaborated in Rename.
+
 Run all production branch-prediction modules, FTQ configurations, metadata
 transport checks, and predictor integration tests with:
 

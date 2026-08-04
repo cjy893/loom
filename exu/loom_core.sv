@@ -279,6 +279,19 @@ module loom_core #(
     logic [ASID_BITS-1:0]        tlb_inv_asid_w;
     logic [31:0]                 tlb_inv_vaddr_w;
 
+    // Cross-stage control signals are declared before their first use. This
+    // prevents Verilog tools from creating implicit one-bit nets for signals
+    // whose producers are instantiated later in this module.
+    br_update_info_t             brupdate_w;
+    logic [CORE_WIDTH-1:0]       bm_is_full;
+    logic                        dis_ready_w;
+    logic                        unq_exec_ready;
+    logic [ROB_ADDR_SZ-1:0]      rob_tail_idx_w;
+    logic                        rob_rollback_w;
+    logic                        rob_flush_frontend_w;
+    logic                        rob_ready_w;
+    logic                        core_idle_q;
+
     // The frontend owns the packet until every valid lane has entered Decode.
     // Only a completion mask is retained here; instruction data stays at the
     // ready/valid boundary and can therefore flow through without an extra
@@ -450,7 +463,6 @@ module loom_core #(
     logic [CORE_WIDTH-1:0]               bm_will_fire;
     logic [CORE_WIDTH-1:0][$clog2(MAX_BR_COUNT)-1:0] bm_br_tag;
     logic [CORE_WIDTH-1:0][MAX_BR_COUNT-1:0]         bm_br_mask;
-    logic [CORE_WIDTH-1:0]               bm_is_full;
     logic                                bm_flush;
 
     for (genvar w = 0; w < CORE_WIDTH; w++) begin : gen_branch_inputs
@@ -509,7 +521,6 @@ module loom_core #(
     // Rename Stage
     // ================================================================
     wakeup_t [NUM_WAKEUPS-1:0]   wakeups;
-    logic                         dis_ready_w;
 
     // Keep the fields used by dispatch-ready calculation independent from the
     // physical rename result, which itself legitimately depends on dis_fire.
@@ -552,7 +563,8 @@ module loom_core #(
     end
 
     rename_stage #(.CORE_WIDTH(CORE_WIDTH), .PHYSICAL_REGS(PHYSICAL_REGS),
-                   .WAKEUP_PORTS(NUM_WAKEUPS), .IS_FP(0))
+                   .WAKEUP_PORTS(NUM_WAKEUPS), .IS_FP(0),
+                   .MAX_BR_COUNT(MAX_BR_COUNT))
     rename (
         .clk(clk), .rst_n(rst_n),
         .dec_valids(dec_valids),
@@ -1123,7 +1135,6 @@ module loom_core #(
     // ================================================================
     // 执行单元——UNQ
     // ================================================================
-    logic unq_exec_ready;
     logic unq_res_valid;
     exe_unit_resp_t unq_res;
 
@@ -1396,22 +1407,17 @@ module loom_core #(
     // ================================================================
     logic [CORE_WIDTH-1:0]             rob_enq_valids;
     uop_t [CORE_WIDTH-1:0]             rob_enq_uops;
-    logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
     exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
     exe_unit_resp_t [ALU_WIDTH-1:0]    alu_rob_wb_d;
     exe_unit_resp_t [ALU_WIDTH-1:0]    alu_rob_wb_q;
     commit_exception_signals_t          rob_com_xcpt_w;
     commit_exception_signals_t          rob_flush_w;
-    logic                               rob_rollback_w;
-    logic                               rob_flush_frontend_w;
-    logic                               rob_ready_w;
     logic [31:0]                        rob_interrupt_next_pc_w;
 
     assign rob_enq_valids = dis_fire;
     assign rob_enq_uops = dis_uops_w;
 
     logic        rob_interrupt_taken_w;
-    logic        core_idle_q;
     logic        idle_commit_w;
     logic [31:0] idle_commit_pc_w;
     logic [31:0] idle_resume_pc_q;
@@ -1764,7 +1770,6 @@ module loom_core #(
     // ================================================================
     // 分支更新
     // ================================================================
-    br_update_info_t brupdate_w;
     logic [MAX_BR_COUNT-1:0] resolve_mask_d;
     logic [MAX_BR_COUNT-1:0] resolve_mask_q;
     logic [MAX_BR_COUNT-1:0] mispredict_mask_d;

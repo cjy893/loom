@@ -27,6 +27,11 @@ constexpr uint32_t TIMER_ADDRESS = 0xbfafe000U;
 constexpr uint32_t UART_STATUS_WORD_ADDRESS = 0xbfe001e4U;
 constexpr unsigned COMMIT_WIDTH = 2;
 constexpr unsigned ALU_WIDTH = 3;
+#ifndef TEST_MAX_BRANCH_TAGS
+#define TEST_MAX_BRANCH_TAGS 4
+#endif
+constexpr unsigned MAX_BRANCH_TAGS = TEST_MAX_BRANCH_TAGS;
+static_assert(MAX_BRANCH_TAGS > 0 && MAX_BRANCH_TAGS < 32);
 constexpr unsigned IQ_MEM = 0x1;
 constexpr unsigned IQ_UNQ = 0x2;
 constexpr unsigned IQ_ALU = 0x4;
@@ -54,6 +59,7 @@ struct Options {
     bool simu_flag_set = false;
     bool allow_exceptions = false;
     bool check_startup_prefix = true;
+    bool branch_tag_contract_only = false;
     std::set<uint32_t> allowed_exception_pcs;
 };
 
@@ -68,7 +74,13 @@ struct CommitRecord {
 struct BranchPcStats {
     uint64_t resolves = 0;
     uint64_t taken = 0;
+    uint64_t predicted_taken = 0;
     uint64_t mispredicts = 0;
+    uint64_t direction_transitions = 0;
+    bool has_last_actual = false;
+    bool last_actual_taken = false;
+    std::string actual_trace;
+    std::string predicted_trace;
 };
 
 uint64_t parse_unsigned(const std::string& option,
@@ -98,6 +110,8 @@ void print_usage(const char* executable) {
         "                      allow an exception at one instruction PC\n"
         "  --skip-startup-prefix\n"
         "                      accept an ELF-specific startup sequence\n"
+        "  --check-branch-tag-contract\n"
+        "                      stop after checking allocator/Rename capacity\n"
         "  --trace             print commits and AXI transactions\n",
         executable);
 }
@@ -147,6 +161,8 @@ Options parse_options(int argc, char** argv) {
                 parse_unsigned(argument, require_value())));
         } else if (argument == "--skip-startup-prefix") {
             options.check_startup_prefix = false;
+        } else if (argument == "--check-branch-tag-contract") {
+            options.branch_tag_contract_only = true;
         } else if (argument == "--trace") {
             options.trace = true;
         } else if (argument == "--help" || argument == "-h") {
@@ -597,6 +613,75 @@ unsigned count_bits(unsigned value) {
     return count;
 }
 
+struct BranchRecycleCycle {
+    unsigned free_before = 0;
+    unsigned free_after = 0;
+    bool opportunity = false;
+    bool actionable = false;
+    bool insufficient = false;
+    bool contract_miss = false;
+    bool stalled_without_safe_resolve = false;
+};
+
+BranchRecycleCycle classify_branch_recycle(
+    unsigned branch_mask, unsigned branch_demand,
+    unsigned safe_resolve, bool branch_alloc_ready,
+    bool decode_downstream_ready) {
+    const unsigned tag_mask = (1U << MAX_BRANCH_TAGS) - 1U;
+    branch_mask &= tag_mask;
+    safe_resolve &= branch_mask;
+
+    BranchRecycleCycle result;
+    result.free_before = MAX_BRANCH_TAGS - count_bits(branch_mask);
+    result.free_after =
+        MAX_BRANCH_TAGS - count_bits(branch_mask & ~safe_resolve);
+
+    const bool request = branch_demand != 0;
+    const bool would_stall_before =
+        request && branch_demand > result.free_before;
+    result.opportunity = would_stall_before && safe_resolve != 0 &&
+                         branch_demand <= result.free_after;
+    result.insufficient = would_stall_before && safe_resolve != 0 &&
+                          branch_demand > result.free_after;
+    result.contract_miss = result.opportunity && !branch_alloc_ready;
+    result.actionable = result.opportunity && branch_alloc_ready &&
+                        decode_downstream_ready;
+    result.stalled_without_safe_resolve =
+        request && !branch_alloc_ready && safe_resolve == 0;
+    return result;
+}
+
+bool branch_recycle_accounting_self_test() {
+    const unsigned full_mask = (1U << MAX_BRANCH_TAGS) - 1U;
+    const auto one_tag = classify_branch_recycle(
+        full_mask, 1, 0x1U, true, true);
+    const auto two_tags = classify_branch_recycle(
+        full_mask, 2, 0x1U, false, true);
+    const auto already_free = classify_branch_recycle(
+        full_mask & ~0x1U, 1, 0x2U, true, true);
+    const auto downstream_stall = classify_branch_recycle(
+        full_mask, 1, 0x1U, true, false);
+    const auto contract_miss = classify_branch_recycle(
+        full_mask, 1, 0x1U, false, true);
+    const auto no_resolve = classify_branch_recycle(
+        full_mask, 1, 0x0U, false, true);
+
+    const bool passed =
+        one_tag.free_before == 0 && one_tag.free_after == 1 &&
+        one_tag.opportunity && one_tag.actionable &&
+        !one_tag.insufficient && !one_tag.contract_miss &&
+        two_tags.insufficient && !two_tags.opportunity &&
+        !already_free.opportunity &&
+        downstream_stall.opportunity && !downstream_stall.actionable &&
+        contract_miss.opportunity && contract_miss.contract_miss &&
+        !contract_miss.actionable &&
+        no_resolve.stalled_without_safe_resolve;
+    if (!passed)
+        std::fprintf(stderr,
+                     "FAIL: branch recycle accounting self-test\n");
+    return passed;
+}
+
 double ratio(uint64_t numerator, uint64_t denominator) {
     return denominator == 0
                ? 0.0
@@ -674,7 +759,16 @@ struct PerformanceStats {
     uint64_t unique_dispatches = 0;
     uint64_t unq_busy_cycles = 0;
     uint64_t unq_issue_wait_cycles = 0;
+    std::array<uint64_t, MAX_BRANCH_TAGS + 1>
+        branch_mask_occupancy_cycles{};
+    uint64_t branch_alloc_request_cycles = 0;
     uint64_t branch_alloc_stall_cycles = 0;
+    uint64_t branch_safe_resolve_cycles = 0;
+    uint64_t branch_recycle_opportunity_cycles = 0;
+    uint64_t branch_recycle_actionable_cycles = 0;
+    uint64_t branch_recycle_insufficient_cycles = 0;
+    uint64_t branch_recycle_contract_miss_cycles = 0;
+    uint64_t branch_stall_without_safe_resolve_cycles = 0;
     uint64_t rob_stall_cycles = 0;
     uint64_t alu_iq_full_cycles = 0;
     uint64_t mem_iq_full_cycles = 0;
@@ -866,8 +960,32 @@ struct PerformanceStats {
         unq_busy_cycles += dut->unq_state != 0;
         unq_issue_wait_cycles +=
             dut->unq_issue_valid && !dut->unq_exec_ready;
-        branch_alloc_stall_cycles +=
-            dut->dispatch_valid != 0 && !dut->branch_alloc_ready;
+
+        const unsigned branch_mask =
+            dut->branch_mask_state & ((1U << MAX_BRANCH_TAGS) - 1U);
+        const unsigned branch_demand =
+            count_bits(dut->branch_alloc_demand &
+                       ((1U << COMMIT_WIDTH) - 1U));
+        const unsigned safe_resolve =
+            (dut->branch_resolve_mask & ~dut->branch_mispredict_mask) &
+            branch_mask;
+        const bool branch_alloc_request = branch_demand != 0;
+        const bool branch_alloc_stall =
+            branch_alloc_request && !dut->branch_alloc_ready;
+        const BranchRecycleCycle recycle = classify_branch_recycle(
+            branch_mask, branch_demand, safe_resolve,
+            dut->branch_alloc_ready, dut->decode_downstream_ready);
+
+        ++branch_mask_occupancy_cycles[count_bits(branch_mask)];
+        branch_alloc_request_cycles += branch_alloc_request;
+        branch_alloc_stall_cycles += branch_alloc_stall;
+        branch_safe_resolve_cycles += safe_resolve != 0;
+        branch_recycle_opportunity_cycles += recycle.opportunity;
+        branch_recycle_actionable_cycles += recycle.actionable;
+        branch_recycle_insufficient_cycles += recycle.insufficient;
+        branch_recycle_contract_miss_cycles += recycle.contract_miss;
+        branch_stall_without_safe_resolve_cycles +=
+            recycle.stalled_without_safe_resolve;
         rob_stall_cycles += dut->dispatch_valid != 0 && !dut->rob_ready;
         alu_iq_full_cycles += dut->alu_iq_full;
         mem_iq_full_cycles += dut->mem_iq_full;
@@ -885,11 +1003,25 @@ struct PerformanceStats {
 
             const uint32_t pc = dut->branch_resolve_pc_detail[port];
             BranchPcStats& stats = branches_by_pc[pc];
-            ++stats.resolves;
-            stats.taken +=
+            const bool predicted_taken =
+                (dut->branch_resolve_predicted_taken_detail >> port) & 1U;
+            const bool actual_taken =
                 (dut->branch_resolve_actual_taken_detail >> port) & 1U;
+            ++stats.resolves;
+            stats.taken += actual_taken;
+            stats.predicted_taken += predicted_taken;
             stats.mispredicts +=
                 (dut->branch_resolve_mispredict_detail >> port) & 1U;
+            if (stats.has_last_actual &&
+                stats.last_actual_taken != actual_taken)
+                ++stats.direction_transitions;
+            stats.has_last_actual = true;
+            stats.last_actual_taken = actual_taken;
+            if (stats.actual_trace.size() < 64) {
+                stats.actual_trace.push_back(actual_taken ? 'T' : 'N');
+                stats.predicted_trace.push_back(
+                    predicted_taken ? 'T' : 'N');
+            }
         }
         branch_mispredicts += dut->branch_mispredict;
         if (dut->branch_mispredict) {
@@ -969,6 +1101,39 @@ struct PerformanceStats {
             100.0 * ratio(dispatch_blocked_cycles, cycles),
             100.0 * ratio(branch_alloc_stall_cycles, cycles),
             100.0 * ratio(rob_stall_cycles, cycles));
+        std::printf(
+            "  brtag_detail: request=%llu stall=%llu "
+            "safe_resolve=%llu recycle_opportunity=%llu "
+            "recycle_actionable=%llu "
+            "recycle_insufficient=%llu contract_miss=%llu "
+            "no_safe_resolve=%llu\n",
+            static_cast<unsigned long long>(branch_alloc_request_cycles),
+            static_cast<unsigned long long>(branch_alloc_stall_cycles),
+            static_cast<unsigned long long>(branch_safe_resolve_cycles),
+            static_cast<unsigned long long>(
+                branch_recycle_opportunity_cycles),
+            static_cast<unsigned long long>(branch_recycle_actionable_cycles),
+            static_cast<unsigned long long>(
+                branch_recycle_insufficient_cycles),
+            static_cast<unsigned long long>(
+                branch_recycle_contract_miss_cycles),
+            static_cast<unsigned long long>(
+                branch_stall_without_safe_resolve_cycles));
+        std::printf("  brtag_occupancy%%:");
+        for (unsigned used = 0; used <= MAX_BRANCH_TAGS; ++used) {
+            std::printf(
+                " %u=%.2f", used,
+                100.0 * ratio(branch_mask_occupancy_cycles[used], cycles));
+        }
+        std::printf("\n");
+        std::printf(
+            "  brtag_recycle_coverage: actionable/request=%.2f%% "
+            "actionable/cycles=%.2f%% contract_miss/opportunity=%.2f%%\n",
+            100.0 * ratio(branch_recycle_actionable_cycles,
+                          branch_alloc_request_cycles),
+            100.0 * ratio(branch_recycle_actionable_cycles, cycles),
+            100.0 * ratio(branch_recycle_contract_miss_cycles,
+                          branch_recycle_opportunity_cycles));
         std::printf(
             "  rename_detail: free_count%%(0/1/2+)="
             "%.2f/%.2f/%.2f alloc_need%%(0/1/2)="
@@ -1135,11 +1300,24 @@ struct PerformanceStats {
         for (size_t index = 0; index < branch_shown; ++index) {
             const auto& [pc, stats] = hot_branches[index];
             std::printf(
-                " %08x=%llu/%llu(%.1f%%,taken=%.1f%%)", pc,
+                " %08x=%llu/%llu(%.1f%%,actual_t=%.1f%%,pred_t=%.1f%%,"
+                "trans=%llu)", pc,
                 static_cast<unsigned long long>(stats.mispredicts),
                 static_cast<unsigned long long>(stats.resolves),
                 100.0 * ratio(stats.mispredicts, stats.resolves),
-                100.0 * ratio(stats.taken, stats.resolves));
+                100.0 * ratio(stats.taken, stats.resolves),
+                100.0 * ratio(stats.predicted_taken, stats.resolves),
+                static_cast<unsigned long long>(
+                    stats.direction_transitions));
+        }
+        std::printf("\n");
+
+        std::printf("  branch_direction_trace (first 64, A/P):");
+        for (size_t index = 0; index < branch_shown; ++index) {
+            const auto& [pc, stats] = hot_branches[index];
+            std::printf(
+                " %08x=%s/%s", pc, stats.actual_trace.c_str(),
+                stats.predicted_trace.c_str());
         }
         std::printf("\n");
     }
@@ -1150,6 +1328,9 @@ struct PerformanceStats {
 int main(int argc, char** argv) {
     std::setvbuf(stdout, nullptr, _IOLBF, 0);
     Verilated::commandArgs(argc, argv);
+
+    if (!branch_recycle_accounting_self_test())
+        return 2;
 
     Options options;
     try {
@@ -1191,6 +1372,25 @@ int main(int argc, char** argv) {
 
     auto* dut = new Vcore_top_elf_axi_test_top;
     reset(dut);
+
+    if (dut->rename_branch_capacity != MAX_BRANCH_TAGS) {
+        std::fprintf(
+            stderr,
+            "FAIL: branch-tag capacity contract: allocator/types=%u, "
+            "rename snapshots=%u\n",
+            MAX_BRANCH_TAGS,
+            static_cast<unsigned>(dut->rename_branch_capacity));
+        delete dut;
+        return 1;
+    }
+
+    if (options.branch_tag_contract_only) {
+        std::printf(
+            "PASS: branch-tag capacity contract MAX_BR_COUNT=%u\n",
+            MAX_BRANCH_TAGS);
+        delete dut;
+        return 0;
+    }
 
     AxiMemory memory(
         &image, options.axi_latency, options.stress, options.trace,
