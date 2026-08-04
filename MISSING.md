@@ -55,13 +55,20 @@
 - `test/core_ifu/` 已覆盖预测训练、RAS/GHist repair、随机反压和全前端 flush；
   `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
-- 当前 56 PREG 版本的完整性能结果以 [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md)
-  为准。最低 IPC 比值为 `quick_sort` 0.71、`dhrystone` 0.74、`crc32` 0.75、
-  `bubble_sort` 0.78；其余已测用例均不低于 0.8，且多项超过 1.0。此前记录的
-  `fireye_C0`、`stream_copy` 等局部瓶颈已被后续优化改变，不再作为当前优先级依据。
-- 当前首要时序缺口是从 `alu_brinfo_valid_q` 发出的分支解析高扇出组合锥；实现后
-  WNS 为 +0.827 ns，最差路径到 GShare `s1_provider_data`，40 级逻辑且 79.05% 为
-  布线延迟。下一轮先尝试不增加预测级数的 mask 预译码寄存和本地复制。
+- 当前 56 PREG、40 MHz 版本的完整基线以
+  [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) 为准。`4103d09` 是 DCache
+  直返前的 A/B 回退提交，不包含当前已验收的 DCache改动；新提交号保存后需要回填。
+- 40 MHz 实现后的 WNS/TNS 为 `+0.118 ns / 0.000 ns`，WHS/THS 为
+  `+0.051 ns / 0.000 ns`，setup/hold 均无失败端点。最差 CPU 路径为 ICache
+  `req_paddr_q` 到 GShare `s1_counter_data`，数据路径中约 80.12% 为布线延迟；
+  原 `mispredict_mask_q` 恢复链时序缺口已经关闭。
+- 单 outstanding DCache 已实现 LOOKUP 当拍 load/store hit 响应；下游反压时保存
+  响应并回退 `S_RESPONSE`。单元、LSU/DMMU、生产恢复、官方功能 ELF 正常/AXI
+  背压均已通过；隔离 A/B 中 `fireye_A0`、`my_memcmp`、`stream_copy`、`crc32`
+  IPC 分别提高 17.6%、24.2%、39.8%、3.7%。40 MHz 实现以 WNS `+0.043 ns`、
+  WHS `+0.050 ns` 通过，DCache直返不是最差路径；板上性能验收也已通过，最终仅
+  `quick_sort` 0.73、`crc32` 0.75、`dhrystone` 0.81 低于 0.9，其余均高于
+  0.9，且有 10 项超过 1.0。
 
 ---
 

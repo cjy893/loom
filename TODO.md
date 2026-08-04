@@ -303,13 +303,24 @@
   `free_count=1` 时的前缀部分分配，改由当前版本的新阻塞统计决定。
 - [ ] 针对 `fireye_C0` 的数据相关条件分支增加预测回归；当前误预测率 19.31%，
   热点均为条件分支，未发现 B/BL 或 JIRL 目标误预测。
-- [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应红测试；当前 RTL 仍有2个
-  时序断言失败，其余功能契约通过。
-- [ ] DCache hit 直接响应作为数据侧后续优化保留；它对 `my_memcmp` 明确有益。
+- [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应测试，并在正式 RTL 中实现
+  直返及反压时回退 `S_RESPONSE`；DCache 1975 项、LSU/DMMU 243 项、生产恢复正常/
+  AXI 背压，以及官方功能 ELF 正常模式均通过。
+- [x] 完成 DCache hit 直接响应的官方功能 ELF AXI 背压和隔离性能 A/B：
+  `fireye_A0` 0.3978->0.4678（+17.6%）、`my_memcmp` 0.6171->0.7662
+  （+24.2%）、`stream_copy` 0.6155->0.8606（+39.8%）、`crc32`
+  0.6952->0.7207（+3.7%），四项提交数和结果保持正确。
+- [x] 完成 DCache hit 直接响应的 40 MHz 综合和实现：WNS/TNS 为
+  `+0.043 ns / 0.000 ns`，WHS/THS 为 `+0.050 ns / 0.000 ns`，setup/hold 均无
+  失败端点。最差路径为 ROB `rob_val` 到 UNQ IQ `psrc1_busy`，DCache直返没有成为
+  报告中的最差路径。
+- [x] 完成 DCache hit 直接响应的上板功能和性能验收：仅 `quick_sort` 0.73、
+  `crc32` 0.75、`dhrystone` 0.81 低于 0.9，其余全部高于 0.9，其中 10 项超过
+  OpenLA500 的 IPC；该优化正式并入新的 40 MHz 基线。
   “优先分析仅约参考核三分之一的 `crc32` 和 `fireye_C0`”属于旧基线结论，已经由
   下方 2026-08-04 基线取代。
 
-#### 2026-08-04 频率优化前基线
+#### 2026-08-04 频率优化基线与结果
 
 - [x] 当前 56 PREG、Age Matrix MEM IQ 和分组 Freelist 版本的基线已保存到
   [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md)，对应 Git 提交 `6f8543d`。
@@ -317,8 +328,15 @@
   `+0.052 ns / 0.000 ns`；原 Freelist 到 ALU IQ 的路径已退出最差路径。
 - [x] 当前最低 IPC 比值为 `quick_sort` 0.71、`dhrystone` 0.74、`crc32` 0.75、
   `bubble_sort` 0.78；其余已测用例均不低于 0.8，且多项超过 1.0。
-- [ ] 下一轮先处理 `alu_brinfo_valid_q` 发出的分支解析高扇出路径，并保持现有周期行为；
-  综合和实现完成后同时比较时序、利用率和完整 IPC，不能只比较综合 WNS。
+- [x] 处理 `alu_brinfo_valid_q` 发出的分支解析高扇出路径，并完成 40 MHz 非增量实现；
+  当前提交 `4103d09` 的 WNS/TNS 为 `+0.118 ns / 0.000 ns`，WHS/THS 为
+  `+0.051 ns / 0.000 ns`，setup/hold 均无失败端点。最差 CPU 路径已转移为
+  ICache `req_paddr_q` 到 GShare `s1_counter_data`，原恢复链不再是最差路径。
+- [x] 40 MHz bitstream 已完成上板功能和性能验证。`fireye_A0`、`my_memcmp`、
+  `crc32` 的 IPC 相比 32.727 MHz 基线下降，但频率增益覆盖了 IPC 损失，三项实际
+  吞吐均提高；正 WNS 版本与此前负 WNS 的 40 MHz 版本性能一致。
+- [x] 以 `4103d09` 为 40 MHz 回退基线，单独实现 DCache load/store hit 的 LOOKUP
+  当拍响应并完成功能、性能、40 MHz 实现和上板验收。
 
 ### 真实指令用例
 

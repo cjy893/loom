@@ -149,6 +149,7 @@ module dcache #(
     logic [SET_BITS-1:0] lookup_set;
     logic [TAG_BITS-1:0] lookup_tag;
     logic [BEAT_BITS-1:0] lookup_word;
+    logic lookup_resp_valid;
 
     logic maint_hit;
     logic [WAY_BITS-1:0] maint_hit_way;
@@ -223,6 +224,11 @@ module dcache #(
         assert (ADDR_WIDTH > LINE_OFFSET_BITS + SET_BITS);
     end
 
+    assign lookup_resp_valid =
+        state_q == S_LOOKUP &&
+        req_cacheable_q &&
+        lookup_hit;
+
     always_comb begin
         logic victim_found;
 
@@ -271,10 +277,16 @@ module dcache #(
 
     always_comb begin
         req_ready = rst_n && state_q == S_IDLE && !maint_valid;
-        resp_valid = state_q == S_RESPONSE;
+        resp_valid = lookup_resp_valid || state_q == S_RESPONSE;
         resp_is_store = resp_is_store_q;
         resp_rdata = resp_rdata_q;
         resp_tag = resp_tag_q;
+
+        if (lookup_resp_valid) begin
+            resp_is_store = req_is_store_q;
+            resp_rdata = req_is_store_q ? '0 : data_read_q[lookup_hit_way];
+            resp_tag = req_tag_q;
+        end
 
         maint_ready = rst_n && state_q == S_IDLE;
         maint_done = maint_done_q;
@@ -443,7 +455,7 @@ module dcache #(
                         if (req_is_store_q) begin
                             dirty_array[lookup_set][lookup_hit_way] <= 1'b1;
                         end
-                        state_q <= S_RESPONSE;
+                        state_q <= resp_ready ? S_IDLE : S_RESPONSE;
                     end else begin
                         refill_set_q <= lookup_set;
                         refill_tag_q <= lookup_tag;
