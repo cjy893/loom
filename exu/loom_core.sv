@@ -1398,6 +1398,8 @@ module loom_core #(
     uop_t [CORE_WIDTH-1:0]             rob_enq_uops;
     logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
     exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
+    exe_unit_resp_t [ALU_WIDTH-1:0]    alu_rob_wb_d;
+    exe_unit_resp_t [ALU_WIDTH-1:0]    alu_rob_wb_q;
     commit_exception_signals_t          rob_com_xcpt_w;
     commit_exception_signals_t          rob_flush_w;
     logic                               rob_rollback_w;
@@ -1458,8 +1460,29 @@ module loom_core #(
 
     end
 
+    always_comb begin
+        alu_rob_wb_d = alu_res;
+        for (int i = 0; i < ALU_WIDTH; i++) begin
+            alu_rob_wb_d[i].valid =
+                alu_res_valid[i] &&
+                !(|(alu_res[i].uop.br_mask &
+                    brupdate_w.b1.mispredict_mask));
+            alu_rob_wb_d[i].uop.br_mask =
+                alu_res[i].uop.br_mask & ~brupdate_w.b1.resolve_mask;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            alu_rob_wb_q <= '0;
+        else if (bm_flush)
+            alu_rob_wb_q <= '0;
+        else
+            alu_rob_wb_q <= alu_rob_wb_d;
+    end
+
     for (genvar i = 0; i < ALU_WIDTH; i++)
-        assign rob_wb_resps[i] = alu_res[i];
+        assign rob_wb_resps[i] = alu_rob_wb_q[i];
     assign rob_wb_resps[ALU_WIDTH]   = lsu_resp_w;
     assign rob_wb_resps[ALU_WIDTH+1] = unq_res;
     for (genvar i = ALU_WIDTH + 2; i < NUM_WAKEUPS; i++) begin : gen_unused_rob_wb
@@ -1742,8 +1765,10 @@ module loom_core #(
     // 分支更新
     // ================================================================
     br_update_info_t brupdate_w;
-    logic [MAX_BR_COUNT-1:0] resolve_mask;
-    logic [MAX_BR_COUNT-1:0] mispredict_mask;
+    logic [MAX_BR_COUNT-1:0] resolve_mask_d;
+    logic [MAX_BR_COUNT-1:0] resolve_mask_q;
+    logic [MAX_BR_COUNT-1:0] mispredict_mask_d;
+    logic [MAX_BR_COUNT-1:0] mispredict_mask_q;
     logic [ALU_WIDTH-1:0] alu_brinfo_valid_d;
     logic [ALU_WIDTH-1:0] alu_brinfo_valid_q;
     br_resolution_info_t [ALU_WIDTH-1:0] alu_brinfo_d;
@@ -1752,43 +1777,49 @@ module loom_core #(
     br_resolution_info_t brupdate_b2_q;
 
     always_comb begin
-        resolve_mask    = '0;
-        mispredict_mask = '0;
-        for (int i = 0; i < ALU_WIDTH; i++) begin
-            if (alu_brinfo_valid_q[i]) begin
-                resolve_mask[alu_brinfo_q[i].uop.br_tag] = 1'b1;
-                if (alu_brinfo_q[i].mispredict)
-                    mispredict_mask[alu_brinfo_q[i].uop.br_tag] = 1'b1;
-            end
-        end
-    end
-
-    assign brupdate_w.b1.resolve_mask    = resolve_mask;
-    assign brupdate_w.b1.mispredict_mask = mispredict_mask;
-
-    always_comb begin
         alu_brinfo_valid_d = alu_brinfo_valid;
         alu_brinfo_d       = alu_brinfo;
 
         for (int i = 0; i < ALU_WIDTH; i++) begin
             alu_brinfo_valid_d[i] =
                 alu_brinfo_valid[i] &&
-                !(|(alu_brinfo[i].uop.br_mask & mispredict_mask));
+                !(|(alu_brinfo[i].uop.br_mask & mispredict_mask_q));
             alu_brinfo_d[i].uop.br_mask =
-                alu_brinfo[i].uop.br_mask & ~resolve_mask;
+                alu_brinfo[i].uop.br_mask & ~resolve_mask_q;
+        end
+
+        // Predecode the results entering alu_brinfo_q so the branch masks are
+        // registered at the same boundary instead of decoded on its output.
+        resolve_mask_d = '0;
+        mispredict_mask_d = '0;
+        for (int i = 0; i < ALU_WIDTH; i++) begin
+            if (alu_brinfo_valid_d[i]) begin
+                resolve_mask_d[alu_brinfo_d[i].uop.br_tag] = 1'b1;
+                if (alu_brinfo_d[i].mispredict)
+                    mispredict_mask_d[alu_brinfo_d[i].uop.br_tag] = 1'b1;
+            end
         end
     end
+
+    assign brupdate_w.b1.resolve_mask = resolve_mask_q;
+    assign brupdate_w.b1.mispredict_mask = mispredict_mask_q;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             alu_brinfo_valid_q <= '0;
             alu_brinfo_q       <= '0;
+            resolve_mask_q     <= '0;
+            mispredict_mask_q  <= '0;
         end else if (bm_flush) begin
             alu_brinfo_valid_q <= '0;
             alu_brinfo_q       <= '0;
+            resolve_mask_q     <= '0;
+            mispredict_mask_q  <= '0;
         end else begin
             alu_brinfo_valid_q <= alu_brinfo_valid_d;
             alu_brinfo_q       <= alu_brinfo_d;
+            resolve_mask_q     <= resolve_mask_d;
+            mispredict_mask_q  <= mispredict_mask_d;
         end
     end
 
@@ -1811,7 +1842,7 @@ module loom_core #(
         found_mispredict = 1'b0;
         for (int i = 0; i < ALU_WIDTH; i++) begin
             if (alu_brinfo_valid_q[i] && alu_brinfo_q[i].mispredict &&
-                !(|(alu_brinfo_q[i].uop.br_mask & mispredict_mask)) &&
+                !(|(alu_brinfo_q[i].uop.br_mask & mispredict_mask_q)) &&
                 (!found_mispredict ||
                  rob_idx_is_older(alu_brinfo_q[i].uop.rob_idx,
                                   brupdate_b2_d.uop.rob_idx))) begin
@@ -1820,7 +1851,7 @@ module loom_core #(
             end
         end
         brupdate_b2_d.uop.br_mask =
-            brupdate_b2_d.uop.br_mask & ~resolve_mask;
+            brupdate_b2_d.uop.br_mask & ~resolve_mask_q;
     end
 
     always_ff @(posedge clk or negedge rst_n) begin

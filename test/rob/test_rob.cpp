@@ -31,6 +31,7 @@ static void clear_inputs(Vrob_test_top* dut) {
     dut->lsu_clr_bsy_addr_1 = 0;
     dut->interrupt_pending = 0;
     dut->interrupt_next_pc = 0;
+    dut->br_mispredict_mask = 0;
     dut->br_mispredict = 0;
     dut->lxcpt_valid = 0;
     dut->lxcpt_rob_idx = 0;
@@ -417,6 +418,31 @@ int main(int argc, char** argv) {
     expect_eq("dynamic exception cause wins", dut->com_xcpt_cause, 9);
     expect_eq("dynamic exception PC wins", dut->com_xcpt_pc, 0x1c000700);
     expect_eq("dynamic exception BADV", dut->com_xcpt_badvaddr, 0x102);
+
+    // Match the v4 boundary: the branch writeback and b1 resolution reach the
+    // ROB together. The branch stays busy until this edge, so program order
+    // protects younger uops while an older lane remains safe to retire. A
+    // global b1 commit stall adds a bubble and a frontend combinational path.
+    clear_inputs(dut);
+    reset_dut(dut);
+    dut->enq_valid = 3;
+    dut->enq_rob_idx_0 = 0;
+    dut->enq_rob_idx_1 = 1;
+    dut->enq_ldst_0 = 8;
+    dut->enq_ldst_1 = 9;
+    dut->enq_busy_1 = 1;
+    eval_cycle(dut);
+    clear_inputs(dut);
+
+    dut->br_mispredict_mask = 2;
+    dut->wb_valid = 2;
+    dut->wb_rob_idx_1 = 1;
+    dut->eval();
+    expect_eq("b1 recovery commits safe older lane only",
+              dut->commit_valid, 1);
+    expect_eq("b1 recovery older lane identity", dut->commit_ldst_0, 8);
+    expect_eq("b1 recovery does not synthesize ROB flush",
+              dut->flush_valid, 0);
 
     // Resolve a branch redirect first, then accept the still-pending interrupt.
     clear_inputs(dut);

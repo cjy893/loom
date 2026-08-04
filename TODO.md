@@ -297,15 +297,28 @@
 
   六个性能窗口均没有 CSR 分发；只有 `fireye_I2` 动态执行 2900 条 DIV/MOD，且没有
   因 DIV/MOD 等待 ROB 清空的周期。因此 CSR replay 和解除 DIV/MOD 串行化都不是
-  当前主要性能工作。下一步先对 48/56/64 个物理寄存器做参数扫描，再根据面积、时序
-  和 IPC 决定容量；同时评估 free_count=1、双目的寄存器 packet 的前缀部分分配。
+  当前主要性能工作。
+- [x] 物理寄存器容量已从 48 增加到 56，并完成 Freelist 时序重构、完整功能回归和
+  实现验证；实现后 WNS 为 +0.827 ns。是否继续增加到 64 或实现
+  `free_count=1` 时的前缀部分分配，改由当前版本的新阻塞统计决定。
 - [ ] 针对 `fireye_C0` 的数据相关条件分支增加预测回归；当前误预测率 19.31%，
   热点均为条件分支，未发现 B/BL 或 JIRL 目标误预测。
 - [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应红测试；当前 RTL 仍有2个
   时序断言失败，其余功能契约通过。
-- [ ] DCache hit 直接响应作为数据侧第二优先级保留；它对 `my_memcmp` 明确有益，
-  但 `my_memcmp` 总体 IPC 已约为参考核的 0.8。当前优先分析相对参考核仅约三分之一
-  的 `crc32` 和 `fireye_C0`，避免把局部停顿直接等同于主要整体性能缺口。
+- [ ] DCache hit 直接响应作为数据侧后续优化保留；它对 `my_memcmp` 明确有益。
+  “优先分析仅约参考核三分之一的 `crc32` 和 `fireye_C0`”属于旧基线结论，已经由
+  下方 2026-08-04 基线取代。
+
+#### 2026-08-04 频率优化前基线
+
+- [x] 当前 56 PREG、Age Matrix MEM IQ 和分组 Freelist 版本的基线已保存到
+  [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md)，对应 Git 提交 `6f8543d`。
+- [x] 实现后 WNS/TNS 为 `+0.827 ns / 0.000 ns`，WHS/THS 为
+  `+0.052 ns / 0.000 ns`；原 Freelist 到 ALU IQ 的路径已退出最差路径。
+- [x] 当前最低 IPC 比值为 `quick_sort` 0.71、`dhrystone` 0.74、`crc32` 0.75、
+  `bubble_sort` 0.78；其余已测用例均不低于 0.8，且多项超过 1.0。
+- [ ] 下一轮先处理 `alu_brinfo_valid_q` 发出的分支解析高扇出路径，并保持现有周期行为；
+  综合和实现完成后同时比较时序、利用率和完整 IPC，不能只比较综合 WNS。
 
 ### 真实指令用例
 
