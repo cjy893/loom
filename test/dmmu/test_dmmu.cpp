@@ -147,9 +147,16 @@ class Testbench {
     void wait_for_bypass_response() {
         check("bypass path does not query TLB",
               dut_->tlb_req_valid == 0);
-        check("bypass response is registered", dut_->resp_valid == 0);
-        tick();
-        check("bypass response becomes valid", dut_->resp_valid == 1);
+        const bool direct_response = dut_->resp_valid == 1;
+        check("bypass response is valid in CHECK", direct_response);
+
+        // Preserve synchronization with the old registered-response RTL so
+        // a latency-contract failure does not cascade into functional errors.
+        if (!direct_response) {
+            tick();
+            check("legacy bypass response becomes valid",
+                  dut_->resp_valid == 1);
+        }
     }
 
     ResponseSnapshot snapshot() const {

@@ -55,6 +55,7 @@ module core_ifu_test_top (
     output logic [1:0]                   core_dec_fire,
     output logic [1:0]                   core_dis_fire,
     output logic                         core_dis_unique,
+    output logic                         core_dis_mul,
     output logic                         core_flush_valid,
 
     output logic [1:0]                   commit_valid,
@@ -279,6 +280,9 @@ module core_ifu_test_top (
     assign core_packet_inst = ifu_fetch_insts;
     assign core_packet_partial = |core.fe_finished_q;
     assign core_dec_fire = core.dec_fire;
+    assign core_dis_mul =
+        (core.dis_fire[0] && core.dis_uops_w[0].fu_code[FC_MUL]) ||
+        (core.dis_fire[1] && core.dis_uops_w[1].fu_code[FC_MUL]);
     assign core_flush_valid = frontend_flush_valid;
 
     always_comb begin

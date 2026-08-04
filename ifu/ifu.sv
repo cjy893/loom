@@ -5,6 +5,7 @@ import loom_types::*;
 module ifu #(
     parameter int FETCH_WIDTH = 4,
     parameter int EXEC_QUERY_WIDTH = ALU_WIDTH,
+    parameter int BPD_BTB_WAYS = 2,
     parameter logic [31:0] RESET_PC = 32'h1c00_0000
 )(
     input logic clk,
@@ -70,6 +71,13 @@ module ifu #(
     localparam int BLOCK_OFFSET_BITS = $clog2(ICACHE_BLOCK_BYTES);
     localparam int NUM_BANK_CHUNKS = ICACHE_BLOCK_BYTES / BANK_BYTES;
     localparam int BANK_LANE_BITS = (BANK_WIDTH > 1) ? $clog2(BANK_WIDTH) : 1;
+    localparam int BIM_CTR_SZ = 2;
+    localparam int BIM_META_SZ = BANK_WIDTH * BIM_CTR_SZ;
+    localparam int GSHARE_META_SZ = BANK_WIDTH * 2;
+    localparam int F2_DIRECTION_META_SZ = BIM_META_SZ + GSHARE_META_SZ;
+    localparam int BTB_WAY_IDX_SZ =
+        (BPD_BTB_WAYS <= 1) ? 1 : $clog2(BPD_BTB_WAYS);
+    localparam int BTB_META_SZ = BANK_WIDTH * (1 + BTB_WAY_IDX_SZ);
 
     typedef enum logic [2:0] {
         S_XLATE_REQ,
@@ -114,8 +122,23 @@ module ifu #(
     logic packet_cfi_is_call_d;
     logic packet_cfi_is_ret_d;
     logic packet_cfi_npc_plus4_d;
+    logic packet_early_safe_d;
+    logic packet_has_xcpt;
     logic [31:0] packet_next_pc_d;
     logic [31:0] packet_return_addr_d;
+    logic next_request_launch;
+    logic [31:0] next_request_pc;
+    logic next_request_adef;
+    logic xlate_resp_fire;
+    logic xlate_to_imem_valid;
+    logic imem_resp_fire;
+    logic live_mem_packet_valid;
+
+    logic [FETCH_WIDTH-1:0]       packet_src_valid;
+    logic [FETCH_WIDTH-1:0][31:0] packet_src_pc;
+    logic [FETCH_WIDTH-1:0][31:0] packet_src_insts;
+    logic [FETCH_WIDTH-1:0]       packet_src_xcpt_valid;
+    logic [FETCH_WIDTH-1:0][5:0]  packet_src_xcpt_code;
 
     logic [FETCH_WIDTH-1:0][2:0] predecode_cfi_type;
     logic [FETCH_WIDTH-1:0] predecode_is_call;
@@ -134,21 +157,36 @@ module ifu #(
     logic frontend_epoch_q;
     logic bpd_requested_q;
     logic bpd_result_valid_q;
+    logic bpd_live_result_valid;
+    logic bpd_early_result_valid;
+    logic bpd_packet_result_valid;
+    logic bpd_packet_uses_f2;
+    logic bpd_drop_f3_q;
 
     logic bpd_first_bank;
     logic bpd_second_bank;
     logic bpd_last_bank_in_block;
     logic [31:0] bpd_first_bank_pc;
     logic [31:0] bpd_second_bank_pc;
+    logic [31:0] bpd_request_pc;
     logic [NBANKS-1:0] bank_f0_valid;
     logic [NBANKS-1:0][31:0] bank_f0_pc;
+    logic [NBANKS-1:0][GLOBAL_HISTORY_LENGTH-1:0] bank_f0_ghist;
+    global_history_t bpd_request_ghist;
+    logic [GLOBAL_HISTORY_LENGTH-1:0] bpd_second_bank_ghist;
     logic [NBANKS-1:0] bank_ready;
+    branch_prediction_t [BANK_WIDTH-1:0] bank_f2_preds [NBANKS-1:0];
     branch_prediction_t [BANK_WIDTH-1:0] bank_f3_preds [NBANKS-1:0];
+    logic [BPD_MAX_META_LENGTH-1:0] bank_f2_meta [NBANKS-1:0];
     logic [BPD_MAX_META_LENGTH-1:0] bank_f3_meta [NBANKS-1:0];
+    branch_prediction_t [FETCH_WIDTH-1:0] bpd_f2_preds;
     branch_prediction_t [FETCH_WIDTH-1:0] bpd_f3_preds;
     branch_prediction_t [FETCH_WIDTH-1:0] bpd_f3_preds_q;
+    branch_prediction_t [FETCH_WIDTH-1:0] bpd_packet_preds;
+    logic [NBANKS-1:0][BPD_MAX_META_LENGTH-1:0] bpd_f2_meta;
     logic [NBANKS-1:0][BPD_MAX_META_LENGTH-1:0] bpd_f3_meta;
     logic [NBANKS-1:0][BPD_MAX_META_LENGTH-1:0] bpd_f3_meta_q;
+    logic [NBANKS-1:0][BPD_MAX_META_LENGTH-1:0] bpd_packet_meta;
 
     logic [NBANKS-1:0] bank_update_valid;
     bpd_bank_update_t bank_update [NBANKS-1:0];
@@ -192,30 +230,111 @@ module ifu #(
     endfunction
 
     assign request_adef = |request_pc_q[1:0];
+    assign request_lane = FETCH_LANE_BITS'(request_pc_q >> 2);
     assign request_bank_lane = BANK_LANE_BITS'(request_pc_q >> 2);
     assign branch_redirect_valid = redirect_valid && !flush_valid;
 
-    assign bpd_first_bank = request_pc_q[BANK_ALIGN_BITS];
+    assign next_request_launch = packet_fire && !packet_has_xcpt;
+    assign next_request_pc = next_request_launch ? packet_next_pc_d :
+                                                      request_pc_q;
+    assign next_request_adef = |next_request_pc[1:0];
+    assign xlate_resp_fire = xlate_resp_valid && xlate_resp_ready;
+    assign xlate_to_imem_valid = xlate_resp_fire &&
+                                 !xlate_resp_xcpt_valid;
+    assign imem_resp_fire = imem_resp_valid && imem_resp_ready;
+    assign live_mem_packet_valid = state_q == S_MEM_RESP &&
+                                   imem_resp_fire &&
+                                   !request_stale_q &&
+                                   !redirect_valid;
+
+    assign bpd_request_pc = next_request_pc;
+    assign bpd_first_bank = bpd_request_pc[BANK_ALIGN_BITS];
     assign bpd_second_bank = ~bpd_first_bank;
     assign bpd_first_bank_pc =
-        {request_pc_q[31:BANK_ALIGN_BITS], {BANK_ALIGN_BITS{1'b0}}};
+        {bpd_request_pc[31:BANK_ALIGN_BITS], {BANK_ALIGN_BITS{1'b0}}};
     assign bpd_second_bank_pc = bpd_first_bank_pc + 32'(BANK_BYTES);
     assign bpd_last_bank_in_block =
-        request_pc_q[BLOCK_OFFSET_BITS-1:BANK_ALIGN_BITS] ==
+        bpd_request_pc[BLOCK_OFFSET_BITS-1:BANK_ALIGN_BITS] ==
         (BLOCK_OFFSET_BITS-BANK_ALIGN_BITS)'(NUM_BANK_CHUNKS - 1);
     assign bpd_ready = &bank_ready;
-    assign bpd_f0_valid = state_q == S_XLATE_REQ && !redirect_valid &&
-                          !request_adef && !bpd_requested_q && bpd_ready;
+    assign bpd_f0_valid = !redirect_valid && !next_request_adef && bpd_ready &&
+                          ((state_q == S_XLATE_REQ && !bpd_requested_q) ||
+                           next_request_launch);
+
+    always_comb begin
+        bpd_request_ghist = current_ghist;
+        if (ftq_ghist_restore_valid) begin
+            bpd_request_ghist = ftq_ghist_restore;
+        end else if (next_request_launch) begin
+            bpd_request_ghist = update_global_history(
+                current_ghist,
+                packet_br_mask_d,
+                packet_cfi_valid_d,
+                packet_cfi_idx_d,
+                packet_cfi_valid_d,
+                packet_cfi_type_d == CFI_BR,
+                packet_cfi_is_call_d,
+                packet_cfi_is_ret_d,
+                request_pc_q
+            );
+        end
+    end
+
+    always_comb begin
+        bpd_second_bank_ghist = bpd_request_ghist.old_history;
+        if(bpd_request_ghist.new_saw_branch_taken) begin
+            bpd_second_bank_ghist = {
+                bpd_request_ghist.old_history[
+                    GLOBAL_HISTORY_LENGTH-2:0
+                ],
+                1'b1
+            };
+        end else if(bpd_request_ghist.new_saw_branch_not_taken) begin
+            bpd_second_bank_ghist = {
+                bpd_request_ghist.old_history[
+                    GLOBAL_HISTORY_LENGTH-2:0
+                ],
+                1'b0
+            };
+        end
+    end
 
     always_comb begin
         bank_f0_valid = '0;
         bank_f0_pc = '0;
+        bank_f0_ghist = '0;
         bank_f0_valid[bpd_first_bank] = bpd_f0_valid;
         bank_f0_pc[bpd_first_bank] = bpd_first_bank_pc;
+        bank_f0_ghist[bpd_first_bank] =
+            bpd_request_ghist.old_history;
 
         if (!bpd_last_bank_in_block) begin
             bank_f0_valid[bpd_second_bank] = bpd_f0_valid;
             bank_f0_pc[bpd_second_bank] = bpd_second_bank_pc;
+            bank_f0_ghist[bpd_second_bank] = bpd_second_bank_ghist;
+        end
+    end
+
+    always_comb begin
+        bpd_f2_preds = '0;
+        bpd_f2_meta = '0;
+
+        if (bpd_f2_valid_q) begin
+            for (int lane = 0; lane < BANK_WIDTH; lane++) begin
+                bpd_f2_preds[lane] =
+                    bank_f2_preds[bpd_f2_first_bank_q][lane];
+
+                if (bpd_f2_second_valid_q) begin
+                    bpd_f2_preds[BANK_WIDTH + lane] =
+                        bank_f2_preds[~bpd_f2_first_bank_q][lane];
+                end
+            end
+
+            for (int bank = 0; bank < NBANKS; bank++) begin
+                bpd_f2_meta[bank][
+                    BTB_META_SZ +: F2_DIRECTION_META_SZ
+                ] = bank_f2_meta[bank][F2_DIRECTION_META_SZ-1:0];
+            end
         end
     end
 
@@ -234,6 +353,32 @@ module ifu #(
 
             for (int bank = 0; bank < NBANKS; bank++)
                 bpd_f3_meta[bank] = bank_f3_meta[bank];
+        end
+    end
+
+    assign bpd_live_result_valid = bpd_f3_valid_q &&
+                                   bpd_f3_epoch_q == frontend_epoch_q &&
+                                   !bpd_drop_f3_q;
+    assign bpd_early_result_valid = live_mem_packet_valid &&
+                                    bpd_f2_valid_q &&
+                                    bpd_f2_epoch_q == frontend_epoch_q &&
+                                    !bpd_result_valid_q &&
+                                    !bpd_live_result_valid;
+    assign bpd_packet_result_valid = bpd_result_valid_q ||
+                                     bpd_live_result_valid ||
+                                     bpd_early_result_valid;
+
+    always_comb begin
+        bpd_packet_preds = bpd_f3_preds_q;
+        bpd_packet_meta = bpd_f3_meta_q;
+        bpd_packet_uses_f2 = 1'b0;
+        if (bpd_live_result_valid) begin
+            bpd_packet_preds = bpd_f3_preds;
+            bpd_packet_meta = bpd_f3_meta;
+        end else if (bpd_early_result_valid) begin
+            bpd_packet_preds = bpd_f2_preds;
+            bpd_packet_meta = bpd_f2_meta;
+            bpd_packet_uses_f2 = 1'b1;
         end
     end
 
@@ -296,11 +441,27 @@ module ifu #(
             end
             if (bpd_f0_valid)
                 bpd_requested_q <= 1'b1;
-            if (bpd_f3_valid_q && bpd_f3_epoch_q == frontend_epoch_q) begin
+            if (bpd_live_result_valid && !packet_fire) begin
                 bpd_f3_preds_q <= bpd_f3_preds;
                 bpd_f3_meta_q <= bpd_f3_meta;
                 bpd_result_valid_q <= 1'b1;
             end
+        end
+    end
+
+    // An F2-consumed packet still produces its now-obsolete F3 result one
+    // cycle later. Drop exactly that result so it cannot be associated with
+    // the next fetch request already entering the predictor pipeline.
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            bpd_drop_f3_q <= 1'b0;
+        end else if (redirect_valid) begin
+            bpd_drop_f3_q <= 1'b0;
+        end else begin
+            if (bpd_drop_f3_q && bpd_f3_valid_q)
+                bpd_drop_f3_q <= 1'b0;
+            if (packet_fire && bpd_packet_uses_f2)
+                bpd_drop_f3_q <= 1'b1;
         end
     end
 
@@ -331,15 +492,19 @@ module ifu #(
     );
 
     for (genvar bank = 0; bank < NBANKS; bank++) begin : gen_composer
-        composer #(.BANK_WIDTH(BANK_WIDTH)) composer_inst (
+        composer #(
+            .BANK_WIDTH(BANK_WIDTH),
+            .BTB_WAYS(BPD_BTB_WAYS)
+        ) composer_inst (
             .clk,
             .rst_n,
             .f0_valid(bank_f0_valid[bank]),
             .f0_pc(bank_f0_pc[bank]),
+            .f0_ghist(bank_f0_ghist[bank]),
             .f1_preds(),
-            .f2_preds(),
+            .f2_preds(bank_f2_preds[bank]),
             .f3_preds(bank_f3_preds[bank]),
-            .f2_meta(),
+            .f2_meta(bank_f2_meta[bank]),
             .f3_meta(bank_f3_meta[bank]),
             .ready(bank_ready[bank]),
             .update_valid(bank_update_valid[bank]),
@@ -347,10 +512,35 @@ module ifu #(
         );
     end
 
+    always_comb begin
+        packet_src_valid = fetch_valid_q;
+        packet_src_pc = fetch_pc_q;
+        packet_src_insts = fetch_insts_q;
+        packet_src_xcpt_valid = fetch_xcpt_valid_q;
+        packet_src_xcpt_code = fetch_xcpt_code_q;
+
+        if (live_mem_packet_valid) begin
+            packet_src_valid = '0;
+            packet_src_pc = '0;
+            packet_src_insts = '0;
+            packet_src_xcpt_valid = '0;
+            packet_src_xcpt_code = '0;
+
+            for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
+                if (lane + int'(request_lane) < FETCH_WIDTH) begin
+                    packet_src_valid[lane] = 1'b1;
+                    packet_src_pc[lane] = request_pc_q + lane * 4;
+                    packet_src_insts[lane] =
+                        imem_resp_insts[lane + int'(request_lane)];
+                end
+            end
+        end
+    end
+
     for (genvar lane = 0; lane < FETCH_WIDTH; lane++) begin : gen_predecode
         f3_predecode predecode_inst (
-            .inst(fetch_insts_q[lane]),
-            .pc(fetch_pc_q[lane]),
+            .inst(packet_src_insts[lane]),
+            .pc(packet_src_pc[lane]),
             .cfi_type(predecode_cfi_type[lane]),
             .is_call(predecode_is_call[lane]),
             .is_ret(predecode_is_ret[lane]),
@@ -377,6 +567,7 @@ module ifu #(
         packet_cfi_is_call_d = 1'b0;
         packet_cfi_is_ret_d = 1'b0;
         packet_cfi_npc_plus4_d = 1'b1;
+        packet_early_safe_d = 1'b1;
         packet_next_pc_d = align_bundle(request_pc_q) + FETCH_BYTES;
         packet_return_addr_d = '0;
         selected = 1'b0;
@@ -386,16 +577,20 @@ module ifu #(
             lane_target = '0;
             predictor_lane = lane + int'(request_bank_lane);
 
-            if (fetch_valid_q[lane] && !selected) begin
+            if (packet_src_valid[lane] && !selected) begin
                 packet_valid_d[lane] = 1'b1;
-                packet_predicted_npc_d[lane] = fetch_pc_q[lane] + 32'd4;
+                packet_predicted_npc_d[lane] =
+                    packet_src_pc[lane] + 32'd4;
 
                 unique case (predecode_cfi_type[lane])
                     CFI_BR: begin
                         packet_br_mask_d[lane] = 1'b1;
                         lane_target = predecode_direct_target[lane];
-                        if (bpd_result_valid_q && predictor_lane < FETCH_WIDTH) begin
-                            lane_take = bpd_f3_preds_q[predictor_lane].is_br && bpd_f3_preds_q[predictor_lane].taken;
+                        if (bpd_packet_result_valid &&
+                            predictor_lane < FETCH_WIDTH) begin
+                            lane_take =
+                                bpd_packet_preds[predictor_lane].is_br &&
+                                bpd_packet_preds[predictor_lane].taken;
                         end
                     end
                     CFI_B_BL: begin
@@ -406,9 +601,18 @@ module ifu #(
                         if (predecode_is_ret[lane]) begin
                             lane_take = 1'b1;
                             lane_target = ras_read_addr;
-                        end else if(bpd_result_valid_q && predictor_lane < FETCH_WIDTH) begin
-                            lane_take = bpd_f3_preds_q[predictor_lane].is_jirl && bpd_f3_preds_q[predictor_lane].taken;
-                            lane_target = bpd_f3_preds_q[predictor_lane].predicted_pc;
+                        end else if (bpd_packet_result_valid &&
+                                     predictor_lane < FETCH_WIDTH) begin
+                            lane_take =
+                                bpd_packet_preds[predictor_lane].is_jirl &&
+                                bpd_packet_preds[predictor_lane].taken;
+                            lane_target =
+                                bpd_packet_preds[predictor_lane].predicted_pc;
+
+                            if (bpd_packet_uses_f2 && !lane_take)
+                                packet_early_safe_d = 1'b0;
+                        end else if (bpd_packet_uses_f2) begin
+                            packet_early_safe_d = 1'b0;
                         end
                     end
                     default: begin
@@ -432,11 +636,18 @@ module ifu #(
         end
     end
 
-    assign packet_available = state_q == S_FETCH && !redirect_valid &&
-                              |fetch_valid_q &&
-                              (!bpd_requested_q || bpd_result_valid_q);
+    assign packet_available = !redirect_valid &&
+                              (state_q == S_FETCH ||
+                               live_mem_packet_valid) &&
+                              |packet_src_valid &&
+                              (!bpd_requested_q ||
+                               bpd_packet_result_valid) &&
+                              (!bpd_packet_uses_f2 ||
+                               packet_early_safe_d);
     assign ftq_enq_valid = packet_available && fetch_ready;
     assign packet_fire = packet_available && fetch_ready && ftq_enq_ready;
+    assign packet_has_xcpt =
+        |(packet_src_xcpt_valid & packet_valid_d);
 
     always_comb begin
         ghist_restore_mux = ftq_ghist_restore;
@@ -501,7 +712,7 @@ module ifu #(
         .enq_ras_idx(current_ghist.ras_idx),
         .enq_start_bank(request_pc_q[BANK_ALIGN_BITS]),
         .enq_ghist(current_ghist),
-        .enq_meta(bpd_result_valid_q ? bpd_f3_meta_q : '0),
+        .enq_meta(bpd_packet_result_valid ? bpd_packet_meta : '0),
         .enq_idx(ftq_enq_idx),
         .commit_valid(ftq_commit_valid),
         .commit_ftq_idx(ftq_commit_idx),
@@ -560,31 +771,37 @@ module ifu #(
     );
 
     always_comb begin
-        request_lane = FETCH_LANE_BITS'(request_pc_q >> 2);
-
-        xlate_req_valid = state_q == S_XLATE_REQ && !request_adef &&
-                          !redirect_valid;
-        xlate_req_vaddr = request_pc_q;
+        xlate_req_valid = !redirect_valid && !next_request_adef &&
+                          (state_q == S_XLATE_REQ || next_request_launch);
+        xlate_req_vaddr = next_request_pc;
         xlate_resp_ready = state_q == S_XLATE_RESP && !redirect_valid;
 
-        imem_req_valid = state_q == S_MEM_REQ && !redirect_valid;
-        imem_req_addr = align_bundle(request_paddr_q);
-        imem_req_mat = request_mat_q;
-        imem_req_cacheable = request_cacheable_q;
+        imem_req_valid = !redirect_valid &&
+                         (state_q == S_MEM_REQ || xlate_to_imem_valid);
+        if (xlate_to_imem_valid) begin
+            imem_req_addr = align_bundle(xlate_resp_paddr);
+            imem_req_mat = xlate_resp_mat;
+            imem_req_cacheable = xlate_resp_cacheable;
+        end else begin
+            imem_req_addr = align_bundle(request_paddr_q);
+            imem_req_mat = request_mat_q;
+            imem_req_cacheable = request_cacheable_q;
+        end
         imem_resp_ready = state_q == S_MEM_RESP;
 
         fetch_valid = '0;
         fetch_xcpt_valid = '0;
-        fetch_pc = fetch_pc_q;
-        fetch_insts = fetch_insts_q;
-        fetch_xcpt_code = fetch_xcpt_code_q;
+        fetch_pc = packet_src_pc;
+        fetch_insts = packet_src_insts;
+        fetch_xcpt_code = packet_src_xcpt_code;
         fetch_ftq_idx = '0;
         fetch_predicted_taken = '0;
         fetch_predicted_npc = '0;
 
         if (packet_available && ftq_enq_ready) begin
             fetch_valid = packet_valid_d;
-            fetch_xcpt_valid = fetch_xcpt_valid_q & packet_valid_d;
+            fetch_xcpt_valid =
+                packet_src_xcpt_valid & packet_valid_d;
             fetch_predicted_taken = packet_predicted_taken_d;
             fetch_predicted_npc = packet_predicted_npc_d;
             for (int lane = 0; lane < FETCH_WIDTH; lane++) begin
@@ -636,7 +853,7 @@ module ifu #(
                     if (redirect_valid) begin
                         state_q <= S_XLATE_REQ;
                         request_pc_q <= redirect_pc;
-                    end else if (xlate_resp_valid && xlate_resp_ready) begin
+                    end else if (xlate_resp_fire) begin
                         if (xlate_resp_xcpt_valid) begin
                             state_q <= S_FETCH;
                             fetch_valid_q <= '0;
@@ -653,7 +870,12 @@ module ifu #(
                             request_paddr_q <= xlate_resp_paddr;
                             request_mat_q <= xlate_resp_mat;
                             request_cacheable_q <= xlate_resp_cacheable;
-                            state_q <= S_MEM_REQ;
+                            if (imem_req_valid && imem_req_ready) begin
+                                state_q <= S_MEM_RESP;
+                                request_stale_q <= 1'b0;
+                            end else begin
+                                state_q <= S_MEM_REQ;
+                            end
                         end
                     end
                 end
@@ -674,12 +896,22 @@ module ifu #(
                         redirect_pc_q <= redirect_pc;
                     end
 
-                    if (imem_resp_valid && imem_resp_ready) begin
+                    if (imem_resp_fire) begin
                         if (request_stale_q || redirect_valid) begin
                             state_q <= S_XLATE_REQ;
                             request_pc_q <= redirect_valid ? redirect_pc :
                                                            redirect_pc_q;
                             request_stale_q <= 1'b0;
+                        end else if (packet_fire) begin
+                            fetch_valid_q <= '0;
+                            fetch_xcpt_valid_q <= '0;
+                            request_pc_q <= packet_next_pc_d;
+                            request_stale_q <= 1'b0;
+
+                            if (xlate_req_valid && xlate_req_ready)
+                                state_q <= S_XLATE_RESP;
+                            else
+                                state_q <= S_XLATE_REQ;
                         end else begin
                             state_q <= S_FETCH;
                             fetch_valid_q <= '0;
@@ -712,8 +944,11 @@ module ifu #(
                         if (|fetch_xcpt_valid_q) begin
                             state_q <= S_FAULT;
                         end else begin
-                            state_q <= S_XLATE_REQ;
                             request_pc_q <= packet_next_pc_d;
+                            if (xlate_req_valid && xlate_req_ready)
+                                state_q <= S_XLATE_RESP;
+                            else
+                                state_q <= S_XLATE_REQ;
                         end
                         fetch_xcpt_valid_q <= '0;
                     end

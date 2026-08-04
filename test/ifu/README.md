@@ -29,6 +29,14 @@ The backend side uses a scalar packet handshake:
 Redirects have priority over sequential fetch. If several redirects arrive
 while an older request is being drained, the most recent target wins.
 
+The predictor checks include the production GShare history path:
+
+- logical first/second-bank histories rotate with the physical starting bank;
+- accepting a packet and launching the next request in the same cycle uses the
+  advanced history snapshot;
+- the first predictor request after a branch rewind uses the corrected FTQ
+  restore snapshot instead of the previous speculative history.
+
 Run the suite after adding the implementation:
 
 ```bash

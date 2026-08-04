@@ -9,53 +9,62 @@ VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__4(Vmem_issue
     Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if ((1U & ((~ (IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec)) 
-               & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available) 
-                  >> 1U)))) {
-        vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec = 1U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_slot = 1U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available 
-            = (0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available));
-    }
-    if ((1U & ((~ (IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec)) 
-               & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available) 
-                  >> 2U)))) {
-        vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec = 1U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_slot = 2U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available 
-            = (0x0bU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available));
-    }
-    if (((~ (IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec)) 
-         & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available) 
-            >> 3U))) {
-        vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec = 1U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_slot = 3U;
-        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available 
-            = (7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available));
-    }
-    vlSelfRef.__VdfgRegularize_h6e95ff9d_0_3 = (1U 
-                                                & (~ 
-                                                   (((1U 
-                                                      == 
-                                                      (3U 
-                                                       & (vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U] 
-                                                          >> 4U)))
-                                                      ? vlSelfRef.agen_addr
-                                                      : (IData)(
-                                                                ((0x00000020U 
-                                                                  == 
-                                                                  (0x00000030U 
-                                                                   & vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_uop[2U])) 
-                                                                 & (0U 
-                                                                    != 
-                                                                    (3U 
-                                                                     & vlSelfRef.agen_addr))))) 
-                                                    & (IData)(vlSelfRef.mem_issue_test_top__DOT__mem_dut__DOT__exe_agen_valid))));
-    vlSelfRef.iss_valid = vlSelfRef.mem_issue_test_top__DOT__iss_valid_vec;
-    vlSelfRef.dis_ready = vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec;
-    vlSelfRef.iss_rob_idx = (0x0000003fU & vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[5U]);
-    vlSelfRef.iss_use_agen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x00000011U));
-    vlSelfRef.iss_use_dgen = (1U & (vlSelfRef.mem_issue_test_top__DOT____Vcellout__issue_dut__iss_uop[8U] 
-                                    >> 0x00000012U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
+        = ((0x0eU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
+           | (1U & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready) 
+                    | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U] 
+                                       << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[20U] 
+                                                 >> 0x0000001eU)) 
+                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         << 0x00000017U) 
+                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                           >> 9U))))) 
+              << 1U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready)) 
+           | ((IData)((((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                          >> 1U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
+                                       >> 1U))) & (~ 
+                                                   (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[16U] 
+                                                    >> 0x00000015U))) 
+                       & (0x00020000U == (0x00024000U 
+                                          & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U])))) 
+              << 1U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready)) 
+           | ((IData)((((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                          >> 1U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
+                                       >> 1U))) & (~ 
+                                                   (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[16U] 
+                                                    >> 0x00000014U))) 
+                       & (0x00040000U == (0x00042000U 
+                                          & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[21U])))) 
+              << 1U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready 
+        = ((0x0dU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_ready)) 
+           | (2U & ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready) 
+                    | (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready))));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed 
+        = ((0x0bU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed)) 
+           | ((0U != (0x0000000fU & (((vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[34U] 
+                                       << 2U) | (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[33U] 
+                                                 >> 0x0000001eU)) 
+                                     & ((vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                         << 0x00000017U) 
+                                        | (vlSelfRef.mem_issue_test_top__DOT__brupdate[15U] 
+                                           >> 9U))))) 
+              << 2U));
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready 
+        = ((0x0bU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready)) 
+           | ((IData)((((((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_valid) 
+                          >> 2U) & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_killed) 
+                                       >> 2U))) & (~ 
+                                                   (vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[29U] 
+                                                    >> 0x00000015U))) 
+                       & (0x00020000U == (0x00024000U 
+                                          & vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__slot_uop[34U])))) 
+              << 2U));
 }

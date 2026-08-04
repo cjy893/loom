@@ -29,8 +29,22 @@ void Vbpd_full_test_top___024root___nba_sequent__TOP__7(Vbpd_full_test_top___024
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0U;
+    vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0 = 0U;
     vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entries__v5 = 0U;
+    if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__doing_reset) {
+        vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 
+            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
+        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 1U;
+    } else if (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_write) {
+        vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 
+            = vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__upd_new_ctr;
+        vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 
+            = (0x000007ffU & (vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__s1_update[8U] 
+                              >> 5U));
+        vlSelfRef.__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 1U;
+    }
     if (vlSelfRef.rst_n) {
         if (vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__do_allocate) {
             vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0 

@@ -10,6 +10,7 @@ DUT_SOURCES=(
   "$ROOT/common/types_pkg.sv"
   "$ROOT/ifu/bpd/ubtb.sv"
   "$ROOT/ifu/bpd/bim.sv"
+  "$ROOT/ifu/bpd/gshare.sv"
   "$ROOT/ifu/bpd/btb.sv"
   "$ROOT/ifu/bpd/composer.sv"
 )

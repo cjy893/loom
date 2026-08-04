@@ -18,6 +18,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
     struct {
         VL_IN8(clk,0,0);
         VL_IN8(rst_n,0,0);
+        VL_IN8(rob_head_idx,5,0);
         VL_IN8(dis_valid,0,0);
         VL_OUT8(dis_ready,0,0);
         VL_IN8(dis_rob_idx,5,0);
@@ -27,6 +28,17 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         VL_IN8(dis_psrc2_busy,0,0);
         VL_IN8(dis_use_agen,0,0);
         VL_IN8(dis_use_dgen,0,0);
+        VL_IN8(dis_br_mask,3,0);
+        VL_IN8(dis_valid_1,0,0);
+        VL_OUT8(dis_ready_1,0,0);
+        VL_IN8(dis_rob_idx_1,5,0);
+        VL_IN8(dis_psrc1_1,5,0);
+        VL_IN8(dis_psrc2_1,5,0);
+        VL_IN8(dis_psrc1_busy_1,0,0);
+        VL_IN8(dis_psrc2_busy_1,0,0);
+        VL_IN8(dis_use_agen_1,0,0);
+        VL_IN8(dis_use_dgen_1,0,0);
+        VL_IN8(dis_br_mask_1,3,0);
         VL_IN8(wakeup_valid_0,0,0);
         VL_IN8(wakeup_pdst_0,5,0);
         VL_IN8(wakeup_valid_1,0,0);
@@ -43,7 +55,8 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         VL_OUT8(agen_rob_idx,5,0);
         VL_OUT8(dgen_valid,0,0);
         VL_OUT8(dgen_rob_idx,5,0);
-        CData/*0:0*/ mem_issue_test_top__DOT__dis_ready_vec;
+        CData/*1:0*/ mem_issue_test_top__DOT__dis_valid_vec;
+        CData/*1:0*/ mem_issue_test_top__DOT__dis_ready_vec;
         CData/*0:0*/ mem_issue_test_top__DOT__iss_valid_vec;
         CData/*1:0*/ mem_issue_test_top__DOT__wakeup_valid;
         SData/*11:0*/ mem_issue_test_top__DOT__wakeup_pdst;
@@ -56,15 +69,29 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_killed;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_ready;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_grant;
-        CData/*1:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_slot;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_complete;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_agen_ready;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_dgen_ready;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__issue_agen;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__issue_dgen;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_slot;
+        CData/*1:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_br_killed;
+        CData/*1:0*/ mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire;
+        SData/*15:0*/ mem_issue_test_top__DOT__issue_dut__DOT__older_q;
+        SData/*15:0*/ mem_issue_test_top__DOT__issue_dut__DOT__older_n;
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__oldest_ready;
+    };
+    struct {
+        CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__survivor;
+        VlWide<52>/*1663:0*/ mem_issue_test_top__DOT__issue_dut__DOT__uop_mux_terms;
         CData/*3:0*/ mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__available;
-        CData/*0:0*/ mem_issue_test_top__DOT__issue_dut__DOT__unnamedblk2__DOT__port_used;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_3;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_4;
         CData/*0:0*/ __VstlFirstIteration;
         CData/*0:0*/ __VstlPhaseResult;
         CData/*0:0*/ __Vtrigprevexpr___TOP__clk__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__rst_n__0;
+        CData/*5:0*/ __Vtrigprevexpr___TOP__rob_head_idx__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__dis_valid__0;
         CData/*5:0*/ __Vtrigprevexpr___TOP__dis_rob_idx__0;
         CData/*5:0*/ __Vtrigprevexpr___TOP__dis_psrc1__0;
@@ -73,6 +100,16 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         CData/*0:0*/ __Vtrigprevexpr___TOP__dis_psrc2_busy__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__dis_use_agen__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__dis_use_dgen__0;
+        CData/*3:0*/ __Vtrigprevexpr___TOP__dis_br_mask__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__dis_valid_1__0;
+        CData/*5:0*/ __Vtrigprevexpr___TOP__dis_rob_idx_1__0;
+        CData/*5:0*/ __Vtrigprevexpr___TOP__dis_psrc1_1__0;
+        CData/*5:0*/ __Vtrigprevexpr___TOP__dis_psrc2_1__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__dis_psrc1_busy_1__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__dis_psrc2_busy_1__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__dis_use_agen_1__0;
+        CData/*0:0*/ __Vtrigprevexpr___TOP__dis_use_dgen_1__0;
+        CData/*3:0*/ __Vtrigprevexpr___TOP__dis_br_mask_1__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__wakeup_valid_0__0;
         CData/*5:0*/ __Vtrigprevexpr___TOP__wakeup_pdst_0__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__wakeup_valid_1__0;
@@ -80,8 +117,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         CData/*3:0*/ __Vtrigprevexpr___TOP__resolve_mask__0;
         CData/*3:0*/ __Vtrigprevexpr___TOP__mispredict_mask__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__br_mispredict__0;
-    };
-    struct {
         CData/*0:0*/ __Vtrigprevexpr___TOP__flush_pipeline__0;
         CData/*0:0*/ __VicoDidInit;
         CData/*0:0*/ __VicoPhaseResult;
@@ -100,6 +135,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_src1;
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_src2;
         IData/*31:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_imm;
+        VlWide<13>/*415:0*/ mem_issue_test_top__DOT__issue_dut__DOT__selected_uop_bits;
         IData/*31:0*/ __Vtrigprevexpr___TOP__src1_data__0;
         IData/*31:0*/ __Vtrigprevexpr___TOP__src2_data__0;
         IData/*31:0*/ __Vtrigprevexpr___TOP__imm_data__0;
@@ -109,7 +145,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top___024root final {
         VlWide<13>/*415:0*/ mem_issue_test_top__DOT__mem_dut__DOT__rrd_uop;
         VlWide<13>/*415:0*/ mem_issue_test_top__DOT__mem_dut__DOT__exe_uop;
         VlWide<52>/*1663:0*/ mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
-        VlWide<13>/*415:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated;
+        VlWide<26>/*831:0*/ mem_issue_test_top__DOT__issue_dut__DOT__dis_uop_updated;
+    };
+    struct {
         VlWide<52>/*1663:0*/ __Vdly__mem_issue_test_top__DOT__issue_dut__DOT__slot_uop;
         VlUnpacked<QData/*63:0*/, 1> __VstlTriggered;
         VlUnpacked<QData/*63:0*/, 2> __VicoTriggered;

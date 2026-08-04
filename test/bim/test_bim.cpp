@@ -522,6 +522,90 @@ void test_two_entry_write_bypass(Vbim_test_top* dut) {
               read_bim_meta(dut, 0), 1);
 }
 
+void test_lane1_nt_alternation(Vbim_test_top* dut) {
+    clear_inputs(dut);
+    reset_bim(dut);
+
+    // This is the bank-local address for a branch at ...077c: physical bank 1,
+    // local lane 1. A phase of N,T drives a weak-taken BIM counter between
+    // 2'b10 and 2'b01, so its direction prediction is wrong every time.
+    constexpr uint32_t pc = 0x1c00'0778U;
+    constexpr int iterations = 16;
+    const uint64_t lane1_branch =
+        pred_to_u64({false, true, false, false, 0x1c00'0700U});
+    uint8_t expected_ctr = 2;
+    int mispredicts = 0;
+    uint8_t history_ctrs[2] = {2, 2};
+    bool previous_taken = false;
+    int history_mispredicts = 0;
+
+    for (int iteration = 0; iteration < iterations; ++iteration) {
+        do_bim_lookup(dut, pc, 0, lane1_branch);
+
+        const uint8_t lane0_meta = read_bim_meta(dut, 0);
+        const uint8_t lane1_meta = read_bim_meta(dut, 1);
+        const bool predicted_taken = read_f2_pred(dut, 1).taken;
+        const bool actual_taken = (iteration & 1) != 0;
+
+        expect_eq("alternating lane1: lane0 remains weak taken",
+                  lane0_meta, 2);
+        expect_eq("alternating lane1: metadata follows 10/01 state",
+                  lane1_meta, expected_ctr);
+        expect_eq("alternating lane1: prediction uses counter MSB",
+                  predicted_taken, (expected_ctr >> 1) & 1U);
+        mispredicts += predicted_taken != actual_taken;
+
+        // A one-bit-history reference separates the two contexts addressed
+        // by the same PC. This is the minimum behavior expected from a future
+        // GShare implementation; it is deliberately not DUT behavior here.
+        uint8_t& history_ctr = history_ctrs[previous_taken ? 1 : 0];
+        const bool history_prediction = (history_ctr >> 1) & 1U;
+        history_mispredicts += history_prediction != actual_taken;
+        if (actual_taken)
+            history_ctr = history_ctr == 3 ? 3 : history_ctr + 1;
+        else
+            history_ctr = history_ctr == 0 ? 0 : history_ctr - 1;
+        previous_taken = actual_taken;
+
+        drive_raw_update(dut, pc, 0b10, true, 1, actual_taken,
+                         true, false, false, lane0_meta, lane1_meta);
+        if (actual_taken)
+            expected_ctr = expected_ctr == 3 ? 3 : expected_ctr + 1;
+        else
+            expected_ctr = expected_ctr == 0 ? 0 : expected_ctr - 1;
+    }
+
+    lookup_meta(dut, pc);
+    expect_eq("alternating lane1: even-length sequence returns to 10",
+              read_bim_meta(dut, 1), 2);
+    expect_eq("alternating lane1: N/T phase defeats one BIM counter",
+              mispredicts, iterations);
+    expect_eq("alternating lane1: one-bit history only pays cold misses",
+              history_mispredicts, 3);
+}
+
+void test_lane1_stale_meta_write_bypass(Vbim_test_top* dut) {
+    clear_inputs(dut);
+    reset_bim(dut);
+
+    constexpr uint32_t pc = 0x1c00'1778U;
+
+    // Model four already-in-flight predictions, all of which observed the
+    // same old 2'b10 metadata. The write-bypass chain must serialize their
+    // N,T,N,T commits as 10->01->10->01->10 instead of restarting from 10.
+    for (int update = 0; update < 4; ++update) {
+        const bool actual_taken = (update & 1) != 0;
+        drive_raw_update(dut, pc, 0b10, true, 1, actual_taken,
+                         true, false, false, 2, 2);
+    }
+
+    lookup_meta(dut, pc);
+    expect_eq("alternating bypass: lane0 metadata remains unchanged",
+              read_bim_meta(dut, 0), 2);
+    expect_eq("alternating bypass: stale metadata commits form one chain",
+              read_bim_meta(dut, 1), 2);
+}
+
 void test_noncommit_updates_are_ignored(Vbim_test_top* dut) {
     clear_inputs(dut);
     reset_bim(dut);
@@ -656,6 +740,8 @@ int main(int argc, char** argv) {
     test_meta_two_lanes(dut);
     test_update_uses_prediction_meta(dut);
     test_two_entry_write_bypass(dut);
+    test_lane1_nt_alternation(dut);
+    test_lane1_stale_meta_write_bypass(dut);
     test_noncommit_updates_are_ignored(dut);
     test_unconditional_cfi_training(dut);
     test_direct_cfi_after_earlier_branch(dut);

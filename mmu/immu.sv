@@ -74,9 +74,11 @@ module immu #(
     logic [31:0] trans_badvaddr;
 
     logic tlb_req_fire;
+    logic direct_resp_valid;
 
     assign tlb_req_fire = tlb_req_valid && tlb_req_ready;
     assign trans_req_valid = (state == S_CHECK) || ((state == S_TLB_WAIT) && tlb_resp_valid);
+    assign direct_resp_valid = (state == S_CHECK) && trans_resp_valid;
 
     addr_trans trans (
         .req_valid       (trans_req_valid),
@@ -109,20 +111,34 @@ module immu #(
     );
 
     always_comb begin
-        req_ready = (state == S_IDLE) && !flush;
+        req_ready = !flush &&
+                    ((state == S_IDLE) ||
+                     (direct_resp_valid && resp_ready));
 
         tlb_req_valid = (state == S_CHECK) && trans_use_tlb && !flush;
         tlb_req_vaddr = req_vaddr_q;
         tlb_req_asid = csr_asid_q[ASID_WIDTH-1:0];
 
-        resp_valid = (state == S_RESPONSE) && !flush;
-        resp_vaddr = resp_vaddr_q;
-        resp_paddr = resp_paddr_q;
-        resp_mat = resp_mat_q;
-        resp_cacheable = resp_cacheable_q;
-        resp_xcpt_valid = resp_xcpt_valid_q;
-        resp_xcpt_code = resp_xcpt_code_q;
-        resp_badvaddr = resp_badvaddr_q;
+        resp_valid = !flush &&
+                     (direct_resp_valid || (state == S_RESPONSE));
+
+        if (direct_resp_valid) begin
+            resp_vaddr = req_vaddr_q;
+            resp_paddr = trans_paddr;
+            resp_mat = trans_mat;
+            resp_cacheable = trans_cacheable;
+            resp_xcpt_valid = trans_xcpt_valid;
+            resp_xcpt_code = trans_xcpt_code;
+            resp_badvaddr = trans_badvaddr;
+        end else begin
+            resp_vaddr = resp_vaddr_q;
+            resp_paddr = resp_paddr_q;
+            resp_mat = resp_mat_q;
+            resp_cacheable = resp_cacheable_q;
+            resp_xcpt_valid = resp_xcpt_valid_q;
+            resp_xcpt_code = resp_xcpt_code_q;
+            resp_badvaddr = resp_badvaddr_q;
+        end
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -157,14 +173,18 @@ module immu #(
 
                 S_CHECK: begin
                     if (trans_resp_valid) begin
-                        resp_vaddr_q <= req_vaddr_q;
-                        resp_paddr_q <= trans_paddr;
-                        resp_mat_q <= trans_mat;
-                        resp_cacheable_q <= trans_cacheable;
-                        resp_xcpt_valid_q <= trans_xcpt_valid;
-                        resp_xcpt_code_q <= trans_xcpt_code;
-                        resp_badvaddr_q <= trans_badvaddr;
-                        state <= S_RESPONSE;
+                        if (resp_ready) begin
+                            if (req_valid && req_ready) begin
+                                req_vaddr_q <= req_vaddr;
+                                csr_crmd_q <= csr_crmd;
+                                csr_asid_q <= csr_asid;
+                                csr_dmw0_q <= csr_dmw0;
+                                csr_dmw1_q <= csr_dmw1;
+                                state <= S_CHECK;
+                            end else begin
+                                state <= S_IDLE;
+                            end
+                        end
                     end else if (trans_use_tlb && tlb_req_fire) begin
                         state <= S_TLB_WAIT;
                     end

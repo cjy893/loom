@@ -52,7 +52,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         SData/*9:0*/ bpd_full_test_top__DOT__btb_inst__DOT__invalidate_set;
         CData/*0:0*/ bpd_full_test_top__DOT__btb_inst__DOT__do_allocate;
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_valid;
-        CData/*3:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_rdata;
+        CData/*3:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata;
+        CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_valid;
+        CData/*3:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_data;
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s1_update_valid;
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s2_valid;
         CData/*3:0*/ bpd_full_test_top__DOT__bim_inst__DOT__s2_ctrs;
@@ -65,8 +67,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_hit_idx;
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_enq_idx;
         CData/*0:0*/ bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
-        CData/*2:0*/ bpd_full_test_top__DOT__bim_inst__DOT__rst_col;
-        CData/*7:0*/ bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
         CData/*3:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr;
         CData/*0:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__f1_valid;
         CData/*0:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit;
@@ -95,7 +95,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_36;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_37;
         CData/*0:0*/ __VdfgRegularize_h6e95ff9d_0_38;
-        CData/*7:0*/ __Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set;
         CData/*0:0*/ __Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset;
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0;
@@ -114,6 +113,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entries__v7;
         CData/*0:0*/ __VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__entries__v8;
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entries__v8;
+        CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0;
+        CData/*3:0*/ __VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
+        CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
         CData/*0:0*/ __VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0;
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0;
@@ -128,13 +130,6 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v1;
-        CData/*7:0*/ __VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0;
-        CData/*2:0*/ __VdlyDim1__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0;
-        CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0;
-        CData/*3:0*/ __VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
-        CData/*7:0*/ __VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
-        CData/*2:0*/ __VdlyDim1__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
-        CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
         CData/*3:0*/ __VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0;
         CData/*0:0*/ __VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0;
@@ -146,13 +141,13 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*4:0*/ __VdlyDim0__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v0;
         CData/*0:0*/ __VdlySet__bpd_full_test_top__DOT__ras_inst__DOT__stack__v1;
-    };
-    struct {
         CData/*0:0*/ __VstlFirstIteration;
         CData/*0:0*/ __VstlPhaseResult;
         CData/*0:0*/ __Vtrigprevexpr___TOP__clk__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__rst_n__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__f0_valid__0;
+    };
+    struct {
         CData/*0:0*/ __Vtrigprevexpr___TOP__f1_update_valid__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__f1_is_br__0;
         CData/*0:0*/ __Vtrigprevexpr___TOP__f1_taken__0;
@@ -180,10 +175,14 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         CData/*0:0*/ __Vtrigprevexpr___TOP__rst_n__1;
         CData/*0:0*/ __VactPhaseResult;
         CData/*0:0*/ __VnbaPhaseResult;
+        SData/*10:0*/ bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
         SData/*15:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid;
         SData/*15:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__update_hit_vec;
         SData/*15:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__0__KET____DOT__hit_vec;
         SData/*15:0*/ bpd_full_test_top__DOT__ubtb_inst__DOT__genblk1__BRA__1__KET____DOT__hit_vec;
+        SData/*10:0*/ __Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
+        SData/*10:0*/ __VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0;
+        SData/*10:0*/ __VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1;
         SData/*10:0*/ __VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx__v0;
         VL_IN(f0_pc,31,0);
         VL_OUTW(bim_f2_meta,119,0,4);
@@ -212,9 +211,9 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         IData/*31:0*/ __Vtrigprevexpr___TOP__update_target__0;
         VlWide<4>/*119:0*/ __Vtrigprevexpr___TOP__update_meta__0;
         IData/*31:0*/ __VactIterCount;
+        VL_OUTW(ubtb_f1_preds,71,0,3);
     };
     struct {
-        VL_OUTW(ubtb_f1_preds,71,0,3);
         VL_OUTW(bim_f2_preds,71,0,3);
         VL_OUTW(btb_f3_preds,71,0,3);
         VL_OUTW(current_ghist,71,0,3);
@@ -233,7 +232,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vbpd_full_test_top___024root final {
         VlUnpacked<CData/*1:0*/, 32> bpd_full_test_top__DOT__btb_inst__DOT__entry_valid;
         VlUnpacked<VlWide<4>/*119:0*/, 32> bpd_full_test_top__DOT__btb_inst__DOT__entries;
         VlUnpacked<CData/*0:0*/, 32> bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr;
-        VlUnpacked<VlUnpacked<CData/*3:0*/, 256>, 8> bpd_full_test_top__DOT__bim_inst__DOT__ram;
+        VlUnpacked<CData/*3:0*/, 2048> bpd_full_test_top__DOT__bim_inst__DOT__ram;
         VlUnpacked<SData/*10:0*/, 2> bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_idx;
         VlUnpacked<CData/*3:0*/, 2> bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data;
         VlUnpacked<IData/*31:0*/, 32> bpd_full_test_top__DOT__ras_inst__DOT__stack;

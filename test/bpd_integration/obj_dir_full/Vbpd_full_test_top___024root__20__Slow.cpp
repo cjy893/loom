@@ -9,6 +9,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_1(Vbpd_full_test
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelf->__VdfgRegularize_h6e95ff9d_0_8 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_9 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_10 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_27 = 0;
@@ -19,8 +20,8 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_1(Vbpd_full_test
     vlSelf->__VdfgRegularize_h6e95ff9d_0_36 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_37 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_38 = 0;
-    vlSelf->__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_set = 0;
     vlSelf->__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__doing_reset = 0;
+    vlSelf->__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx = 0;
     VL_ZERO_RESET_W(72, vlSelf->__Vdly__bpd_full_test_top__DOT__ghist_inst__DOT__history_q);
     vlSelf->__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0 = 0;
     vlSelf->__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entries__v0 = 0;
@@ -51,6 +52,11 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_1(Vbpd_full_test
     vlSelf->__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__entries__v8 = 0;
     vlSelf->__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entries__v8 = 0;
     vlSelf->__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entries__v8 = 0;
+    vlSelf->__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0;
+    vlSelf->__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0;
+    vlSelf->__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
+    vlSelf->__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
+    vlSelf->__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
     vlSelf->__VdlyLsb__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0 = 0;
     vlSelf->__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0 = 0;
     vlSelf->__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__entry_valid__v0 = 0;
@@ -65,13 +71,6 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_1(Vbpd_full_test
     vlSelf->__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0 = 0;
     vlSelf->__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0 = 0;
     vlSelf->__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v1 = 0;
-    vlSelf->__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0;
-    vlSelf->__VdlyDim1__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0;
-    vlSelf->__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v0 = 0;
-    vlSelf->__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
-    vlSelf->__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
-    vlSelf->__VdlyDim1__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
-    vlSelf->__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__ram__v1 = 0;
     vlSelf->__VdlyVal__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0 = 0;
     vlSelf->__VdlyDim0__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0 = 0;
     vlSelf->__VdlySet__bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_data__v0 = 0;
@@ -114,4 +113,5 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_1(Vbpd_full_test
     vlSelf->__Vtrigprevexpr___TOP__update_cfi_valid__0 = 0;
     vlSelf->__Vtrigprevexpr___TOP__update_cfi_idx__0 = 0;
     vlSelf->__Vtrigprevexpr___TOP__update_cfi_taken__0 = 0;
+    vlSelf->__Vtrigprevexpr___TOP__update_cfi_mispredicted__0 = 0;
 }

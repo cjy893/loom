@@ -292,13 +292,24 @@ class RequestStabilityMonitor {
 public:
     void observe(Vcore_top_contract_test_top* dut) {
         if (hold_imem_) {
-            protocol_ok_ &=
-                dut->imem_req_valid &&
+            // An unaccepted fetch may be canceled by an internal redirect.
+            // If the offer remains valid, however, its address must not move.
+            bool stable =
+                !dut->imem_req_valid ||
                 dut->imem_req_addr == imem_addr_;
+            if (!stable && imem_protocol_ok_) {
+                std::fprintf(stderr,
+                             "FAIL: imem request changed under backpressure: "
+                             "valid=%u addr=0x%08x expected=0x%08x\n",
+                             static_cast<unsigned>(dut->imem_req_valid),
+                             static_cast<unsigned>(dut->imem_req_addr),
+                             imem_addr_);
+            }
+            imem_protocol_ok_ &= stable;
         }
 
         if (hold_dmem_) {
-            protocol_ok_ &=
+            bool stable =
                 dut->dmem_req_valid &&
                 dut->dmem_req_is_store == dmem_is_store_ &&
                 dut->dmem_req_addr == dmem_addr_ &&
@@ -306,6 +317,11 @@ public:
                 dut->dmem_req_mask == dmem_mask_ &&
                 dut->dmem_req_size == dmem_size_ &&
                 dut->dmem_req_idx == dmem_idx_;
+            if (!stable && dmem_protocol_ok_) {
+                std::fprintf(stderr,
+                             "FAIL: dmem request changed under backpressure\n");
+            }
+            dmem_protocol_ok_ &= stable;
         }
 
         hold_imem_ =
@@ -328,12 +344,15 @@ public:
         }
     }
 
-    bool protocol_ok() const { return protocol_ok_; }
+    bool protocol_ok() const {
+        return imem_protocol_ok_ && dmem_protocol_ok_;
+    }
     bool saw_imem_stall() const { return saw_imem_stall_; }
     bool saw_dmem_stall() const { return saw_dmem_stall_; }
 
 private:
-    bool protocol_ok_ = true;
+    bool imem_protocol_ok_ = true;
+    bool dmem_protocol_ok_ = true;
     bool hold_imem_ = false;
     bool hold_dmem_ = false;
     bool saw_imem_stall_ = false;

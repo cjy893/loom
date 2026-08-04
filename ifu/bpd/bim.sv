@@ -23,14 +23,9 @@ module bim #(
     input logic update_valid,
     input bpd_bank_update_t update
 );
-    localparam int NUM_SETS_PER_COL = NUM_SETS/NUM_COLS;
     localparam int CTR_SZ = 2;
-    localparam int COL_SZ = (NUM_COLS <= 1) ? 1 : $clog2(NUM_COLS);
-    localparam int SET_SZ = (NUM_SETS_PER_COL <= 1) ? 1 : $clog2(NUM_SETS_PER_COL);
-    localparam logic [COL_SZ-1:0] LAST_COL = COL_SZ'(NUM_COLS-1);
-    localparam logic [SET_SZ-1:0] LAST_SET = SET_SZ'(NUM_SETS_PER_COL-1);
-
     localparam int IDX_SZ = $clog2(NUM_SETS);
+    localparam logic [IDX_SZ-1:0] LAST_IDX = IDX_SZ'(NUM_SETS-1);
     localparam int FETCH_ALIGN_BITS = $clog2(ICACHE_FETCH_BYTES);
     localparam int CFI_IDX_SZ = (BANK_WIDTH <= 1) ? 1 : $clog2(BANK_WIDTH);
 
@@ -46,18 +41,17 @@ module bim #(
         else bim_write = (~|old_ctr) ? old_ctr : old_ctr - CTR_SZ'(1);
     endfunction
 
-    logic [BANK_WIDTH*CTR_SZ-1:0] ram [NUM_COLS-1:0] [NUM_SETS_PER_COL-1:0];
+    (* ram_style = "block" *)
+    logic [BANK_WIDTH*CTR_SZ-1:0] ram [0:NUM_SETS-1];
 
     logic [IDX_SZ-1:0] s0_idx;
-    logic [COL_SZ-1:0] s0_col;
-    logic [SET_SZ-1:0] s0_set;
 
     assign s0_idx = f0_pc[FETCH_ALIGN_BITS+IDX_SZ -1:FETCH_ALIGN_BITS];
-    assign s0_col = s0_idx[COL_SZ-1:0];
-    assign s0_set = s0_idx[COL_SZ+SET_SZ-1:COL_SZ];
 
     logic s1_valid;
-    logic [BANK_WIDTH-1:0] [CTR_SZ-1:0] s1_rdata;
+    logic [BANK_WIDTH-1:0] [CTR_SZ-1:0] s1_ram_rdata;
+    logic s1_read_bypass_valid;
+    logic [BANK_WIDTH-1:0] [CTR_SZ-1:0] s1_read_bypass_data;
     logic s1_update_valid;
     bpd_bank_update_t s1_update;
 
@@ -68,13 +62,9 @@ module bim #(
     assign f2_meta = s2_valid ? {{BPD_MAX_META_LENGTH - BANK_WIDTH * CTR_SZ{1'b0}}, s2_ctrs[1], s2_ctrs[0]} : '0;
 
     logic [IDX_SZ-1:0] upd_idx;
-    logic [COL_SZ-1:0] upd_col;
-    logic [SET_SZ-1:0] upd_set;
     logic upd_is_commit;
 
     assign upd_idx = s1_update.pc[FETCH_ALIGN_BITS+IDX_SZ -1:FETCH_ALIGN_BITS];
-    assign upd_col = upd_idx[COL_SZ-1:0];
-    assign upd_set = upd_idx[COL_SZ+SET_SZ-1:COL_SZ];
     assign upd_is_commit = !s1_update.is_mispredict_update && !s1_update.is_repair_update && !(|s1_update.btb_mispredicts);
 
     logic [BANK_WIDTH-1:0] [CTR_SZ-1:0] upd_old_ctr;
@@ -93,8 +83,7 @@ module bim #(
     logic [WRBYPASS_IDX_SZ-1:0] wrbypass_enq_idx;
 
     logic doing_reset;
-    logic [COL_SZ-1:0] rst_col;
-    logic [SET_SZ-1:0] rst_set;
+    logic [IDX_SZ-1:0] rst_idx;
 
     logic bim_ready;
     assign bim_ready = !doing_reset;
@@ -104,20 +93,23 @@ module bim #(
         if(!rst_n) begin
             s1_valid <= 1'b0;
             s2_valid <= 1'b0;
+            s1_read_bypass_valid <= 1'b0;
+            s1_read_bypass_data <= '0;
         end else begin
             s1_valid <= f0_valid && !doing_reset;
             s2_valid <= s1_valid;
+            s1_read_bypass_valid <= f0_valid && !doing_reset && upd_write && s0_idx == upd_idx;
+            if(f0_valid && !doing_reset && upd_write && s0_idx == upd_idx)
+                s1_read_bypass_data <= upd_new_ctr;
         end
     end
 
     always_ff @(posedge clk) begin
-        if(f0_valid && !doing_reset) begin
-            if(upd_write && s0_idx == upd_idx) s1_rdata <= upd_new_ctr;
-            else s1_rdata <= ram[s0_col][s0_set];
-        end
+        if(f0_valid && !doing_reset)
+            s1_ram_rdata <= ram[s0_idx];
 
         s2_preds_in <= f1_preds_in;
-        s2_ctrs <= s1_rdata;
+        s2_ctrs <= s1_read_bypass_valid ? s1_read_bypass_data : s1_ram_rdata;
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -153,22 +145,16 @@ module bim #(
     always_ff @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
             doing_reset <= 1'b1;
-            rst_col <= '0;
-            rst_set <= '0;
+            rst_idx <= '0;
         end else if(doing_reset) begin
-            ram[rst_col][rst_set] <= {BANK_WIDTH{2'b10}};
+            if(rst_idx == LAST_IDX) doing_reset <= 1'b0;
+            else rst_idx <= rst_idx + 1'b1;
+        end
+    end
 
-            if(rst_set == LAST_SET) begin
-                rst_set <= '0;
-                if(rst_col == LAST_COL) doing_reset <= 1'b0;
-                else rst_col <= rst_col + 1'b1;
-            end else begin
-                rst_set <= rst_set + 1'b1;
-            end
-        end
-        else if(upd_write) begin
-            ram[upd_col][upd_set] <= upd_new_ctr;
-        end
+    always_ff @(posedge clk) begin
+        if(doing_reset) ram[rst_idx] <= {BANK_WIDTH{2'b10}};
+        else if(upd_write) ram[upd_idx] <= upd_new_ctr;
     end
 
     for(genvar entry = 0; entry < NUM_WRBYPASS; entry++) begin

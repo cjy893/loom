@@ -162,6 +162,8 @@
 - [x] 验证正常双发包连续进入 Decode，`is_unique` 包不会提前离开 Fetch Buffer。
 - [x] 用正式重定向端口替代测试顶层对 `loom_core` 内部信号的层次化引用。
 - [x] 建立单 outstanding IMMU 控制契约，覆盖 ITLB、取指异常、反压和 flush。
+- [x] 直映射 IMMU 与 ICache lookup hit 支持直接响应；接受当前 fetch packet 时同拍发起
+  下一 PC 的翻译和 BPD 请求，消除单 outstanding 前端的固定包间气泡。
 - [x] 单 outstanding IFU 使用 frontend epoch 丢弃迟到预测，并用请求 stale 状态
   拒绝重定向前的翻译/取指响应。
 - [ ] 实现多 outstanding ICache/IMMU 时，为请求增加 tag/FTQ index
@@ -220,9 +222,90 @@
 - [x] 增加生产 `core_top` 在 ICache/DCache refill 在途时的分支、异常和中断恢复回归，
   正常与确定性 AXI 背压模式均通过 `test/core_top_recovery/`。
 - [x] 生产 `core_top` 官方功能 ELF 在正常与 AXI 背压模式下均通过 58/58 测试点。
-- [ ] 在 `core_top_elf_axi` 增加周期、IPC、误预测、Cache miss 和主要阻塞原因统计，
+- [x] 在 `core_top_elf_axi` 增加周期、IPC、误预测、Cache miss 和主要阻塞原因统计，
   再运行 CoreMark 与 `fireye_A0` 建立性能基线。
-- [ ] 根据性能数据决定是否实现 F1/F2 早重定向和带 tag/epoch 的多 outstanding IFU/IMMU。
+- [x] 根据性能数据决定是否实现 F1/F2 早重定向和带 tag/epoch 的多 outstanding IFU/IMMU：
+  当前先保留已对齐 F3；多 outstanding 前端、LSU/数据侧并发和预测准确度优化拆分为后续阶段。
+
+#### 2026-08-02 性能基线与本轮结果
+
+| 用例 | 优化前 IPC | 优化后 IPC | 变化 | 当前主要限制 |
+|------|-----------:|-----------:|-----:|--------------|
+| `stream_copy` | 0.2233 | 0.3125 | +40.0% | LDQ/数据侧反压，DCache hit 仍有串行延迟 |
+| `crc32` | 0.2886 | 0.4890 | +69.4% | Fetch Buffer 空 66.25%，单 outstanding 前端 |
+| `coremark` | 0.3575 | 0.4079 | +14.1% | 分支误预测率 11.14% |
+| `fireye_A0` | 0.3824 | 0.3752 | -1.9% | LDQ 几乎常满、DCache refill 占用高 |
+
+- [x] CoreMark、`fireye_A0`、`stream_copy`、`crc32` 正常模式均完成并返回正确 LED/NUM。
+- [x] 四个性能用例在确定性 AXI 背压模式下均完成，无死锁、协议或数据错误。
+- [x] 综合检查 IMMU/ICache 直接响应及 IFU 同拍下一请求，WNS 与优化前保持不变。
+- [x] DMMU bypass 已支持 CHECK 当拍直接响应；单元、LSU-DMMU、CACOP、精确异常、
+  core_top 恢复以及官方功能 ELF 正常/AXI 背压回归通过。
+- [x] DMMU CHECK 直接响应性能回归完成：`stream_copy` 0.3264（+4.4%）、
+  `crc32` 0.4966（+1.6%）、`coremark` 0.4336（+6.3%）、
+  `fireye_A0` 0.3852（+2.7%）；四项均正确结束，DMMU `response` 状态占比为 0%。
+- [x] 扩展性能回归到逐分支 PC/CFI/方向统计，记录代表性用例：
+  `bitcount` 0.7666、`crc32` 0.4966、`fireye_C0` 0.2647、`my_memcmp` 0.4820。
+- [x] IFU 命中路径已支持翻译响应直接交接 ICache，并可当拍消费 epoch 匹配的
+  live F3 预测结果；ICache/后端背压时分别回退到请求寄存器和预测结果寄存器。
+  Verilator 回归后 `S_MEM_REQ` 占比为 0%，IPC：`bitcount` 0.8860（+15.6%）、
+  `crc32` 0.6397（+28.8%）、`fireye_C0` 0.2662（+0.6%）、
+  `my_memcmp` 0.5567（+15.5%）。综合后 WNS 仍为 +0.978 ns，与优化前一致。
+- [x] 为 IMMU direct bypass 和 ICache lookup hit 增加响应/下一请求同拍周转红测试；
+  当前 IMMU 225 项检查仅该契约失败 1 项，ICache 32B/64B 配置也分别仅失败 1 项。
+- [x] IMMU direct response 和 ICache lookup hit 已可在响应握手周期接收下一请求；
+  响应反压、TLB wait、miss/refill 和维护期间继续禁止覆盖在途请求。IMMU 231 项、
+  ICache 32B/64B 配置 2158/2406 项检查、core_top 恢复，以及官方 58 项功能 ELF
+  正常/AXI 背压回归均通过。
+- [x] IFU 在 ICache hit 响应与 Composer F2 对齐时直接组包，并在该 packet 被接收的
+  同一周期启动下一次翻译；F2 已消费请求产生的迟到 F3 用单项 drop 状态丢弃，JIRL
+  缺少早期目标、FTQ/后端反压或时序未对齐时仍回退到原有 F3/寄存路径。完整回归后
+  IPC：`bitcount` 0.9077（+2.4%）、`crc32` 0.6799（+6.3%）、`fireye_C0`
+  0.2672（+0.4%）、`my_memcmp` 0.6169（+10.8%）；综合 WNS 为 +0.987 ns，
+  与修改前 +0.978 ns 基本一致。
+- [x] 将 GShare 接入 Composer 和 IFU 的真实逐 bank GHist；逻辑第一/第二 bank 历史
+  会随物理 bank 轮换，packet 接收同拍的下一 BPD 请求使用更新后历史，branch rewind
+  后的首个请求直接使用 FTQ 恢复快照。`test/ifu/` 和 `test/core_ifu/` 回归通过。
+  `bitcount` 的 `0x1c00077c` 分支 taken 恰为 50%，2000 次执行误预测 1990 次，
+  v4 默认配置则在 BIM/BTB 之后继续组合 TAGE 和 loop predictor。该局部分支仍值得
+  修复，但 `bitcount` 总体 IPC 已约为参考核的 0.8，不再视为主要整体性能瓶颈。
+- [x] 固定第一版 GShare 的 F0-to-F2、逐 lane provider、prediction-time meta、
+  fetch-row PC XOR history 索引及提交训练契约；`test/gshare/run.sh --reference`
+  覆盖冷启动、历史分流、N/T 交替、连续旧 meta、读写碰撞和非提交更新过滤。
+- [x] 生产 `ifu/bpd/gshare.sv` 已按上述契约实现，和 reference 仅注释不同；
+  `test/gshare/run.sh` 默认生产模式通过并加入分支预测聚合回归，现已接入 Composer/IFU。
+- [x] 增加 `test/composer_gshare/` 接入测试；reference 和生产模式均覆盖 BIM 冷回退、
+  GShare provider 覆盖、条件/无条件分支选择、bank history 流水对齐，以及
+  `BTB | BIM | GShare` metadata 拼接和反向切片，现已加入分支预测聚合回归。
+- [x] 增加 BIM `bank1/lane1` 的 N,T 交替方向与旧 metadata 连续提交测试；确认计数器
+  合法地在 `2'b10`/`2'b01` 间振荡、write-bypass 未丢训练且无 bank/lane 串扰。
+  同一序列下 BIM 16 次全部误预测，1 位历史参考模型仅有 3 次冷启动误预测。
+- [x] 解除 `mul.w`、`mulh.w`、`mulh.wu` 的 `is_unique` 串行化；定向测试覆盖
+  未完成旧 load 后的 MUL 分发、MUL 结果依赖和错误路径清除，官方功能 ELF 58/58
+  通过。包含此前 GShare 改动的当前 `fireye_C0` IPC 为 0.5152；由于不是单变量
+  A/B，该数只作为新基线，不把全部增益归因于 MUL 改动。DIV/MOD 暂时继续串行。
+- [x] 增加 Rename/Dispatch 阻塞原因性能统计，并在六个低 IPC 用例中完成测量：
+
+  | 用例 | IPC | 分发阻塞/总周期 | freelist/分发阻塞 | unique wait |
+  |------|----:|----------------:|------------------:|------------:|
+  | `fireye_C0` | 0.5152 | 50.08% | 98.01% | 0 |
+  | `crc32` | 0.6800 | 5.69% | 99.94% | 0 |
+  | `bubble_sort` | 0.3498 | 1.62% | 94.19% | 0 |
+  | `sha` | 0.5123 | 59.52% | 94.37% | 0 |
+  | `fireye_I2` | 0.6185 | 40.41% | 95.78% | 800（计时边界的其他 unique） |
+  | `stream_copy` | 0.3265 | 83.43% | 99.99% | 0 |
+
+  六个性能窗口均没有 CSR 分发；只有 `fireye_I2` 动态执行 2900 条 DIV/MOD，且没有
+  因 DIV/MOD 等待 ROB 清空的周期。因此 CSR replay 和解除 DIV/MOD 串行化都不是
+  当前主要性能工作。下一步先对 48/56/64 个物理寄存器做参数扫描，再根据面积、时序
+  和 IPC 决定容量；同时评估 free_count=1、双目的寄存器 packet 的前缀部分分配。
+- [ ] 针对 `fireye_C0` 的数据相关条件分支增加预测回归；当前误预测率 19.31%，
+  热点均为条件分支，未发现 B/BL 或 JIRL 目标误预测。
+- [x] 为 DCache load/store hit 增加 LOOKUP 当拍直接响应红测试；当前 RTL 仍有2个
+  时序断言失败，其余功能契约通过。
+- [ ] DCache hit 直接响应作为数据侧第二优先级保留；它对 `my_memcmp` 明确有益，
+  但 `my_memcmp` 总体 IPC 已约为参考核的 0.8。当前优先分析相对参考核仅约三分之一
+  的 `crc32` 和 `fireye_C0`，避免把局部停顿直接等同于主要整体性能缺口。
 
 ### 真实指令用例
 
@@ -295,7 +378,8 @@
 - [x] 覆盖生产 Cache/AXI 事务在途时的分支、异常和中断恢复。
 - [x] 已发现的前端、分支预测、异常和访存恢复问题均有对应模块级或核心级回归。
 - [ ] 后续失败继续缩减为最小用例并永久加入 `test/`。
-- [ ] 增加 IPC、误预测、Cache miss 和主要阻塞原因统计后，运行 CoreMark 与 `fireye_A0`。
+- [x] 增加 IPC、误预测、Cache miss 和主要阻塞原因统计，并运行 CoreMark、`fireye_A0`、
+  `stream_copy` 与 `crc32`；结果记录在分支预测性能阶段。
 
 ## 每次提交前检查
 

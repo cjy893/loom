@@ -31,6 +31,10 @@ constexpr uint32_t mul_w(unsigned rd, unsigned rj, unsigned rk) {
     return r_op(0x001c0000U, rd, rj, rk);
 }
 
+constexpr uint32_t div_w(unsigned rd, unsigned rj, unsigned rk) {
+    return r_op(0x00200000U, rd, rj, rk);
+}
+
 constexpr uint32_t branch_i16(uint32_t opcode, unsigned rj,
                               unsigned rd, int byte_offset) {
     const unsigned imm16 =
@@ -398,7 +402,7 @@ bool test_unique_packet_boundary(
     const std::vector<Instruction> program = {
         {addi_w(1, 0, 6), "addi.w r1, r0, 6"},
         {addi_w(2, 0, 7), "addi.w r2, r0, 7"},
-        {mul_w(3, 1, 2), "mul.w r3, r1, r2"},
+        {div_w(3, 1, 2), "div.w r3, r1, r2"},
         {addi_w(4, 3, 1), "addi.w r4, r3, 1"},
         {addi_w(5, 0, 5), "addi.w r5, r0, 5"},
         {addi_w(6, 0, 6), "addi.w r6, r0, 6"},

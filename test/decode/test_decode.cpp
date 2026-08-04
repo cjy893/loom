@@ -194,6 +194,8 @@ static void expect_muldiv_decode(Vdecode_test_top* dut, uint32_t inst,
     expect_eq("mul/div destination", dut->ldst, 15);
     expect_eq(fcn_name, dut->fcn_op, fcn);
     expect_eq("mul/div no exception", dut->exception, 0);
+    expect_eq("mul/div serialization", dut->is_unique,
+              fu == FC_DIV ? 1 : 0);
 }
 
 constexpr uint32_t cacop(unsigned code, unsigned rj, unsigned imm12) {

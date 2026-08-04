@@ -8,6 +8,7 @@ module core_top #(
     parameter int FETCH_WIDTH = 4,
     parameter int ALU_WIDTH = 3,
     parameter int CORE_WIDTH = 2,
+    parameter int PHYSICAL_REGS = NUM_INT_PHYS_REGS,
     parameter int FETCH_BUFFER_ENTRIES = 16,
     parameter bit ENABLE_SINGLE_DEBUG_COMMIT = 1'b1
 )(
@@ -290,8 +291,8 @@ module core_top #(
     dcache #(
         .ADDR_WIDTH    (32),
         .TAG_WIDTH     (LSU_ADDR_SZ + 2),
-        .NUM_SETS      (64),
-        .NUM_WAYS      (2),
+        .NUM_SETS      (DCACHE_NSETS),
+        .NUM_WAYS      (DCACHE_NWAYS),
         .LINE_BYTES    (32),
         .MEM_DATA_WIDTH(32),
         .MEM_LEN_WIDTH (DCACHE_MEM_LEN_WIDTH)
@@ -379,6 +380,7 @@ module core_top #(
         .CORE_WIDTH(CORE_WIDTH),
         .FETCH_WIDTH(CORE_WIDTH),
         .ALU_WIDTH(ALU_WIDTH),
+        .PHYSICAL_REGS(PHYSICAL_REGS),
         .CORE_ID(CORE_ID),
         .ENABLE_SINGLE_DEBUG_COMMIT(1'b0)
     ) core_inst (

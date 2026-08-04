@@ -10,7 +10,7 @@ Coverage:
   the gate opens.
 - Buffer output remains stable whenever the core applies backpressure.
 - Commit PC and instruction order are preserved through the complete backend.
-- A packet containing a unique instruction remains at the Fetch Buffer while
+- A packet containing a unique divide remains at the Fetch Buffer while
   the core handles its lanes separately and cannot advance before the unique
   instruction reaches Dispatch.
 - Unique dispatch occurs alone and only while the ROB is empty.

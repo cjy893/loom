@@ -11,6 +11,7 @@ Vmem_issue_test_top::Vmem_issue_test_top(VerilatedContext* _vcontextp__, const c
     , vlSymsp{new Vmem_issue_test_top__Syms(contextp(), _vcname__, this)}
     , clk{vlSymsp->TOP.clk}
     , rst_n{vlSymsp->TOP.rst_n}
+    , rob_head_idx{vlSymsp->TOP.rob_head_idx}
     , dis_valid{vlSymsp->TOP.dis_valid}
     , dis_ready{vlSymsp->TOP.dis_ready}
     , dis_rob_idx{vlSymsp->TOP.dis_rob_idx}
@@ -20,6 +21,17 @@ Vmem_issue_test_top::Vmem_issue_test_top(VerilatedContext* _vcontextp__, const c
     , dis_psrc2_busy{vlSymsp->TOP.dis_psrc2_busy}
     , dis_use_agen{vlSymsp->TOP.dis_use_agen}
     , dis_use_dgen{vlSymsp->TOP.dis_use_dgen}
+    , dis_br_mask{vlSymsp->TOP.dis_br_mask}
+    , dis_valid_1{vlSymsp->TOP.dis_valid_1}
+    , dis_ready_1{vlSymsp->TOP.dis_ready_1}
+    , dis_rob_idx_1{vlSymsp->TOP.dis_rob_idx_1}
+    , dis_psrc1_1{vlSymsp->TOP.dis_psrc1_1}
+    , dis_psrc2_1{vlSymsp->TOP.dis_psrc2_1}
+    , dis_psrc1_busy_1{vlSymsp->TOP.dis_psrc1_busy_1}
+    , dis_psrc2_busy_1{vlSymsp->TOP.dis_psrc2_busy_1}
+    , dis_use_agen_1{vlSymsp->TOP.dis_use_agen_1}
+    , dis_use_dgen_1{vlSymsp->TOP.dis_use_dgen_1}
+    , dis_br_mask_1{vlSymsp->TOP.dis_br_mask_1}
     , wakeup_valid_0{vlSymsp->TOP.wakeup_valid_0}
     , wakeup_pdst_0{vlSymsp->TOP.wakeup_pdst_0}
     , wakeup_valid_1{vlSymsp->TOP.wakeup_valid_1}

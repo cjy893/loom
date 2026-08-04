@@ -4,39 +4,40 @@
 
 #include "Vmem_issue_test_top__pch.h"
 
-bool Vmem_issue_test_top___024root___trigger_anySet__ico(const VlUnpacked<QData/*63:0*/, 2> &in);
-
-VL_ATTR_COLD void Vmem_issue_test_top___024root___dump_triggers__ico__0(const VlUnpacked<QData/*63:0*/, 2> &triggers, const std::string &tag) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___dump_triggers__ico__0\n"); );
+VL_ATTR_COLD void Vmem_issue_test_top___024root___stl_sequent__TOP__9(Vmem_issue_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vmem_issue_test_top___024root___stl_sequent__TOP__9\n"); );
+    Vmem_issue_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
+    auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
-    if ((1U & (~ (IData)(Vmem_issue_test_top___024root___trigger_anySet__ico(triggers))))) {
-        VL_DBG_MSGS("         No '" + tag + "' region triggers active\n");
+    vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire 
+        = ((1U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__alloc_fire)) 
+           | (2U & (((IData)(vlSelfRef.mem_issue_test_top__DOT__dis_valid_vec) 
+                     & (IData)(vlSelfRef.mem_issue_test_top__DOT__dis_ready_vec)) 
+                    & ((~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__dis_br_killed) 
+                           >> 1U)) << 1U))));
+    if ((1U & (~ (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor)))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xfffeU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
-    if ((1U & (IData)(triggers[0U]))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 0 is active: @( clk)\n");
+    if ((IData)((3U != (3U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xfffdU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
-    if ((1U & (IData)((triggers[0U] >> 1U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 1 is active: @( rst_n)\n");
+    if ((IData)((5U != (5U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xfffbU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
-    if ((1U & (IData)((triggers[0U] >> 2U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 2 is active: @( dis_valid)\n");
+    if ((IData)((9U != (9U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xfff7U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
-    if ((1U & (IData)((triggers[0U] >> 3U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 3 is active: @( dis_rob_idx)\n");
+    if ((IData)((3U != (3U & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor))))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xffefU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
-    if ((1U & (IData)((triggers[0U] >> 4U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 4 is active: @( dis_psrc1)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 5U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 5 is active: @( dis_psrc2)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 6U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 6 is active: @( dis_psrc1_busy)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 7U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 7 is active: @( dis_psrc2_busy)\n");
-    }
-    if ((1U & (IData)((triggers[0U] >> 8U)))) {
-        VL_DBG_MSGS("         '" + tag + "' region trigger index 8 is active: @( dis_use_agen)\n");
+    if ((1U & (~ ((IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__survivor) 
+                  >> 1U)))) {
+        vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n 
+            = (0xffdfU & (IData)(vlSelfRef.mem_issue_test_top__DOT__issue_dut__DOT__older_n));
     }
 }

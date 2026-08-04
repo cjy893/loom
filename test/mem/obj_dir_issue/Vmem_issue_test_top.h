@@ -30,6 +30,7 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top VL_NOT_FINAL : public Ver
     // propagate new values into/out from the Verilated model.
     VL_IN8(&clk,0,0);
     VL_IN8(&rst_n,0,0);
+    VL_IN8(&rob_head_idx,5,0);
     VL_IN8(&dis_valid,0,0);
     VL_OUT8(&dis_ready,0,0);
     VL_IN8(&dis_rob_idx,5,0);
@@ -39,6 +40,17 @@ class alignas(VL_CACHE_LINE_BYTES) Vmem_issue_test_top VL_NOT_FINAL : public Ver
     VL_IN8(&dis_psrc2_busy,0,0);
     VL_IN8(&dis_use_agen,0,0);
     VL_IN8(&dis_use_dgen,0,0);
+    VL_IN8(&dis_br_mask,3,0);
+    VL_IN8(&dis_valid_1,0,0);
+    VL_OUT8(&dis_ready_1,0,0);
+    VL_IN8(&dis_rob_idx_1,5,0);
+    VL_IN8(&dis_psrc1_1,5,0);
+    VL_IN8(&dis_psrc2_1,5,0);
+    VL_IN8(&dis_psrc1_busy_1,0,0);
+    VL_IN8(&dis_psrc2_busy_1,0,0);
+    VL_IN8(&dis_use_agen_1,0,0);
+    VL_IN8(&dis_use_dgen_1,0,0);
+    VL_IN8(&dis_br_mask_1,3,0);
     VL_IN8(&wakeup_valid_0,0,0);
     VL_IN8(&wakeup_pdst_0,5,0);
     VL_IN8(&wakeup_valid_1,0,0);

@@ -96,13 +96,13 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_0(Vbpd_full_test
     vlSelf->bpd_full_test_top__DOT__btb_inst__DOT__upd_hit_way = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 9617266273359899742ull);
     vlSelf->bpd_full_test_top__DOT__btb_inst__DOT__invalidate_set = VL_SCOPED_RAND_RESET_I(10, __VscopeHash, 4532203130172926333ull);
     vlSelf->bpd_full_test_top__DOT__btb_inst__DOT__do_allocate = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 14452437203015687754ull);
-    for (int __Vi0 = 0; __Vi0 < 8; ++__Vi0) {
-        for (int __Vi1 = 0; __Vi1 < 256; ++__Vi1) {
-            vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__ram[__Vi0][__Vi1] = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 3359267889558189202ull);
-        }
+    for (int __Vi0 = 0; __Vi0 < 2048; ++__Vi0) {
+        vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__ram[__Vi0] = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 3359267889558189202ull);
     }
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_valid = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 3496960260462044623ull);
-    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_rdata = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 3516362512865452058ull);
+    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_ram_rdata = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 4505980814132842900ull);
+    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_valid = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 3126247637882669703ull);
+    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_read_bypass_data = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 9507977651576598836ull);
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_update_valid = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 10700027118602572047ull);
     VL_SCOPED_RAND_RESET_W(293, vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s1_update, __VscopeHash, 2684761998844626384ull);
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__s2_valid = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 3014079901793658436ull);
@@ -123,8 +123,7 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_0(Vbpd_full_test
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_hit_idx = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 17974549058146310502ull);
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__wrbypass_enq_idx = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 7886398118383190040ull);
     vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__doing_reset = VL_SCOPED_RAND_RESET_I(1, __VscopeHash, 17481517543291015100ull);
-    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__rst_col = VL_SCOPED_RAND_RESET_I(3, __VscopeHash, 536579306575698401ull);
-    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__rst_set = VL_SCOPED_RAND_RESET_I(8, __VscopeHash, 4422602628901487540ull);
+    vlSelf->bpd_full_test_top__DOT__bim_inst__DOT__rst_idx = VL_SCOPED_RAND_RESET_I(11, __VscopeHash, 12212319400422027533ull);
     vlSelf->bpd_full_test_top__DOT__ubtb_inst__DOT__entry_valid = VL_SCOPED_RAND_RESET_I(16, __VscopeHash, 5834653906947136345ull);
     VL_SCOPED_RAND_RESET_W(1040, vlSelf->bpd_full_test_top__DOT__ubtb_inst__DOT__entries, __VscopeHash, 8980269446947875287ull);
     vlSelf->bpd_full_test_top__DOT__ubtb_inst__DOT__repl_ptr = VL_SCOPED_RAND_RESET_I(4, __VscopeHash, 13760635972586785826ull);
@@ -152,5 +151,4 @@ VL_ATTR_COLD void Vbpd_full_test_top___024root___ctor_var_reset_0(Vbpd_full_test
     vlSelf->__VdfgRegularize_h6e95ff9d_0_4 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_6 = 0;
     vlSelf->__VdfgRegularize_h6e95ff9d_0_7 = 0;
-    vlSelf->__VdfgRegularize_h6e95ff9d_0_8 = 0;
 }

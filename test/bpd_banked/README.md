@@ -15,7 +15,10 @@ produced each metadata slice.
 The tests cover all four logical lanes, a physical-bank-1 start and wrap,
 non-8-byte-aligned requests, back-to-back bank rotation, physical metadata
 identity, BIM direction training, first-bank CFI truncation, and the
-I-cache-line boundary.
+I-cache-line boundary. They also reproduce the `bank1/lane1` N,T alternating
+phase seen at a `...77c` branch and verify that the 2-bit BIM counter legally
+oscillates between weak taken and weak not-taken rather than losing bank/lane
+identity.
 
 This is a test-only connection. In the v4-style organization, the equivalent
 bank selection and prediction reordering logic belongs directly in the IFU;

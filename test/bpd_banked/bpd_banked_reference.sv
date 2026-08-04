@@ -7,6 +7,8 @@ module bpd_banked_test_dut #(
     parameter int UBTB_TAG_SZ = 30,
     parameter int BIM_SETS = 2048,
     parameter int BIM_COLS = 8,
+    parameter int GSHARE_SETS = 1024,
+    parameter int GSHARE_HISTORY_BITS = 10,
     parameter int BTB_SETS = 32,
     parameter int BTB_WAYS = 2,
     parameter int BTB_TAG_SZ = 25
@@ -98,6 +100,8 @@ module bpd_banked_test_dut #(
             .UBTB_TAG_SZ(UBTB_TAG_SZ),
             .BIM_SETS(BIM_SETS),
             .BIM_COLS(BIM_COLS),
+            .GSHARE_SETS(GSHARE_SETS),
+            .GSHARE_HISTORY_BITS(GSHARE_HISTORY_BITS),
             .BTB_SETS(BTB_SETS),
             .BTB_WAYS(BTB_WAYS),
             .BTB_TAG_SZ(BTB_TAG_SZ)
@@ -106,6 +110,7 @@ module bpd_banked_test_dut #(
             .rst_n,
             .f0_valid(bank_f0_valid[bank]),
             .f0_pc(bank_f0_pc[bank]),
+            .f0_ghist('0),
             .f1_preds(bank_f1_preds[bank]),
             .f2_preds(bank_f2_preds[bank]),
             .f3_preds(bank_f3_preds[bank]),

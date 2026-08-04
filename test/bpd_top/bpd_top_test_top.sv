@@ -53,6 +53,7 @@ module bpd_top_test_top (
     composer dut (
         .clk, .rst_n,
         .f0_valid, .f0_pc,
+        .f0_ghist('0),
         .f1_preds, .f2_preds, .f3_preds,
         .f2_meta, .f3_meta, .ready,
         .update_valid, .update(update_packed)

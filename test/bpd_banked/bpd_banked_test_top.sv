@@ -74,6 +74,8 @@ module bpd_banked_test_top (
         .UBTB_TAG_SZ(30),
         .BIM_SETS(64),
         .BIM_COLS(8),
+        .GSHARE_SETS(64),
+        .GSHARE_HISTORY_BITS(6),
         .BTB_SETS(16),
         .BTB_WAYS(2),
         .BTB_TAG_SZ(25)

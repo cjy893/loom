@@ -98,7 +98,7 @@ module rename_test_top (
 
     rename_stage #(
         .CORE_WIDTH(2),
-        .PHYSICAL_REGS(48),
+        .PHYSICAL_REGS(56),
         .WAKEUP_PORTS(6),
         .IS_FP(0)
     ) dut (

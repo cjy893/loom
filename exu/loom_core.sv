@@ -10,7 +10,7 @@ module loom_core #(
     parameter int ALU_WIDTH      = 3,
     parameter int MEM_WIDTH      = 2,
     parameter int LSU_WIDTH      = 1,
-    parameter int PHYSICAL_REGS  = 48,
+    parameter int PHYSICAL_REGS  = NUM_INT_PHYS_REGS,
     parameter int ROB_ENTRIES    = 64,
     parameter int ALU_IQ_ENTRIES = 16,
     parameter int MEM_IQ_ENTRIES = 16,
@@ -655,6 +655,7 @@ module loom_core #(
     // wakeup 信号
     logic [NUM_WAKEUPS-1:0]              wakeup_valid_w;
     logic [NUM_WAKEUPS-1:0][$clog2(PHYSICAL_REGS)-1:0] wakeup_pdst_w;
+    logic [ROB_ADDR_SZ-1:0]               rob_head_idx_w;
 
     // ALU IQ
     issue_unit_collapsing #(.NUM_ENTRIES(ALU_IQ_ENTRIES), .ISSUE_WIDTH(ALU_WIDTH),
@@ -664,7 +665,8 @@ module loom_core #(
         .dis_valid(iq_alu_dis_valid), .dis_uop(iq_alu_dis_uop), .dis_ready(alu_iq_dis_ready),
         .iss_valid(alu_iss_valid), .iss_uop(alu_iss_uop),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(1'b0));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(1'b0));
 
     // MEM IQ
     issue_unit_collapsing #(.NUM_ENTRIES(MEM_IQ_ENTRIES), .ISSUE_WIDTH(1),
@@ -674,7 +676,8 @@ module loom_core #(
         .dis_valid(iq_mem_dis_valid), .dis_uop(iq_mem_dis_uop), .dis_ready(mem_iq_dis_ready),
         .iss_valid(mem_iss_valid[0]), .iss_uop(mem_iss_uop[0]),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(1'b0));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(1'b0));
     for (genvar i = 1; i < MEM_WIDTH; i++) begin : gen_unused_mem_issue
         assign mem_iss_valid[i] = 1'b0;
         assign mem_iss_uop[i] = '0;
@@ -688,7 +691,8 @@ module loom_core #(
         .dis_valid(iq_unq_dis_valid), .dis_uop(iq_unq_dis_uop), .dis_ready(unq_iq_dis_ready),
         .iss_valid(unq_iss_valid), .iss_uop(unq_iss_uop),
         .wakeup_valid(wakeup_valid_w), .wakeup_pdst(wakeup_pdst_w),
-        .brupdate(brupdate_w), .flush_pipeline(bm_flush), .squash_grant(!unq_exec_ready));
+        .brupdate(brupdate_w), .rob_head_idx(rob_head_idx_w),
+        .flush_pipeline(bm_flush), .squash_grant(!unq_exec_ready));
 
     // ================================================================
     // 物理寄存器文件
@@ -1393,7 +1397,6 @@ module loom_core #(
     logic [CORE_WIDTH-1:0]             rob_enq_valids;
     uop_t [CORE_WIDTH-1:0]             rob_enq_uops;
     logic [ROB_ADDR_SZ-1:0]            rob_tail_idx_w;
-    logic [ROB_ADDR_SZ-1:0]            rob_head_idx_w;
     exe_unit_resp_t [NUM_WAKEUPS-1:0]  rob_wb_resps;
     commit_exception_signals_t          rob_com_xcpt_w;
     commit_exception_signals_t          rob_flush_w;

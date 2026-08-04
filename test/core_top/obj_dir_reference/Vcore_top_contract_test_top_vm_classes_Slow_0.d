@@ -6,5 +6,6 @@ Vcore_top_contract_test_top_vm_classes_Slow_0.o: \
  Vcore_top_contract_test_top___024root__0__Slow.cpp \
  Vcore_top_contract_test_top___024root__1__Slow.cpp \
  Vcore_top_contract_test_top___024root__2__Slow.cpp \
+ Vcore_top_contract_test_top___024root__3__Slow.cpp \
  Vcore_top_contract_test_top___024unit__Slow.cpp \
  Vcore_top_contract_test_top_loom_types__Slow.cpp

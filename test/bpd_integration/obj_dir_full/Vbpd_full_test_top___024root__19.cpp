@@ -4,11 +4,13 @@
 
 #include "Vbpd_full_test_top__pch.h"
 
-void Vbpd_full_test_top___024root___nba_sequent__TOP__11(Vbpd_full_test_top___024root* vlSelf) {
-    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__11\n"); );
+void Vbpd_full_test_top___024root___nba_sequent__TOP__12(Vbpd_full_test_top___024root* vlSelf) {
+    VL_DEBUG_IF(VL_DBG_MSGF("+    Vbpd_full_test_top___024root___nba_sequent__TOP__12\n"); );
     Vbpd_full_test_top__Syms* const __restrict vlSymsp VL_ATTR_UNUSED = vlSelf->vlSymsp;
     auto& vlSelfRef = std::ref(*vlSelf).get();
     // Body
+    vlSelfRef.bpd_full_test_top__DOT__bim_inst__DOT__rst_idx 
+        = vlSelfRef.__Vdly__bpd_full_test_top__DOT__bim_inst__DOT__rst_idx;
     if (vlSelfRef.__VdlySet__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0) {
         vlSelfRef.bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr[vlSelfRef.__VdlyDim0__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0] 
             = vlSelfRef.__VdlyVal__bpd_full_test_top__DOT__btb_inst__DOT__repl_ptr__v0;

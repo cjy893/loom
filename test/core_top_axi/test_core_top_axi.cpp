@@ -118,7 +118,13 @@ public:
             write_word(RESET_PC + 48, lu12i_w(7, 1));
             write_word(RESET_PC + 52, ori(7, 7, 0x100));
             write_word(RESET_PC + 56, ld_w(8, 7, 0));
-            write_word(RESET_PC + 60, b(0));
+            write_word(RESET_PC + 60, lu12i_w(9, 1));
+            write_word(RESET_PC + 64, ori(9, 9, 0x900));
+            write_word(RESET_PC + 68, ld_w(10, 9, 0));
+            write_word(RESET_PC + 72, lu12i_w(11, 2));
+            write_word(RESET_PC + 76, ori(11, 11, 0x100));
+            write_word(RESET_PC + 80, ld_w(12, 11, 0));
+            write_word(RESET_PC + 84, b(0));
         } else {
             write_word(RESET_PC + 40, b(0));
         }
@@ -126,6 +132,8 @@ public:
         write_word(DATA_BASE + 8, 0x20);
         write_word(DATA_BASE + 0x800, 0x55);
         write_word(DATA_BASE + 0x1000, 0x66);
+        write_word(DATA_BASE + 0x1800, 0x77);
+        write_word(DATA_BASE + 0x2000, 0x88);
     }
 
     void drive(Vcore_top* dut, int cycle) {
@@ -412,8 +420,8 @@ bool run_case(Vcore_top* dut, bool stress, bool cacheable) {
         memory.drive(dut, cycle);
         dut->eval();
         if (dut->debug0_wb_rf_wen != 0) {
-            if (cacheable && dut->debug0_wb_rf_wnum == 8 &&
-                dut->debug0_wb_rf_wdata == 0x66)
+            if (cacheable && dut->debug0_wb_rf_wnum == 12 &&
+                dut->debug0_wb_rf_wdata == 0x88)
                 saw_cacheable_tail_load = true;
             char line[128];
             std::snprintf(
@@ -442,8 +450,8 @@ bool run_case(Vcore_top* dut, bool stress, bool cacheable) {
               memory.read_word(DATA_BASE + 4) == 0x27 &&
               memory.instruction_reads() >= 2 &&
               memory.instruction_line_reads() >= 1 &&
-              memory.data_reads() >= (cacheable ? 3U : 1U) &&
-              (!cacheable || memory.data_line_reads() >= 3) &&
+              memory.data_reads() >= (cacheable ? 5U : 1U) &&
+              (!cacheable || memory.data_line_reads() >= 5) &&
               memory.writes() == (cacheable ? 1U : 3U) &&
               memory.completed_writes() == (cacheable ? 1U : 3U) &&
               (!stress || memory.saw_backpressure());
