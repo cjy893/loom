@@ -75,9 +75,10 @@
   增益。
 - 分支 tag 容量隔离确认生产 4-tag CRC32 有 53.08% 周期因 tag 阻塞。
   `loom_core` 已把 `MAX_BR_COUNT` 显式传给 `rename_stage`，4/6/8-tag Rename 恢复和
-  6-tag Core 契约均通过；临时 6-tag CRC32 IPC 为 0.9304，与 8-tag 完全相同，官方
-  功能 ELF 正常/背压也通过。生产配置现已切换为 6-tag，并通过完整模块回归；尚待
-  非增量综合/实现确认资源占用和 40 MHz 时序。
+  6-tag Core 契约均通过；生产配置已切换为 6-tag。提交 `e293f00` 同时采用 BIM 与
+  GShare counter XPM BRAM，已完成非增量实现和板测：40 MHz WNS/WHS 为
+  `+0.324 ns / +0.054 ns`，最低 IPC 比值为 `crc32` 0.75、`quick_sort` 0.76、
+  `dhrystone` 0.82，未发现整体性能回归。
 
 ---
 

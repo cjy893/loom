@@ -87,7 +87,8 @@ module dcache #(
         S_UC_WRITE_RESP,
         S_RESPONSE,
         S_MAINT_LOOKUP,
-        S_MAINT_SCAN
+        S_MAINT_SCAN,
+        S_MAINT_READ
     } state_t;
 
     typedef enum logic [1:0] {
@@ -99,7 +100,13 @@ module dcache #(
     state_t state_q;
     wb_after_t wb_after_q;
 
-    logic [TAG_BITS-1:0] tag_array [NUM_SETS][NUM_WAYS];
+    logic [TAG_BITS-1:0] tag_read_q [NUM_WAYS];
+    logic tag_read_en;
+    logic [SET_BITS-1:0] tag_read_addr;
+    logic tag_write_en;
+    logic [SET_BITS-1:0] tag_write_addr;
+    logic [WAY_BITS-1:0] tag_write_way;
+    logic [TAG_BITS-1:0] tag_write_data;
     logic [31:0] data_read_q [NUM_WAYS];
 
     logic data_read_en;
@@ -133,6 +140,7 @@ module dcache #(
     logic [SET_BITS-1:0] wb_set_q;
     logic [WAY_BITS-1:0] wb_way_q;
     logic [BEAT_BITS-1:0] wb_beat_q;
+    logic [TAG_BITS-1:0] wb_tag_q;
 
     logic [1:0] maint_op_q;
     logic [1:0] maint_mode_q;
@@ -239,7 +247,8 @@ module dcache #(
         lookup_hit_way = '0;
 
         for (int way = 0; way < NUM_WAYS; way++) begin
-            if (valid_array[lookup_set][way] && tag_array[lookup_set][way] == lookup_tag) begin
+            if (valid_array[lookup_set][way] &&
+                tag_read_q[way] == lookup_tag) begin
                 lookup_hit = 1'b1;
                 lookup_hit_way = WAY_BITS'(way);
             end
@@ -267,7 +276,7 @@ module dcache #(
             maint_tag = address_tag(maint_paddr_q);
             for (int way = 0; way < NUM_WAYS; way++) begin
                 if (valid_array[maint_set][way] &&
-                    tag_array[maint_set][way] == maint_tag) begin
+                    tag_read_q[way] == maint_tag) begin
                     maint_hit = 1'b1;
                     maint_hit_way = WAY_BITS'(way);
                 end
@@ -297,7 +306,9 @@ module dcache #(
         mem_read_resp_ready = state_q == S_REFILL_RESP || state_q == S_UC_READ_RESP;
 
         mem_write_req_valid = state_q == S_WB_REQ || state_q == S_UC_WRITE_REQ;
-        mem_write_req_addr = state_q == S_UC_WRITE_REQ ? align_word(req_paddr_q) : compose_line_address(tag_array[wb_set_q][wb_way_q], wb_set_q);
+        mem_write_req_addr = state_q == S_UC_WRITE_REQ
+                           ? align_word(req_paddr_q)
+                           : compose_line_address(wb_tag_q, wb_set_q);
         mem_write_req_len = state_q == S_UC_WRITE_REQ ? '0 : MEM_LEN_WIDTH'(LINE_BEATS - 1);
 
         mem_write_data_valid = state_q == S_WB_DATA || state_q == S_UC_WRITE_DATA;
@@ -306,6 +317,32 @@ module dcache #(
         mem_write_data_last = state_q == S_UC_WRITE_DATA || wb_beat_q == BEAT_BITS'(LINE_BEATS - 1);
         mem_write_resp_ready = state_q == S_WB_RESP || state_q == S_UC_WRITE_RESP;
     end
+
+    always_comb begin
+        tag_read_en = 1'b0;
+        tag_read_addr = '0;
+
+        if (state_q == S_MAINT_READ) begin
+            tag_read_en = 1'b1;
+            if (maint_all_q)
+                tag_read_addr = maint_scan_set_q;
+            else if (maint_mode_q == 2'd2)
+                tag_read_addr = address_set(maint_paddr_q);
+            else
+                tag_read_addr = address_set(maint_vaddr_q);
+        end else if (req_valid && req_ready && req_cacheable) begin
+            tag_read_en = 1'b1;
+            tag_read_addr = address_set(req_paddr);
+        end
+    end
+
+    assign tag_write_en = state_q == S_REFILL_RESP &&
+                          mem_read_resp_valid &&
+                          mem_read_resp_ready &&
+                          mem_read_resp_last;
+    assign tag_write_addr = refill_set_q;
+    assign tag_write_way = refill_way_q;
+    assign tag_write_data = refill_tag_q;
 
     always_comb begin
         data_read_en = 1'b0;
@@ -376,6 +413,19 @@ module dcache #(
         end
     end
 
+    for (genvar way = 0; way < NUM_WAYS; way++) begin : gen_tag_way
+        (* ram_style = "block" *)
+        logic [TAG_BITS-1:0] mem [0:NUM_SETS-1];
+
+        always_ff @(posedge clk) begin
+            if (tag_read_en)
+                tag_read_q[way] <= mem[tag_read_addr];
+
+            if (tag_write_en && tag_write_way == WAY_BITS'(way))
+                mem[tag_write_addr] <= tag_write_data;
+        end
+    end
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state_q <= S_IDLE;
@@ -396,6 +446,7 @@ module dcache #(
             wb_set_q <= '0;
             wb_way_q <= '0;
             wb_beat_q <= '0;
+            wb_tag_q <= '0;
             maint_op_q <= '0;
             maint_mode_q <= '0;
             maint_all_q <= 1'b0;
@@ -428,10 +479,8 @@ module dcache #(
                         if (maint_all) begin
                             maint_scan_set_q <= '0;
                             maint_scan_way_q <= '0;
-                            state_q <= S_MAINT_SCAN;
-                        end else begin
-                            state_q <= S_MAINT_LOOKUP;
                         end
+                        state_q <= S_MAINT_READ;
                     end else if (req_valid && req_ready) begin
                         assert (!req_is_store || req_wmask != 4'b0000);
                         req_paddr_q <= req_paddr;
@@ -466,6 +515,7 @@ module dcache #(
                             wb_set_q <= lookup_set;
                             wb_way_q <= lookup_victim_way;
                             wb_beat_q <= '0;
+                            wb_tag_q <= tag_read_q[lookup_victim_way];
                             wb_after_q <= WB_TO_REFILL;
                             state_q <= S_WB_REQ;
                         end else begin
@@ -520,7 +570,7 @@ module dcache #(
                                         state_q <= S_IDLE;
                                     end else begin
                                         maint_scan_set_q <= maint_scan_set_q + 1'b1;
-                                        state_q <= S_MAINT_SCAN;
+                                        state_q <= S_MAINT_READ;
                                     end
                                 end else begin
                                     maint_scan_way_q <= maint_scan_way_q + 1'b1;
@@ -546,7 +596,6 @@ module dcache #(
 
                         if (mem_read_resp_last) begin
                             assert (refill_beat_q == BEAT_BITS'(LINE_BEATS - 1));
-                            tag_array[refill_set_q][refill_way_q] <= refill_tag_q;
                             valid_array[refill_set_q][refill_way_q] <= 1'b1;
                             dirty_array[refill_set_q][refill_way_q] <= req_is_store_q;
                             replace_way_q[refill_set_q] <= refill_way_q == WAY_BITS'(NUM_WAYS - 1) ? '0 : refill_way_q + 1'b1;
@@ -603,6 +652,10 @@ module dcache #(
                     if (resp_valid && resp_ready) state_q <= S_IDLE;
                 end
 
+                S_MAINT_READ: begin
+                    state_q <= maint_all_q ? S_MAINT_SCAN : S_MAINT_LOOKUP;
+                end
+
                 S_MAINT_LOOKUP: begin
                     if (!maint_hit) begin
                         maint_done_q <= 1'b1;
@@ -611,6 +664,7 @@ module dcache #(
                         wb_set_q <= maint_set;
                         wb_way_q <= maint_hit_way;
                         wb_beat_q <= '0;
+                        wb_tag_q <= tag_read_q[maint_hit_way];
                         wb_after_q <= WB_TO_MAINT_ADDR;
                         state_q <= S_WB_REQ;
                     end else begin
@@ -630,6 +684,7 @@ module dcache #(
                         wb_set_q <= maint_scan_set_q;
                         wb_way_q <= maint_scan_way_q;
                         wb_beat_q <= '0;
+                        wb_tag_q <= tag_read_q[maint_scan_way_q];
                         wb_after_q <= WB_TO_MAINT_SCAN;
                         state_q <= S_WB_REQ;
                     end else begin
@@ -645,6 +700,7 @@ module dcache #(
                                 state_q <= S_IDLE;
                             end else begin
                                 maint_scan_set_q <= maint_scan_set_q + 1'b1;
+                                state_q <= S_MAINT_READ;
                             end
                         end else begin
                             maint_scan_way_q <= maint_scan_way_q + 1'b1;

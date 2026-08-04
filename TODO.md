@@ -338,8 +338,17 @@
 - [x] 生产 `params_pkg.sv` 的 `MAX_BR_COUNT` 已改为 6；正式参数下完整模块回归、
   Core 参数契约以及官方功能 ELF 正常/确定性 AXI 背压均通过。8-tag 没有额外 IPC
   收益，因此不采用。
-- [ ] 对已切换的生产 6-tag 配置进行非增量综合/实现，记录 LUT、寄存器和 40 MHz
-  WNS，并与已保存的 4-tag 基线比较；若资源或时序不可接受，再回退到 4-tag。
+- [x] 生产 6-tag 与 BIM/GShare counter XPM BRAM 配置已完成非增量实现和上板验收；
+  提交 `e293f00` 的 40 MHz WNS/TNS 为 `+0.324 ns / 0.000 ns`，WHS/THS 为
+  `+0.054 ns / 0.000 ns`，Slice/LUT/BRAM Tile 分别为 98.38%/82.11%/2.88%。
+  板测 `minmax_sequence` IPC 明显提高，其余无明显整体回归；最低比值为 `crc32`
+  0.75、`quick_sort` 0.76、`dhrystone` 0.82。
+- [x] 将两份 GShare `provider_ram` 从 1K x 2 distributed RAM 隔离迁移到 lane-local
+  BRAM；预测流水保持不变，复位扫描、连续训练、同地址读写旁路、官方功能 ELF 和
+  确定性 AXI 背压均已通过，三项性能隔离测试与 `e293f00` 周期级一致。
+- [ ] 对 GShare provider BRAM 改动执行非增量综合/实现，确认四个 1K x 1 RAM
+  映射为 RAMB18、原 64 个 `RAM128X1D` 不再出现，并记录 Slice、LUT、BRAM 与
+  40 MHz setup/hold；物理结果验收前继续以 `e293f00` 为回退基线。
 - [ ] 为 `dhrystone` 热点增加 provider/index/meta/update 归因：`0x1c001704`、
   `0x1c0009a4`、`0x1c0016e4` 实际恒 taken 却分别只预测 taken 33.3%/0%/0%，
   `0x1c0016f4` 为 N,N,T 而持续预测 N；另将 `0x1c001640` 的 JIRL 目标/metadata

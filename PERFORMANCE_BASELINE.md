@@ -14,6 +14,84 @@ The accepted DCache direct-hit revision is:
 1f01183c219930db77a9b2808b9c5157f73dc1f0
 ```
 
+The current accepted 40 MHz implementation and board rollback revision is:
+
+```text
+e293f00f22c63ce9ebb3328f4821d4f5cf29caab
+```
+
+This revision uses six branch tags and explicit XPM block RAMs for both BIM
+counter tables and both GShare counter tables.  The tracked worktree was clean
+when this baseline was captured.
+
+### Current routed implementation
+
+The non-incremental implementation completed without unrouted or partially
+routed nets.  All setup and hold constraints were met:
+
+| Metric | Value |
+|--------|------:|
+| CPU clock | 40 MHz |
+| CPU clock requirement | 25.000 ns |
+| WNS / TNS | +0.324 ns / 0.000 ns |
+| Setup failing endpoints | 0 |
+| WHS / THS | +0.054 ns / 0.000 ns |
+| Hold failing endpoints | 0 |
+
+The worst CPU setup path runs from DCache `req_paddr_q[6]`, through DCache hit
+selection, the Load Queue and UNQ, to CSR `resp_data_q[23]`.  Its data path is
+24.715 ns over 32 logic levels; routing contributes 18.972 ns (76.76%).  The
+branch predictor is no longer the worst setup path.
+
+The final placed whole-SoC utilization is:
+
+| Resource | Used | Available | Utilization |
+|----------|-----:|----------:|------------:|
+| Slice | 32909 | 33450 | 98.38% |
+| Slice LUTs | 109861 | 133800 | 82.11% |
+| LUT as logic | 108468 | 133800 | 81.07% |
+| Slice registers | 70340 | 269200 | 26.13% |
+| Block RAM tiles | 10.5 | 365 | 2.88% |
+
+The implementation report contains 17 RAMB18E1 and two RAMB36E1 instances.
+The two BIM and two GShare counter tables are confirmed as block RAM.  The two
+GShare provider tables remain the only CPU-owned distributed RAM arrays, each
+reported as 1K x 2.
+
+### Current board performance
+
+The bitstream passed board validation.  `minmax_sequence` showed a clear IPC
+increase, while the remaining tests had no material aggregate change.  The
+three lowest IPC ratios against OpenLA500 are now:
+
+| Test | IPC ratio vs. OpenLA500 |
+|------|------------------------:|
+| `crc32` | 0.75 |
+| `quick_sort` | 0.76 |
+| `dhrystone` | 0.82 |
+
+This result accepts the explicit predictor-counter BRAM implementation: it
+relieves physical pressure without a broad board-level IPC regression.  The
+next storage experiment must remain isolated from ICache associativity changes.
+
+### Pending GShare provider BRAM experiment
+
+The working tree after this baseline moves each GShare provider lane into a
+separate 1K x 1 XPM block RAM.  It has not yet replaced `e293f00` as the routed
+or board rollback point.  Pre-synthesis isolation checks are cycle-identical to
+the accepted baseline:
+
+| Test | Cycles | Commits | IPC |
+|------|-------:|--------:|----:|
+| `crc32` | 1836456 | 1708620 | 0.9304 |
+| `quick_sort` | 2235993 | 1330356 | 0.5950 |
+| `dhrystone` | 54541 | 31160 | 0.5713 |
+
+The official functional ELF also passes all 58 test points both normally and
+under deterministic AXI backpressure.  Non-incremental synthesis and
+implementation must still confirm the intended RAMB18 mapping and physical
+resource improvement.
+
 ### Validation result
 
 - Vivado implementation and bitstream generation completed successfully.

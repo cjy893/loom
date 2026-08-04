@@ -238,6 +238,34 @@ void test_lookup_write_collision(Vgshare_test_top* dut) {
     expect_eq("read/write collision metadata", meta_counter(dut, 0), 1);
 }
 
+void test_collision_preserves_existing_provider_lane(
+    Vgshare_test_top* dut) {
+    constexpr uint32_t pc = 0x1c0015c0;
+    reset_gshare(dut);
+
+    // Establish lane 1 first.  The colliding lane 0 update must add its
+    // provider bit without replacing the provider state returned by the RAM.
+    train(dut, pc, 0, 0b10, true, 1, true, true, 2, 2);
+
+    drive_update(dut, pc, 0, 0b01, true, 0, false, true, 2, 3);
+    eval_cycle(dut);
+
+    dut->update_valid = 0;
+    dut->f0_valid = 1;
+    dut->f0_pc = pc;
+    dut->f0_ghist = 0;
+    eval_cycle(dut);
+
+    dut->f0_valid = 0;
+    eval_cycle(dut);
+    expect_eq("collision preserves existing provider lane",
+              dut->f2_provider_valid, 0b11);
+    expect_eq("collision preserves existing direction",
+              dut->f2_taken, 0b10);
+    expect_eq("collision updates lane 0 metadata", meta_counter(dut, 0), 1);
+    expect_eq("collision preserves lane 1 metadata", meta_counter(dut, 1), 3);
+}
+
 void test_provider_bits_survive_bypass_eviction(Vgshare_test_top* dut) {
     constexpr uint32_t pc = 0x1c001a00;
     reset_gshare(dut);
@@ -332,6 +360,7 @@ int main(int argc, char** argv) {
     test_prediction_metadata_is_update_source(dut);
     test_stale_metadata_write_bypass(dut);
     test_lookup_write_collision(dut);
+    test_collision_preserves_existing_provider_lane(dut);
     test_provider_bits_survive_bypass_eviction(dut);
     test_noncommit_updates_are_ignored(dut);
     test_unconditional_cfi_does_not_train(dut);

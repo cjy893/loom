@@ -58,9 +58,6 @@ module gshare #(
         return (~|old_counter) ? old_counter : old_counter - CTR_BITS'(1);
     endfunction
 
-    (* ram_style = "distributed" *)
-    logic [BANK_WIDTH-1:0] provider_ram [0:NUM_SETS-1];
-
     logic doing_reset;
     logic [IDX_BITS-1:0] reset_index;
 
@@ -70,7 +67,7 @@ module gshare #(
     logic [BANK_WIDTH-1:0] s1_provider_data;
     logic s1_read_bypass_valid;
     counter_row_t s1_read_bypass_counters;
-    logic [BANK_WIDTH-1:0] s1_read_bypass_providers;
+    logic [BANK_WIDTH-1:0] s1_provider_set_mask;
     logic s2_valid;
     counter_row_t s2_counters;
     logic [BANK_WIDTH-1:0] s2_providers;
@@ -84,13 +81,11 @@ module gshare #(
     counter_row_t update_meta_counters;
     counter_row_t update_old_counters;
     counter_row_t update_new_counters;
-    logic [BANK_WIDTH-1:0] update_new_providers;
     logic update_write;
 
     logic [NUM_WRBYPASS-1:0] write_bypass_valid;
     logic [IDX_BITS-1:0] write_bypass_index [NUM_WRBYPASS-1:0];
     counter_row_t write_bypass_counters [NUM_WRBYPASS-1:0];
-    logic [BANK_WIDTH-1:0] write_bypass_providers [NUM_WRBYPASS-1:0];
     logic [NUM_WRBYPASS-1:0] write_bypass_hits;
     logic write_bypass_hit;
     logic [WRBYPASS_IDX_BITS-1:0] write_bypass_hit_index;
@@ -98,6 +93,8 @@ module gshare #(
     logic counter_write_en;
     logic [IDX_BITS-1:0] counter_write_index;
     counter_row_t counter_write_data;
+    logic [BANK_WIDTH-1:0] provider_write_en;
+    logic [IDX_BITS-1:0] provider_write_index;
 
     assign ready = !doing_reset;
     assign s0_index = make_index(f0_pc, f0_ghist);
@@ -112,16 +109,12 @@ module gshare #(
     assign update_old_counters = write_bypass_hit
                                ? write_bypass_counters[write_bypass_hit_index]
                                : update_meta_counters;
-    assign update_new_providers = write_bypass_hit
-                                ? write_bypass_providers[write_bypass_hit_index] |
-                                  update_write_mask
-                                : provider_ram[update_index] |
-                                  update_write_mask;
     assign counter_write_en = doing_reset || update_write;
     assign counter_write_index = doing_reset ? reset_index : update_index;
     assign counter_write_data = doing_reset
                               ? {BANK_WIDTH{2'b10}}
                               : update_new_counters;
+    assign provider_write_index = doing_reset ? reset_index : update_index;
 
     bpd_sdp_bram #(
         .DEPTH(NUM_SETS),
@@ -135,6 +128,26 @@ module gshare #(
         .write_addr(counter_write_index),
         .write_data(counter_write_data)
     );
+
+    // Provider bits are monotonic between resets.  A lane-local BRAM can
+    // therefore set one provider without reading or replacing the other lane.
+    for(genvar lane = 0; lane < BANK_WIDTH; lane++) begin: gen_provider_ram
+        assign provider_write_en[lane] = doing_reset ||
+            (update_write && update_write_mask[lane]);
+
+        bpd_sdp_bram #(
+            .DEPTH(NUM_SETS),
+            .WIDTH(1)
+        ) provider_ram (
+            .clk,
+            .read_en(f0_valid && !doing_reset),
+            .read_addr(s0_index),
+            .read_data(s1_provider_data[lane]),
+            .write_en(provider_write_en[lane]),
+            .write_addr(provider_write_index),
+            .write_data(doing_reset ? 1'b0 : 1'b1)
+        );
+    end
 
     for(genvar lane = 0; lane < BANK_WIDTH; lane++) begin: gen_update
         assign update_lane_taken[lane] = s1_update.cfi_valid &&
@@ -183,7 +196,7 @@ module gshare #(
             s2_valid <= 1'b0;
             s1_read_bypass_valid <= 1'b0;
             s1_read_bypass_counters <= '0;
-            s1_read_bypass_providers <= '0;
+            s1_provider_set_mask <= '0;
         end else begin
             s1_valid <= f0_valid && !doing_reset;
             s2_valid <= s1_valid;
@@ -192,18 +205,16 @@ module gshare #(
             if(f0_valid && !doing_reset && update_write &&
                s0_index == update_index) begin
                 s1_read_bypass_counters <= update_new_counters;
-                s1_read_bypass_providers <= update_new_providers;
+                s1_provider_set_mask <= update_write_mask;
             end
         end
     end
 
     always_ff @(posedge clk) begin
-        if(f0_valid && !doing_reset)
-            s1_provider_data <= provider_ram[s0_index];
         s2_counters <= s1_read_bypass_valid
                      ? s1_read_bypass_counters : s1_counter_data;
-        s2_providers <= s1_read_bypass_valid
-                      ? s1_read_bypass_providers : s1_provider_data;
+        s2_providers <= s1_provider_data |
+            (s1_read_bypass_valid ? s1_provider_set_mask : '0);
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
@@ -215,13 +226,6 @@ module gshare #(
             if(update_valid && !doing_reset)
                 s1_update <= update;
         end
-    end
-
-    always_ff @(posedge clk) begin
-        if(doing_reset)
-            provider_ram[reset_index] <= '0;
-        else if(update_write)
-            provider_ram[update_index] <= update_new_providers;
     end
 
     for(genvar entry = 0; entry < NUM_WRBYPASS; entry++) begin: gen_bypass_hit
@@ -247,17 +251,14 @@ module gshare #(
             for(int entry = 0; entry < NUM_WRBYPASS; entry++) begin
                 write_bypass_index[entry] <= '0;
                 write_bypass_counters[entry] <= '0;
-                write_bypass_providers[entry] <= '0;
             end
         end else if(update_write) begin
             if(write_bypass_hit) begin
                 write_bypass_counters[write_bypass_hit_index] <= update_new_counters;
-                write_bypass_providers[write_bypass_hit_index] <= update_new_providers;
             end else begin
                 write_bypass_valid[write_bypass_enqueue_index] <= 1'b1;
                 write_bypass_index[write_bypass_enqueue_index] <= update_index;
                 write_bypass_counters[write_bypass_enqueue_index] <= update_new_counters;
-                write_bypass_providers[write_bypass_enqueue_index] <= update_new_providers;
                 write_bypass_enqueue_index <= write_bypass_enqueue_index +
                                               WRBYPASS_IDX_BITS'(1);
             end
