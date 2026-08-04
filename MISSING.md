@@ -55,14 +55,13 @@
 - `test/core_ifu/` 已覆盖预测训练、RAS/GHist repair、随机反压和全前端 flush；
   `test/core_top_recovery/` 已覆盖生产 Cache/AXI 在途事务恢复。
 - 官方功能 ELF 在正常和确定性 AXI 背压模式下均通过 58/58 测试点。
-- 性能统计已覆盖 CoreMark、`fireye_A0`、`stream_copy`、`bitcount`、`crc32`、
-  `fireye_C0` 和 `my_memcmp`。IFU 已在 live ICache 响应与 F2 对齐时同拍组包并启动
-  下一次翻译；上一轮统一测得四项 IPC 为 0.9077、0.6799、0.2672、0.6169。其中 `bitcount`
-  和 `my_memcmp` 已约为参考核 IPC 的 0.8，当前主要相对缺口是仅约三分之一的
-  `crc32` 和 `fireye_C0`。GShare 已接入真实 GHist，下一步重新测量上述 IPC 和逐分支
-  误预测，再按实测阻塞跟踪 tagged 多 outstanding 前端及 LSU/数据侧并发。
-  解除三条 MUL 的 `is_unique` 后，包含 GShare 改动的当前 `fireye_C0` 新基线为
-  0.5152；该次测量不是单变量 A/B，其余用例仍需在同一版本统一重测。
+- 当前 56 PREG 版本的完整性能结果以 [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md)
+  为准。最低 IPC 比值为 `quick_sort` 0.71、`dhrystone` 0.74、`crc32` 0.75、
+  `bubble_sort` 0.78；其余已测用例均不低于 0.8，且多项超过 1.0。此前记录的
+  `fireye_C0`、`stream_copy` 等局部瓶颈已被后续优化改变，不再作为当前优先级依据。
+- 当前首要时序缺口是从 `alu_brinfo_valid_q` 发出的分支解析高扇出组合锥；实现后
+  WNS 为 +0.827 ns，最差路径到 GShare `s1_provider_data`，40 级逻辑且 79.05% 为
+  布线延迟。下一轮先尝试不增加预测级数的 mask 预译码寄存和本地复制。
 
 ---
 
@@ -109,11 +108,12 @@
 
 ## Rename 性能缺口
 
-- 当前整数物理寄存器为 48 个，扣除 32 个架构映射后只有 16 个可供投机重命名。
-- `rename_stage` 在一个双发 packet 的 `alloc_need` 大于 `free_count` 时整包停顿；
-  `fireye_C0` 有 204235 个周期处于 free_count=1、alloc_need=2，未利用可分配的一个槽位。
-- 六个低 IPC 用例中，分发阻塞周期的 94.19% 至 99.99% 来自 freelist；下一步应先
-  扫描 48/56/64 个物理寄存器的 IPC、LUT/寄存器占用和时序，再评估前缀部分分配。
+- 当前整数物理寄存器为 56 个，扣除 32 个架构映射后有 24 个可供投机重命名。
+- `rename_stage` 仍会在双发 packet 的 `alloc_need` 大于 `free_count` 时整包停顿；
+  `free_count=1、alloc_need=2` 的前缀部分分配尚未实现。
+- 48 PREG 旧基线中，六个低 IPC 用例的分发阻塞曾有 94.19% 至 99.99% 来自
+  Freelist；该统计不能直接代表当前 56 PREG 版本。56 PREG 的实现后时序已经通过，
+  是否继续增加容量或实现前缀分配应依据新的逐项阻塞统计决定。
 
 ---
 

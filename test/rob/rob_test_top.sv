@@ -37,6 +37,7 @@ module rob_test_top (
 
     input  logic        interrupt_pending,
     input  logic [31:0] interrupt_next_pc,
+    input  logic [3:0]  br_mispredict_mask,
     input  logic        br_mispredict,
     input  logic        lxcpt_valid,
     input  logic [5:0]  lxcpt_rob_idx,
@@ -112,6 +113,7 @@ module rob_test_top (
         lsu_clr_bsy_addr[0] = lsu_clr_bsy_addr_0;
         lsu_clr_bsy_addr[1] = lsu_clr_bsy_addr_1;
         brupdate = '0;
+        brupdate.b1.mispredict_mask = br_mispredict_mask;
         brupdate.b2.mispredict = br_mispredict;
         lxcpt = '0;
         lxcpt.valid = lxcpt_valid;
